@@ -5,6 +5,18 @@
 #include "event_groups.h"
 #include <AccelStepper.h>
 
+//TO consider before running for the first Time
+
+// strength of the grip
+// OPEN_POS and CLOSED_POS of the Dynamixel
+
+// speed of XY
+// MAX_POS_X and MAX_POS_Y according to the system's dimensions (CORE_XY)
+// MAX speed and acceleration of the stepper motors
+// Serial Begin, for dynamixel and stepper_motors
+
+
+
 //BOUTONS
 #define BTN_PIN_UP 22
 #define BTN_PIN_DOWN 25
@@ -272,10 +284,8 @@ void TaskdetecterToutou (void *pvParameters) {
     bits = xEventGroupGetBits(toutouEventGroup);
 
     if (bits & EVT_TOUTOU_DROPPED){
-      //Mettre un wait  ou un yield ?
       continue;
     }
-    //On a le toutou, ou on est en attente.
 
     int32_t present_position = dxl.getPresentPosition(id);
     int32_t present_velocity = dxl.getPresentVelocity(id);
