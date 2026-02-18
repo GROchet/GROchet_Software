@@ -3,6 +3,7 @@
 #include <Arduino_FreeRTOS.h>
 #include <semphr.h>
 #include "event_groups.h"
+#include <AccelStepper.h>
 
 //BOUTONS
 #define BTN_PIN_UP 22
@@ -14,7 +15,6 @@
 
 //LIMIT SWITCHES
 #define PIN_LMSW_INTER 2 //D2
-#define LMTSW_Z 36
 #define LMTSW_Y 38
 #define LMTSW_X 40
 
@@ -24,29 +24,51 @@
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 uint8_t id = 102;
 uint8_t strength = 5; //2.69 mA per unit.
+int speed = 50;
 #define OPEN_POS 1000 //(A CHANGER)
 #define CLOSED_POS 5000 //(A CHANGER)
+
+//MOTEURS
+#define FULLSTEP 4 // 4 fils par moteurs
+#define STEPS_REV 4096
+long posX = 0;
+long posY = 0;
+
+//Moteur 1
+#define EN_PIN_M1           38 // Enable
+#define DIR_PIN_M1          22 // Direction
+#define STEP_PIN_M1         28 // Step
+#define SW_RX_M1            48 // TMC2208/TMC2224 SoftwareSerial receive pin
+#define SW_TX_M1            50 // TMC2208/TMC2224 SoftwareSerial transmit pin
+
+//Moteur 2
+#define EN_PIN_M2           39 // Enable
+#define DIR_PIN_M2          23 // Direction
+#define STEP_PIN_M2         29 // Step
+#define SW_RX_M2            49 // TMC2208/TMC2224 SoftwareSerial receive pin
+#define SW_TX_M2            51 // TMC2208/TMC2224 SoftwareSerial transmit pin
+
+//Moteur Z
+#define EN_PIN_MZ           43 // Enable
+#define DIR_PIN_MZ          45 // Direction
+#define STEP_PIN_MZ         42  // Step
+#define SW_RX_MZ            47 // TMC2208/TMC2224 SoftwareSerial receive pin
+#define SW_TX_MZ            44 // TMC2208/TMC2224 SoftwareSerial transmit pin
+
+AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1); //Moteur gauche
+AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
+AccelStepper MOT_Z = AccelStepper(AccelStepper::DRIVER, STEP_PIN_MZ,DIR_PIN_MZ); //Moteur Z
 
 enum SystemState {
   IDLE,
   LOWERING, //On descend l'axe Z
   CLOSING, //Pince fermée
-  HOLDING_OBJECT, //Pince fermée, torque, mais pas de mouvement, le toutou est attrapé
-  DROPPED, //Pince fermée, mais on a drop le toutou/ pas eu le toutou
   LIFTING, //Remonter Axe Z
   MOVING_TO_DROPZONE, //Se déplacer vers la zone de dépôt
   DROPPING, //Pince ouverte
-  RETURN //Retour à la position de départ
 };
 
-enum ToutouState {
-  ATTENTE,
-  ATTRAPE,
-  DROPPED
-}
-//MUTEX A METTRE DANS LE FUTUR
 volatile SystemState currentState = IDLE;
-volatile bool toutouAttrape = ATTENTE;
 bool etatControlMoteur; //false = position, true = torque
 
 void fermerPince ();
@@ -58,11 +80,16 @@ void NotifySwitch();
 void NotifyBtn();
 
 EventGroupHandle_t inputEventGroup;
+EventGroupHandle_t toutouEventGroup;
 #define EVT_BTN_OK (1 << 0)
 #define EVT_BTN_UP (1 << 1)
 #define EVT_BTN_DOWN (1 << 2)
 #define EVT_BTN_LEFT (1 << 3)
 #define EVT_BTN_RIGHT (1 << 4)
+
+#define EVT_TOUTOU_ATTRAPE (1 << 0)
+#define EVT_TOUTOU_DROPPED (1 << 1)
+
 
 void setup() {
   Serial.begin(115200);
@@ -72,6 +99,7 @@ void setup() {
   dxl.setPortProtocolVersion(2.0);
 
   inputEventGroup = xEventGroupCreate();
+  toutouEventGroup = xEventGroupCreate();
 
   //For finding id of your DYNAMIXEL, use this code.
   /*for (uint8_t i = 0; i < 253; i++) {
@@ -108,6 +136,37 @@ void setup() {
   pinMode(LMTSW_X, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(PIN_LMSW_INTER), NotifySwitch, FALLING); //CHANGE OU FALLING ?
 
+  //MOTEURS
+  //Moteur 1
+  pinMode(EN_PIN_M1, OUTPUT);
+  pinMode(STEP_PIN_M1, OUTPUT);
+  pinMode(DIR_PIN_M1, OUTPUT);
+  digitalWrite(EN_PIN_M1, LOW);
+
+  //Moteur 2
+  pinMode(EN_PIN_M2, OUTPUT);
+  pinMode(STEP_PIN_M2, OUTPUT);
+  pinMode(DIR_PIN_M2, OUTPUT);
+  digitalWrite(EN_PIN_M2, LOW);
+
+  //Moteur Z
+  pinMode(EN_PIN_MZ, OUTPUT);
+  pinMode(STEP_PIN_MZ, OUTPUT);
+  pinMode(DIR_PIN_MZ, OUTPUT);
+  digitalWrite(EN_PIN_MZ, LOW);
+
+  MOT_A.setMaxSpeed(50000);
+  MOT_B.setMaxSpeed(50000);
+  MOT_Z.setMaxSpeed(50000);
+
+  MOT_A.setAcceleration(10000);
+  MOT_B.setAcceleration(10000);
+  MOT_Z.setAcceleration(10000);
+
+  MOT_A.setCurrentPosition(0);
+  MOT_B.setCurrentPosition(0);
+  MOT_Z.setCurrentPosition(0);
+
   //RTOS
   xTaskCreate(TaskdetecterToutou, "ToutouTask", 256, NULL, 1, NULL);
   xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 1, NULL);
@@ -142,16 +201,34 @@ void ouvrirPince () {
   dxl.setGoalPosition(id, OPEN_POS); //Changer OPEN_POS
 }
 
+void deplacementXY(long x, long y) {
+    
+  //Serial.println(x);
+  //Serial.println(y);
+  
+  //calcul du deplacementXY des moteurs
+  long deltaMOTa = x + y;
+  long deltaMOTb = x - y;
+
+  //Commande deplacementXYs des moteurs
+  MOT_A.moveTo(deltaMOTa);
+  MOT_B.moveTo(deltaMOTb);
+
+}
+
 void TaskdetecterToutou (void *pvParameters) {
   (void) pvParameters;
   TickType_t xLastWakeTime = xTaskGetTickCount();
+  EventBits_t bits;
   for(;;){
     //Périodique, mais seulement quand on est en état de pince fermée.
 
     vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100)); //A Valider
+    
+    bits = xEventGroupGetBits(toutouEventGroup);
 
-    if (toutouAttrape == DROPPED){
-      //Mettre un wait ?
+    if (bits & EVT_TOUTOU_DROPPED){
+      //Mettre un wait  ou un yield ?
       continue;
     }
     //On a le toutou, ou on est en attente.
@@ -162,10 +239,10 @@ void TaskdetecterToutou (void *pvParameters) {
 
     if (present_position > CLOSED_POS - 5) {
       dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, 0);
-      toutouAttrape = DROPPED;
+      xEventGroupSetBits(toutouEventGroup, EVT_TOUTOU_DROPPED); //Clear dans la tache de state control quand on a drop le toutou.
     }
     else if (abs(present_velocity) < 5 && present_position < CLOSED_POS - 10) {
-      toutouAttrape = ATTRAPE; //Mettre un bool pour savoir si on a un objet ou s'il est dropped a la palce d'utiliser currentState ?
+      xEventGroupSetBits(toutouEventGroup, EVT_TOUTOU_ATTRAPE);
     }
   }
 }
@@ -175,24 +252,58 @@ void TaskMotorControl (void *pvParameters) {
   EventBits_t bits;
 
   for(;;){
-    xEventGroupWaitBits(inputEventGroup, EVT_BTN_UP | EVT_BTN_DOWN | EVT_BTN_LEFT | EVT_BTN_RIGHT, pdFALSE, pdFALSE, portMAX_DELAY);
-    //SET MOTEURS SELON LES BOUTONS APPUYES
+    int deltaX = 0;
+    int deltaY = 0;
+
     bits = xEventGroupGetBits(inputEventGroup);
+    if (bits & EVT_BTN_LEFT | bits & EVT_BTN_RIGHT | bits & EVT_BTN_UP | bits & EVT_BTN_DOWN){
+      //SET MOTEURS SELON LES BOUTONS APPUYES
+      bits = xEventGroupGetBits(inputEventGroup);
+
+      deltaX = (bits & EVT_BTN_UP)*speed - (bits & EVT_BTN_DOWN)*speed;
+      deltaY = (bits & EVT_BTN_LEFT)*speed - (bits & EVT_BTN_RIGHT)*speed;
+
+      // Respect des limit switches
+      if(digitalRead(LMTSW_X) == LOW && deltaX < 0) deltaX = 0;
+      if(digitalRead(LMTSW_Y) == LOW && deltaY < 0) deltaY = 0;
+      
+      posX += deltaX;
+      posY += deltaY;
+
+      // Déplacement
+      long deltaMOTa = posX + posY;
+      long deltaMOTb = posX - posY;
+
+      
+      MOT_A.moveTo(deltaMOTa);
+      MOT_B.moveTo(deltaMOTb);
+
+      // Exécution non-bloquante
+      MOT_A.run();
+      MOT_B.run();
+
+      vTaskDelay(pdMS_TO_TICKS(10)); // 10 ms cycle RTOS
+    }
+    else {
+      //On attend qu'un des boutons de déplacement soit appuyé pour faire un getbits, comme ça on fait pas de getbits en boucle inutilement.
+      xEventGroupWaitBits(inputEventGroup, EVT_BTN_UP | EVT_BTN_DOWN | EVT_BTN_LEFT | EVT_BTN_RIGHT, pdFALSE, pdFALSE, portMAX_DELAY);
+    }
   }
 }
 
 void TaskStateControl (void *pvParameters) {
   (void) pvParameters;
   EventBits_t bits;
-  //Ca serait bien qu'aucune autre tache ne modifie CurrentState, comme ca on a pas besoin de le protéger.
+  //aucune autre tache ne modifie CurrentState, comme ca on a pas besoin de le protéger.
 
   for(;;) {
 
     switch(currentState) {
 
-      case IDLE:
+      case IDLE://DONE
         //Pendant ce temps, on accepte les déplacements haut-bas, gauche-droite
-        // Wait for OK button, we CAN afford to wait infinitely here
+        xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+        currentState = LOWERING;
         break;
 
       case LOWERING:
@@ -201,8 +312,10 @@ void TaskStateControl (void *pvParameters) {
         currentState = CLOSING;
         break;
 
-      case CLOSING:
-        vTaskDelay(pdMS_TO_TICKS(500)); //A remplacer par une condition de fin de mouvement
+      case CLOSING: //DONE
+        xEventGroupClearBits(toutouEventGroup, EVT_TOUTOU_ATTRAPE | EVT_TOUTOU_DROPPED); //Au cas ou Ces bits auraient été set pendant la sequence de drop toutou
+        fermerPince();
+        xEventGroupWaitBits(toutouEventGroup, EVT_TOUTOU_ATTRAPE | EVT_TOUTOU_DROPPED, pdTRUE, pdFALSE, portMAX_DELAY);
         currentState = LIFTING;
         break;
 
@@ -218,8 +331,9 @@ void TaskStateControl (void *pvParameters) {
         currentState = DROPPING;
         break;
 
-      case DROPPING:
+      case DROPPING: //DONE
         ouvrirPince();
+        vTaskDelay(pdMS_TO_TICKS(1000));
         currentState = IDLE;
         break;
     }
@@ -231,21 +345,26 @@ void TaskStateControl (void *pvParameters) {
 void NotifySwitch(){
   //PENDANT SETUP, ON VEUT QUE LES (2 ou 3) LIMITSWITCHES SERVENT A TROUVER LE ZERO
   //En Situation normale, on veut que les limit switch servent à detecter les obstacles et à arrêter le moteur pour pas que ça arrache tout
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+  bool switch_X = digitalRead(LMTSW_X) == LOW;
+  bool switch_Y = digitalRead(LMTSW_Y) == LOW;
+
 }
 
 void NotifyBtn(){
   //METTRE UNE QUEUE ?
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  bool up_state = digitalRead(BTN_PIN_UP);
-  bool down_state = digitalRead(BTN_PIN_DOWN);
-  bool left_state = digitalRead(BTN_PIN_LEFT);
-  bool right_state = digitalRead(BTN_PIN_RIGHT);
-  bool ok_state = digitalRead(BTN_PIN_OK);
+  bool up_state = digitalRead(BTN_PIN_UP) == LOW; //Low because of Input_pullup
+  bool down_state = digitalRead(BTN_PIN_DOWN) == LOW;
+  bool left_state = digitalRead(BTN_PIN_LEFT) == LOW;
+  bool right_state = digitalRead(BTN_PIN_RIGHT) == LOW;
+  bool ok_state = digitalRead(BTN_PIN_OK) == LOW;
 
   bool priority_btn_pressed = false;
 
-  bool list[5] = {ok_state == LOW, up_state == LOW, down_state == LOW, left_state == LOW, right_state == LOW}; //Low because of Input_pullup
+  bool list[5] = {ok_state, up_state, down_state, left_state, right_state}; //Low because of Input_pullup
 
   EventBits_t evtList[5] = {EVT_BTN_OK,EVT_BTN_UP,EVT_BTN_DOWN,EVT_BTN_LEFT,EVT_BTN_RIGHT};
 
@@ -266,8 +385,11 @@ void NotifyBtn(){
 
 }
 
-//Fonctions pour regler la force de la pince ?
-//Fonctions pour communiquer avec le arduino
-//Code limitSwitch
+//TODO
 
-//AVOIR UN STATE EN_MOUVEMENT, pis quand on 
+//Fonctions pour regler la force de la pince ?
+//Code limitSwitches pour trouver le zero au lancement
+//Code Axe Z
+//Code de déplacement vers la dropzone
+//Code déplacement XY
+//FonctionS pour setter les zéros des moteurs stepper et dynamixel ?
