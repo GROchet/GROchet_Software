@@ -1,0 +1,40 @@
+{
+  "name": "Robotis OpenRB-150",
+  "url": "https://en.robotis.com/shop_en/item.php?it_id=902-0183-000",
+  "vendor": "Robotis",
+  "build": {
+    "arduino": {
+      "ldscript": "flash_with_bootloader.ld"
+    },
+    "core": "arduino",
+    "cpu": "cortex-m0plus",
+    "extra_flags": "-DARDUINO_OpenRB -D__SAMD21G18A__ -DUSE_ARDUINO_MKR_PIN_LAYOUT",
+    "f_cpu": "48000000L",
+    "hwids": [
+      ["0x2F5D","0x2202"]
+    ],
+    "mcu": "samd21g18a",
+    "usb_product": "Robotis OpenRB-150",
+    "variant": "OpenRB-150"
+  },
+  "frameworks": ["arduino"],
+  "platforms": ["atmelsam"],
+  "debug": {
+    "jlink_device": "ATSAMD21G18",
+    "openocd_chipname": "at91samd21g18",
+    "openocd_target": "at91samdXX",
+    "svd_path": "ATSAMD21G18A.svd"
+  },
+  "upload": {
+    "disable_flushing": true,
+    "maximum_ram_size": 32768,
+    "maximum_size": 262144,
+    "native_usb": true,
+    "offset_address": "0x2000",
+    "protocol": "sam-ba",
+    "protocols": ["sam-ba","blackmagic","jlink","atmel-ice"],
+    "require_upload_port": true,
+    "use_1200bps_touch": true,
+    "wait_for_upload_port": true
+  }
+}
