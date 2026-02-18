@@ -33,6 +33,8 @@ int speed = 50;
 #define STEPS_REV 4096
 long posX = 0;
 long posY = 0;
+long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
+long MAX_POS_Y = 50000;
 
 //Moteur 1
 #define EN_PIN_M1           38 // Enable
@@ -78,6 +80,7 @@ void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
 void NotifySwitch();
 void NotifyBtn();
+void homeXY();
 
 EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
@@ -89,7 +92,6 @@ EventGroupHandle_t toutouEventGroup;
 
 #define EVT_TOUTOU_ATTRAPE (1 << 0)
 #define EVT_TOUTOU_DROPPED (1 << 1)
-
 
 void setup() {
   Serial.begin(115200);
@@ -131,7 +133,6 @@ void setup() {
 
   //LIMIT SWITCHES
   pinMode(PIN_LMSW_INTER, INPUT_PULLUP);
-  pinMode(LMTSW_Z, INPUT_PULLUP);
   pinMode(LMTSW_Y, INPUT_PULLUP);
   pinMode(LMTSW_X, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(PIN_LMSW_INTER), NotifySwitch, FALLING); //CHANGE OU FALLING ?
@@ -177,6 +178,39 @@ void setup() {
 void loop() {
 }
 
+void homeXY() {
+  Serial.println("Homing XY...");
+
+  // --- Home X axis ---
+  MOT_A.setSpeed(-1000);  // Both motors same direction
+  MOT_B.setSpeed(-1000);
+
+  while(digitalRead(LMTSW_X) == HIGH) {
+    MOT_A.runSpeed();
+    MOT_B.runSpeed();
+  }
+  // Stop and set positions
+  MOT_A.setCurrentPosition(0);
+  MOT_B.setCurrentPosition(0);
+  posX = 0;
+
+  // --- Home Y axis ---
+  // For CoreXY, moving along Y: motors move in opposite directions
+  MOT_A.setSpeed(-1000); // Adjust speed/direction according to your wiring
+  MOT_B.setSpeed(1000);  // Opposite sign for Y
+
+  while(digitalRead(LMTSW_Y) == HIGH) {
+    MOT_A.runSpeed();
+    MOT_B.runSpeed();
+  }
+  // Stop and reset positions
+  MOT_A.setCurrentPosition(0);
+  MOT_B.setCurrentPosition(0);
+  posY = 0;
+
+  Serial.println("Homing XY done.");
+}
+
 void fermerPince () { 
   if (!etatControlMoteur){
     dxl.torqueOff(id);
@@ -199,21 +233,6 @@ void ouvrirPince () {
 
   //Aller en position ouverte
   dxl.setGoalPosition(id, OPEN_POS); //Changer OPEN_POS
-}
-
-void deplacementXY(long x, long y) {
-    
-  //Serial.println(x);
-  //Serial.println(y);
-  
-  //calcul du deplacementXY des moteurs
-  long deltaMOTa = x + y;
-  long deltaMOTb = x - y;
-
-  //Commande deplacementXYs des moteurs
-  MOT_A.moveTo(deltaMOTa);
-  MOT_B.moveTo(deltaMOTb);
-
 }
 
 void TaskdetecterToutou (void *pvParameters) {
@@ -247,45 +266,51 @@ void TaskdetecterToutou (void *pvParameters) {
   }
 }
 
+
 void TaskMotorControl (void *pvParameters) {
   (void) pvParameters;
   EventBits_t bits;
 
   for(;;){
-    int deltaX = 0;
-    int deltaY = 0;
 
     bits = xEventGroupGetBits(inputEventGroup);
-    if (bits & EVT_BTN_LEFT | bits & EVT_BTN_RIGHT | bits & EVT_BTN_UP | bits & EVT_BTN_DOWN){
-      //SET MOTEURS SELON LES BOUTONS APPUYES
-      bits = xEventGroupGetBits(inputEventGroup);
+    if ((bits & EVT_BTN_LEFT) | (bits & EVT_BTN_RIGHT) | (bits & EVT_BTN_UP) | (bits & EVT_BTN_DOWN)){
+      int deltaX = 0;
+      int deltaY = 0;
 
-      deltaX = (bits & EVT_BTN_UP)*speed - (bits & EVT_BTN_DOWN)*speed;
-      deltaY = (bits & EVT_BTN_LEFT)*speed - (bits & EVT_BTN_RIGHT)*speed;
+      // Calcul des deltas selon boutons
+      if(bits & EVT_BTN_UP)    deltaX += speed;
+      if(bits & EVT_BTN_DOWN)  deltaX -= speed;
+      if(bits & EVT_BTN_LEFT)  deltaY += speed;
+      if(bits & EVT_BTN_RIGHT) deltaY -= speed;
 
-      // Respect des limit switches
+      // Respect des limit switches minimum
       if(digitalRead(LMTSW_X) == LOW && deltaX < 0) deltaX = 0;
       if(digitalRead(LMTSW_Y) == LOW && deltaY < 0) deltaY = 0;
-      
+
+      // Respect des software maximum limits
+      if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
+      if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
+
+      // Update positions
       posX += deltaX;
       posY += deltaY;
 
-      // Déplacement
+      // CoreXY mapping
       long deltaMOTa = posX + posY;
       long deltaMOTb = posX - posY;
 
-      
       MOT_A.moveTo(deltaMOTa);
       MOT_B.moveTo(deltaMOTb);
 
-      // Exécution non-bloquante
+      // Execute non-blocking
       MOT_A.run();
       MOT_B.run();
 
-      vTaskDelay(pdMS_TO_TICKS(10)); // 10 ms cycle RTOS
+      vTaskDelay(pdMS_TO_TICKS(10));
     }
     else {
-      //On attend qu'un des boutons de déplacement soit appuyé pour faire un getbits, comme ça on fait pas de getbits en boucle inutilement.
+      // Wait for any movement button press
       xEventGroupWaitBits(inputEventGroup, EVT_BTN_UP | EVT_BTN_DOWN | EVT_BTN_LEFT | EVT_BTN_RIGHT, pdFALSE, pdFALSE, portMAX_DELAY);
     }
   }
@@ -325,9 +350,10 @@ void TaskStateControl (void *pvParameters) {
         currentState = MOVING_TO_DROPZONE;
         break;
 
-      case MOVING_TO_DROPZONE:
+      case MOVING_TO_DROPZONE: //DONE
         //Séquence de mouvement vers la dropzone
-        vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de fin de mouvement
+        homeXY();
+        ouvrirPince();
         currentState = DROPPING;
         break;
 
@@ -362,20 +388,39 @@ void NotifyBtn(){
   bool right_state = digitalRead(BTN_PIN_RIGHT) == LOW;
   bool ok_state = digitalRead(BTN_PIN_OK) == LOW;
 
-  bool priority_btn_pressed = false;
-
   bool list[5] = {ok_state, up_state, down_state, left_state, right_state}; //Low because of Input_pullup
 
   EventBits_t evtList[5] = {EVT_BTN_OK,EVT_BTN_UP,EVT_BTN_DOWN,EVT_BTN_LEFT,EVT_BTN_RIGHT};
 
-  //Si 2 boutons appuyés en meme temps, on garde que le plus prioritaire (ok > up > down > left > right)
-  for (int i = 0; i < 5; i++) {
-    if (list[i] && !priority_btn_pressed) {
-      xEventGroupSetBitsFromISR(inputEventGroup, evtList[i], &xHigherPriorityTaskWoken);
-      priority_btn_pressed = true;
+  //Si 2 boutons appuyés en meme temps, on garde que le plus prioritaire (OK > AUTRES BOUTONS)
+  if (ok_state) {
+    xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_OK, &xHigherPriorityTaskWoken);
+  }
+  else {
+    xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_OK);
+    if (up_state) {
+      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_UP, &xHigherPriorityTaskWoken);
     }
     else {
-      xEventGroupClearBitsFromISR(inputEventGroup, evtList[i]);
+      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_UP);
+    }
+    if (down_state) {
+      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_DOWN, &xHigherPriorityTaskWoken);
+    }
+    else {
+      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_DOWN);
+    }
+    if (left_state) {
+      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_LEFT, &xHigherPriorityTaskWoken);
+    }
+    else {
+      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_LEFT);
+    }
+    if (right_state) {
+      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_RIGHT, &xHigherPriorityTaskWoken);
+    }
+    else {
+      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_RIGHT);
     }
   }
 
@@ -388,7 +433,6 @@ void NotifyBtn(){
 //TODO
 
 //Fonctions pour regler la force de la pince ?
-//Code limitSwitches pour trouver le zero au lancement
 //Code Axe Z
 //Code de déplacement vers la dropzone
 //Code déplacement XY
