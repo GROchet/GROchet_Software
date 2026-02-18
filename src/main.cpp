@@ -12,18 +12,23 @@
 #define BTN_PIN_RIGHT 24
 #define BTN_PIN_OK 26
 #define PIN_BTN_INTERRUPT 3 //D3
+volatile TickType_t lastBtnInterrupt = 0;
+#define DEBOUNCE_MS 20
 
 //LIMIT SWITCHES
 #define PIN_LMSW_INTER 2 //D2
 #define LMTSW_Y 38
 #define LMTSW_X 40
+EventGroupHandle_t limitEventGroup;
+#define EVT_LIMIT_X (1 << 0)
+#define EVT_LIMIT_Y (1 << 1)
 
 //DYNAMIXEL
 #define DXL_SERIAL   Serial1
 #define DXL_DIR_PIN  -1
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 uint8_t id = 102;
-uint8_t strength = 5; //2.69 mA per unit.
+uint8_t strength = 5;
 int speed = 50;
 #define OPEN_POS 1000 //(A CHANGER)
 #define CLOSED_POS 5000 //(A CHANGER)
@@ -31,8 +36,11 @@ int speed = 50;
 //MOTEURS
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
+
+//Mutex sur posX et posY ?
 long posX = 0;
 long posY = 0;
+
 long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
 
@@ -84,6 +92,8 @@ void homeXY();
 
 EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
+TaskHandle_t motorTaskHandle = NULL;
+
 #define EVT_BTN_OK (1 << 0)
 #define EVT_BTN_UP (1 << 1)
 #define EVT_BTN_DOWN (1 << 2)
@@ -102,6 +112,7 @@ void setup() {
 
   inputEventGroup = xEventGroupCreate();
   toutouEventGroup = xEventGroupCreate();
+  limitEventGroup = xEventGroupCreate();
 
   //For finding id of your DYNAMIXEL, use this code.
   /*for (uint8_t i = 0; i < 253; i++) {
@@ -113,6 +124,7 @@ void setup() {
   }*/
 
   //DYNAMIXEL 
+  //----------------
   if (!dxl.ping(id)) {
     Serial.println("No Dynamixel found. Reality is disappointing.");
     while (1);
@@ -123,6 +135,7 @@ void setup() {
   etatControlMoteur = true; //Torque
 
   //BOUTONS
+  //----------------
   pinMode(BTN_PIN_UP, INPUT_PULLUP); //Verifier avec Marcob input vs input_pullup (resistance interne ou pas)
   pinMode(BTN_PIN_DOWN, INPUT_PULLUP);
   pinMode(BTN_PIN_LEFT, INPUT_PULLUP);
@@ -132,12 +145,14 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, FALLING);
 
   //LIMIT SWITCHES
+  //----------------
   pinMode(PIN_LMSW_INTER, INPUT_PULLUP);
   pinMode(LMTSW_Y, INPUT_PULLUP);
   pinMode(LMTSW_X, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(PIN_LMSW_INTER), NotifySwitch, FALLING); //CHANGE OU FALLING ?
 
   //MOTEURS
+  //----------------
   //Moteur 1
   pinMode(EN_PIN_M1, OUTPUT);
   pinMode(STEP_PIN_M1, OUTPUT);
@@ -156,22 +171,23 @@ void setup() {
   pinMode(DIR_PIN_MZ, OUTPUT);
   digitalWrite(EN_PIN_MZ, LOW);
 
-  MOT_A.setMaxSpeed(50000);
-  MOT_B.setMaxSpeed(50000);
-  MOT_Z.setMaxSpeed(50000);
+  MOT_A.setMaxSpeed(8000);
+  MOT_B.setMaxSpeed(8000);
+  MOT_Z.setMaxSpeed(4000);
 
-  MOT_A.setAcceleration(10000);
-  MOT_B.setAcceleration(10000);
-  MOT_Z.setAcceleration(10000);
+  MOT_A.setAcceleration(2000);
+  MOT_B.setAcceleration(2000);
+  MOT_Z.setAcceleration(1000);
 
   MOT_A.setCurrentPosition(0);
   MOT_B.setCurrentPosition(0);
   MOT_Z.setCurrentPosition(0);
 
   //RTOS
+  //----------------
   xTaskCreate(TaskdetecterToutou, "ToutouTask", 256, NULL, 1, NULL);
-  xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 1, NULL);
-  xTaskCreate(TaskStateControl, "StateTask", 256, NULL, 1, NULL);
+  xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
+  xTaskCreate(TaskStateControl, "StateTask", 256, NULL, 2, NULL);
 
 }
 
@@ -181,32 +197,41 @@ void loop() {
 void homeXY() {
   Serial.println("Homing XY...");
 
+  // Clear any stale limit bits first
+  xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X | EVT_LIMIT_Y);
+
   // --- Home X axis ---
-  MOT_A.setSpeed(-1000);  // Both motors same direction
+  MOT_A.setSpeed(-1000);
   MOT_B.setSpeed(-1000);
 
-  while(digitalRead(LMTSW_X) == HIGH) {
+  while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_X)) {
     MOT_A.runSpeed();
     MOT_B.runSpeed();
+    vTaskDelay(pdMS_TO_TICKS(5));
   }
-  // Stop and set positions
+
   MOT_A.setCurrentPosition(0);
   MOT_B.setCurrentPosition(0);
   posX = 0;
 
-  // --- Home Y axis ---
-  // For CoreXY, moving along Y: motors move in opposite directions
-  MOT_A.setSpeed(-1000); // Adjust speed/direction according to your wiring
-  MOT_B.setSpeed(1000);  // Opposite sign for Y
+  // Clear bit so it doesn't interfere with Y
+  xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X);
 
-  while(digitalRead(LMTSW_Y) == HIGH) {
+  // --- Home Y axis ---
+  MOT_A.setSpeed(-1000);
+  MOT_B.setSpeed(1000);
+
+  while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_Y)) {
     MOT_A.runSpeed();
     MOT_B.runSpeed();
+    vTaskDelay(pdMS_TO_TICKS(5));
   }
-  // Stop and reset positions
+
   MOT_A.setCurrentPosition(0);
   MOT_B.setCurrentPosition(0);
   posY = 0;
+
+  xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
 
   Serial.println("Homing XY done.");
 }
@@ -266,59 +291,88 @@ void TaskdetecterToutou (void *pvParameters) {
   }
 }
 
-
 void TaskMotorControl (void *pvParameters) {
   (void) pvParameters;
   EventBits_t bits;
+  EventBits_t limitBits;
 
   for(;;){
 
-    bits = xEventGroupGetBits(inputEventGroup);
-    if ((bits & EVT_BTN_LEFT) | (bits & EVT_BTN_RIGHT) | (bits & EVT_BTN_UP) | (bits & EVT_BTN_DOWN)){
-      int deltaX = 0;
-      int deltaY = 0;
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-      // Calcul des deltas selon boutons
-      if(bits & EVT_BTN_UP)    deltaX += speed;
-      if(bits & EVT_BTN_DOWN)  deltaX -= speed;
-      if(bits & EVT_BTN_LEFT)  deltaY += speed;
-      if(bits & EVT_BTN_RIGHT) deltaY -= speed;
+    for(;;){
 
-      // Respect des limit switches minimum
-      if(digitalRead(LMTSW_X) == LOW && deltaX < 0) deltaX = 0;
-      if(digitalRead(LMTSW_Y) == LOW && deltaY < 0) deltaY = 0;
+      bits = xEventGroupGetBits(inputEventGroup);
+      limitBits = xEventGroupGetBits(limitEventGroup);
 
-      // Respect des software maximum limits
-      if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
-      if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
+      //Limit Switch Protection
+      if ((limitBits & EVT_LIMIT_X) && posX <= 0){
+        MOT_A.stop();
+        MOT_B.stop();
+        posX = 0;
 
-      // Update positions
-      posX += deltaX;
-      posY += deltaY;
+        // Cancel any queued motion
+        MOT_A.moveTo(MOT_A.currentPosition());
+        MOT_B.moveTo(MOT_B.currentPosition());
+      }
 
-      // CoreXY mapping
-      long deltaMOTa = posX + posY;
-      long deltaMOTb = posX - posY;
+      if ((limitBits & EVT_LIMIT_Y) && posY <= 0){
+        MOT_A.stop();
+        MOT_B.stop();
+        posY = 0;
 
-      MOT_A.moveTo(deltaMOTa);
-      MOT_B.moveTo(deltaMOTb);
+        MOT_A.moveTo(MOT_A.currentPosition());
+        MOT_B.moveTo(MOT_B.currentPosition());
+      }
 
-      // Execute non-blocking
+      //When a Button is pressed
+      if (bits & (EVT_BTN_LEFT | EVT_BTN_RIGHT | EVT_BTN_UP | EVT_BTN_DOWN)){
+        int deltaX = 0;
+        int deltaY = 0;
+
+        // Calcul des deltas selon boutons
+        if(bits & EVT_BTN_UP)    deltaX += speed;
+        if(bits & EVT_BTN_DOWN)  deltaX -= speed;
+        if(bits & EVT_BTN_LEFT)  deltaY += speed;
+        if(bits & EVT_BTN_RIGHT) deltaY -= speed;
+      
+        // Respect des limit switches minimum
+        if(deltaX < 0 && (limitBits & EVT_LIMIT_X)) deltaX = 0;
+        if(deltaY < 0 && (limitBits & EVT_LIMIT_Y)) deltaY = 0;
+
+        // Respect des software maximum/min limits
+        if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
+        if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
+        if(posX + deltaX < 0) deltaX = -posX;
+        if(posY + deltaY < 0) deltaY = -posY;
+
+        // Update positions
+        posX += deltaX;
+        posY += deltaY;
+
+        // CoreXY mapping
+        long targetA = posX + posY;
+        long targetB = posX - posY;
+
+        MOT_A.moveTo(targetA);
+        MOT_B.moveTo(targetB);
+      }
+
+      // always update steppers
       MOT_A.run();
       MOT_B.run();
 
-      vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    else {
-      // Wait for any movement button press
-      xEventGroupWaitBits(inputEventGroup, EVT_BTN_UP | EVT_BTN_DOWN | EVT_BTN_LEFT | EVT_BTN_RIGHT, pdFALSE, pdFALSE, portMAX_DELAY);
+      // Check if we received a new notification telling us to STOP
+      if (ulTaskNotifyTake(pdTRUE, 0)) {
+        break;  // Exit manual mode immediately
+      }
+      vTaskDelay(pdMS_TO_TICKS(5));
     }
   }
 }
 
 void TaskStateControl (void *pvParameters) {
   (void) pvParameters;
-  EventBits_t bits;
   //aucune autre tache ne modifie CurrentState, comme ca on a pas besoin de le protéger.
 
   for(;;) {
@@ -326,8 +380,9 @@ void TaskStateControl (void *pvParameters) {
     switch(currentState) {
 
       case IDLE://DONE
-        //Pendant ce temps, on accepte les déplacements haut-bas, gauche-droite
+        xTaskNotifyGive(motorTaskHandle);   // Enable manual control
         xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+        xTaskNotifyGive(motorTaskHandle);   // Send stop signal
         currentState = LOWERING;
         break;
 
@@ -373,8 +428,15 @@ void NotifySwitch(){
   //En Situation normale, on veut que les limit switch servent à detecter les obstacles et à arrêter le moteur pour pas que ça arrache tout
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  bool switch_X = digitalRead(LMTSW_X) == LOW;
-  bool switch_Y = digitalRead(LMTSW_Y) == LOW;
+  if (digitalRead(LMTSW_X) == LOW) {
+    xEventGroupSetBitsFromISR(limitEventGroup, EVT_LIMIT_X, &xHigherPriorityTaskWoken);
+  }
+  if (digitalRead(LMTSW_Y) == LOW) {
+    xEventGroupSetBitsFromISR(limitEventGroup, EVT_LIMIT_Y, &xHigherPriorityTaskWoken);
+  }
+  if (xHigherPriorityTaskWoken == pdTRUE) {
+    portYIELD_FROM_ISR();
+  }
 
 }
 
@@ -382,15 +444,18 @@ void NotifyBtn(){
   //METTRE UNE QUEUE ?
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  bool up_state = digitalRead(BTN_PIN_UP) == LOW; //Low because of Input_pullup
+  //Ignore button bouncing
+  uint32_t now = xTaskGetTickCountFromISR();
+  if (now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) {
+      return;
+  }
+  lastBtnInterrupt = now;
+
+  bool up_state = digitalRead(BTN_PIN_UP) == LOW;
   bool down_state = digitalRead(BTN_PIN_DOWN) == LOW;
   bool left_state = digitalRead(BTN_PIN_LEFT) == LOW;
   bool right_state = digitalRead(BTN_PIN_RIGHT) == LOW;
   bool ok_state = digitalRead(BTN_PIN_OK) == LOW;
-
-  bool list[5] = {ok_state, up_state, down_state, left_state, right_state}; //Low because of Input_pullup
-
-  EventBits_t evtList[5] = {EVT_BTN_OK,EVT_BTN_UP,EVT_BTN_DOWN,EVT_BTN_LEFT,EVT_BTN_RIGHT};
 
   //Si 2 boutons appuyés en meme temps, on garde que le plus prioritaire (OK > AUTRES BOUTONS)
   if (ok_state) {
@@ -430,10 +495,8 @@ void NotifyBtn(){
 
 }
 
-//TODO
 
+//TODO
 //Fonctions pour regler la force de la pince ?
 //Code Axe Z
-//Code de déplacement vers la dropzone
-//Code déplacement XY
-//FonctionS pour setter les zéros des moteurs stepper et dynamixel ?
+//FonctionS pour setter les zéros de l'axe Z et Pince ? lors de l'init
