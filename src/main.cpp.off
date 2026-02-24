@@ -57,8 +57,8 @@ long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
 
 //Moteur 1
-#define EN_PIN_M1           38 // Enable
-#define DIR_PIN_M1          22 // Direction
+#define EN_PIN_M1           29 // Enable
+#define DIR_PIN_M1          27 // Direction
 #define STEP_PIN_M1         28 // Step
 #define SW_RX_M1            48 // TMC2208/TMC2224 SoftwareSerial receive pin
 #define SW_TX_M1            50 // TMC2208/TMC2224 SoftwareSerial transmit pin
@@ -390,10 +390,15 @@ void TaskStateControl (void *pvParameters) {
     switch(currentState) {
 
       case IDLE://DONE
-        xTaskNotifyGive(motorTaskHandle);   // Enable manual control
-        xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-        xTaskNotifyGive(motorTaskHandle);   // Send stop signal
-        currentState = LOWERING;
+        Serial.println("IDLE");
+        digitalWrite(STEP_PIN_M1, LOW);
+        vTaskDelay(pdMS_TO_TICKS(20));
+        digitalWrite(STEP_PIN_M1, HIGH);
+        vTaskDelay(pdMS_TO_TICKS(20));
+        //xTaskNotifyGive(motorTaskHandle);   // Enable manual control
+        //xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+        //xTaskNotifyGive(motorTaskHandle);   // Send stop signal
+        //currentState = LOWERING;
         break;
 
       case LOWERING:
@@ -510,3 +515,4 @@ void NotifyBtn(){
 //Fonctions pour regler la force de la pince ?
 //Code Axe Z
 //FonctionS pour setter les zéros de l'axe Z et Pince ? lors de l'init
+//Set speed et non position pour stepper motor.

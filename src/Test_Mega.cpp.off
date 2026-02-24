@@ -8,7 +8,7 @@
 
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 uint8_t id = 102;
-uint8_t strength = 150;
+uint8_t strength = 5;
 bool PinceFermee = false;
 
 // Function prototypes
@@ -92,7 +92,7 @@ void modeTorque() {
 
 void modePosition() {
     dxl.torqueOff(id);
-    dxl.setOperatingMode(id, OP_POSITION);
+    dxl.setOperatingMode(id, OP_EXTENDED_POSITION);
     dxl.torqueOn(id);
 }
 
