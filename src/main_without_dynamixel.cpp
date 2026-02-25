@@ -47,25 +47,25 @@ long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
 
 //Moteur 1
-#define EN_PIN_M1           38 // Enable
-#define DIR_PIN_M1          22 // Direction
-#define STEP_PIN_M1         28 // Step
-#define SW_RX_M1            48 // TMC2208/TMC2224 SoftwareSerial receive pin
-#define SW_TX_M1            50 // TMC2208/TMC2224 SoftwareSerial transmit pin
+#define EN_PIN_M1 29
+#define DIR_PIN_M1 27
+#define STEP_PIN_M1 28
+#define SW_RX_M1            12 // TMC2208/TMC2224 SoftwareSerial receive pin
+#define SW_TX_M1            11 // TMC2208/TMC2224 SoftwareSerial transmit pin
 
 //Moteur 2
-#define EN_PIN_M2           39 // Enable
-#define DIR_PIN_M2          23 // Direction
-#define STEP_PIN_M2         29 // Step
-#define SW_RX_M2            49 // TMC2208/TMC2224 SoftwareSerial receive pin
-#define SW_TX_M2            51 // TMC2208/TMC2224 SoftwareSerial transmit pin
+#define EN_PIN_M2 32
+#define DIR_PIN_M2 30
+#define STEP_PIN_M2 31
+#define SW_RX_M2            10 // TMC2208/TMC2224 SoftwareSerial receive pin
+#define SW_TX_M2            9 // TMC2208/TMC2224 SoftwareSerial transmit pin
 
 //Moteur Z
-#define EN_PIN_MZ           43 // Enable
-#define DIR_PIN_MZ          45 // Direction
-#define STEP_PIN_MZ         42  // Step
-#define SW_RX_MZ            47 // TMC2208/TMC2224 SoftwareSerial receive pin
-#define SW_TX_MZ            44 // TMC2208/TMC2224 SoftwareSerial transmit pin
+#define EN_PIN_MZ 35
+#define DIR_PIN_MZ 33
+#define STEP_PIN_MZ 34
+#define SW_RX_MZ            14 // TMC2208/TMC2224 SoftwareSerial receive pin
+#define SW_TX_MZ            13 // TMC2208/TMC2224 SoftwareSerial transmit pin
 
 AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1); //Moteur gauche
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
@@ -114,7 +114,7 @@ void setup() {
   pinMode(BTN_PIN_RIGHT, INPUT_PULLUP);
   pinMode(BTN_PIN_OK, INPUT_PULLUP);
   pinMode(PIN_BTN_INTERRUPT, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, FALLING);
+  attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, CHANGE);
 
   //LIMIT SWITCHES
   //----------------
@@ -220,7 +220,7 @@ void TaskMotorControl (void *pvParameters) {
 
       bits = xEventGroupGetBits(inputEventGroup);
       limitBits = xEventGroupGetBits(limitEventGroup);
-
+      /*
       //Limit Switch Protection
       if ((limitBits & EVT_LIMIT_X) && posX <= 0){
         MOT_A.stop();
@@ -239,7 +239,7 @@ void TaskMotorControl (void *pvParameters) {
 
         MOT_A.moveTo(MOT_A.currentPosition());
         MOT_B.moveTo(MOT_B.currentPosition());
-      }
+      }*/
 
       //When a Button is pressed
       if (bits & (EVT_BTN_LEFT | EVT_BTN_RIGHT | EVT_BTN_UP | EVT_BTN_DOWN)){
