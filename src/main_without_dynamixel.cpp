@@ -46,6 +46,8 @@ long posY = 0;
 long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
 
+#define SerialGripper    Serial1 //A CHANGER SELON PORTS
+
 //Moteur 1
 #define EN_PIN_M1 29
 #define DIR_PIN_M1 27
@@ -101,6 +103,7 @@ TaskHandle_t motorTaskHandle = NULL;
 
 void setup() {
   Serial.begin(115200);
+  SerialGripper.begin(115200)
   delay(2000);
 
   inputEventGroup = xEventGroupCreate();
@@ -308,12 +311,35 @@ void TaskStateControl (void *pvParameters) {
         currentState = CLOSING;
         break;
 
-      case CLOSING:
+      case CLOSING:{
         //send message to OpenRB-150 pour fermer la pince
+        SerialGripper.write(0x02); //Fermer pince ET demander status toutou (bit 2 et 4)
         //Attendre que le toutou soit attrapé ou pas (message de retour de OpenRB-150)
+        uint8_t resp1 = 0x04; //Start as "moving"
+        while((resp1 & 0x01) == 0 && (resp1 & 0x02) == 0){ //tant que ni toutou attrapé ni rien attrapé
+          SerialGripper.write(0x04); 
+
+          // Wait for response
+          uint32_t start = millis();
+          while (!SerialGripper.available()) {
+              if (millis() - start > 500) break; // timeout
+              vTaskDelay(pdMS_TO_TICKS(10));
+          }
+
+          if (SerialGripper.available()) resp1 = SerialGripper.read();
+          vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        if (resp1 & 0x01) {
+          Serial.println("Toutou attrapé !");
+          //On passe a lifting. MAIS ON DOIT CONTINUER DE DETECTER TOUTOU EN MEME TEMPS, JUSQUA DROPPING... créer une nouvelle tache ?
+        } 
+        else if (resp1 & 0x02) {
+          Serial.println("Rien attrapé.");
+          //Ajouter Variable pour PAS call ouvrirPince tantot.
+        }
         currentState = LIFTING;
         break;
-
+      }
       case LIFTING:
         //WAIT FOR X TO BE LIFTED, THEN MOVE TO DROPZONE
         vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de détection de la levée de la pince.

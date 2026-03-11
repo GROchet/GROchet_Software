@@ -4,8 +4,8 @@
 #define DXL_SERIAL      Serial1
 #define DXL_DIR_PIN     -1
 
-#define OPEN_POS        1083
-#define CLOSED_POS      9000
+int32_t OPEN_POS = 1083
+int32_t CLOSED_POS = 9000
 
 #define MOVE_CURRENT    300 // Courant à appliquer pour déplacer la pince (unités brutes)
 #define GRIP_CURRENT    50 // Courant à appliquer pour fermer la pince (unités brutes)
@@ -57,15 +57,18 @@ void loop() {
     if (msg & 0x02) fermerPince();
     if (msg & 0x08) {
         calibrer();
-        reponse |= 0x04; // Calibration done
+        response |= 0x04; // Calibration done
     }
 
     if (msg & 0x04) { //4 = bit qui dit de verifier toutou
         int status = detecterToutou();
         if (status == 1) response |= 0x01;  // toutou_attrape
-        if (status == 2) response |= 0x02;  // rien attrapé
+        if (status == 2) {
+            ouvrirPince(); // éviter de staller le moteur
+            response |= 0x02;  // rien attrapé
+        }
+        if (status == 0) response |= 0x04;  // en mouvement (ni toutou attrapé ni rien attrapé)
     }
-    //RESET WHEN DANS ARDUINO ?
 
     // ── Send response ──
     Serial3.write(response);
