@@ -37,7 +37,7 @@ EventGroupHandle_t limitEventGroup;
 //MOTEURS
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
-int speed = 50;
+int speed = 25;
 
 //Mutex sur posX et posY ?
 long posX = 0;
@@ -103,7 +103,7 @@ TaskHandle_t motorTaskHandle = NULL;
 
 void setup() {
   Serial.begin(115200);
-  SerialGripper.begin(115200)
+  SerialGripper.begin(115200);
   delay(2000);
 
   inputEventGroup = xEventGroupCreate();
