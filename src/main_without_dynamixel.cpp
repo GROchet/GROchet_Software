@@ -19,8 +19,8 @@
 //BOUTONS
 #define BTN_PIN_UP 22
 #define BTN_PIN_DOWN 25
-#define BTN_PIN_LEFT 23
-#define BTN_PIN_RIGHT 24
+#define BTN_PIN_LEFT 24
+#define BTN_PIN_RIGHT 23
 #define BTN_PIN_OK 26
 #define PIN_BTN_INTERRUPT 3 //D3
 volatile TickType_t lastBtnInterrupt = 0;
@@ -401,33 +401,38 @@ void NotifyBtn(){
 
   //Si 2 boutons appuyés en meme temps, on garde que le plus prioritaire (OK > AUTRES BOUTONS)
   if (ok_state) {
-    xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_OK, &xHigherPriorityTaskWoken);
+    Serial.println("Blanc");
+    //xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_OK, &xHigherPriorityTaskWoken);
   }
   else {
-    xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_OK);
+    //xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_OK);
     if (up_state) {
-      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_UP, &xHigherPriorityTaskWoken);
+      Serial.println("Rouge");
+      //xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_UP, &xHigherPriorityTaskWoken);
     }
     else {
-      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_UP);
+      //xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_UP);
     }
     if (down_state) {
-      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_DOWN, &xHigherPriorityTaskWoken);
+      Serial.println("Bleu");
+      //xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_DOWN, &xHigherPriorityTaskWoken);
     }
     else {
-      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_DOWN);
+      //xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_DOWN);
     }
     if (left_state) {
-      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_LEFT, &xHigherPriorityTaskWoken);
+      Serial.println("Jaune");
+      //xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_LEFT, &xHigherPriorityTaskWoken);
     }
     else {
-      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_LEFT);
+      //xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_LEFT);
     }
     if (right_state) {
-      xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_RIGHT, &xHigherPriorityTaskWoken);
+      Serial.println("Vert");
+      //xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_RIGHT, &xHigherPriorityTaskWoken);
     }
     else {
-      xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_RIGHT);
+      //xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_RIGHT);
     }
   }
 
