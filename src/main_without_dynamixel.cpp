@@ -309,13 +309,14 @@ void TaskStateControl (void *pvParameters) {
         break;
 
       case CLOSING:
-        vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de fin de mouvement de la pince
+        //send message to OpenRB-150 pour fermer la pince
+        //Attendre que le toutou soit attrapé ou pas (message de retour de OpenRB-150)
         currentState = LIFTING;
         break;
 
       case LIFTING:
         //WAIT FOR X TO BE LIFTED, THEN MOVE TO DROPZONE
-        vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de détection de la levée du toutou.
+        vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de détection de la levée de la pince.
         currentState = MOVING_TO_DROPZONE;
         break;
 
@@ -326,7 +327,8 @@ void TaskStateControl (void *pvParameters) {
         break;
 
       case DROPPING: //DONE;
-        vTaskDelay(pdMS_TO_TICKS(3000)); //A remplacer par une condition de fin de mouvement de la pince ou de détection du dépôt du toutou
+        //send message to OpenRB-150 pour ouvrir la pince
+        //Délai pour que la pince soit ouverte !
         currentState = IDLE;
         break;
     }
