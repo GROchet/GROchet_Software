@@ -81,8 +81,8 @@ enum SystemState {
   MOVING_TO_DROPZONE, //Se déplacer vers la zone de dépôt
   DROPPING, //Pince ouverte
 };
-
 volatile SystemState currentState = IDLE;
+bool toutouAttrape = false; // Variable globale pour stocker l'état du toutou attrapé
 
 void TaskdetecterToutou (void *pvParameters);
 void TaskMotorControl (void *pvParameters);
@@ -313,10 +313,10 @@ void TaskStateControl (void *pvParameters) {
 
       case CLOSING:{
         //send message to OpenRB-150 pour fermer la pince
-        SerialGripper.write(0x02); //Fermer pince ET demander status toutou (bit 2 et 4)
+        SerialGripper.write(0x02); //Fermer pince 
         //Attendre que le toutou soit attrapé ou pas (message de retour de OpenRB-150)
         uint8_t resp1 = 0x04; //Start as "moving"
-        while((resp1 & 0x01) == 0 && (resp1 & 0x02) == 0){ //tant que ni toutou attrapé ni rien attrapé
+        while((resp1 &  0x01) == 0 && (resp1 & 0x02) == 0){ //tant que ni toutou attrapé ni rien attrapé
           SerialGripper.write(0x04); 
 
           // Wait for response
@@ -331,10 +331,12 @@ void TaskStateControl (void *pvParameters) {
         }
         if (resp1 & 0x01) {
           Serial.println("Toutou attrapé !");
+          toutouAttrape = true;
           //On passe a lifting. MAIS ON DOIT CONTINUER DE DETECTER TOUTOU EN MEME TEMPS, JUSQUA DROPPING... créer une nouvelle tache ?
         } 
         else if (resp1 & 0x02) {
           Serial.println("Rien attrapé.");
+          toutouAttrape = false;
           //Ajouter Variable pour PAS call ouvrirPince tantot.
         }
         currentState = LIFTING;

@@ -3,8 +3,8 @@
 #define DXL_SERIAL      Serial1
 #define DXL_DIR_PIN     -1
 
-#define OPEN_POS        1083
-#define CLOSED_POS      9000
+int32_t OPEN_POS = 1083;
+int32_t CLOSED_POS = 9000;
 
 #define MOVE_CURRENT    300
 #define GRIP_CURRENT    50
@@ -19,6 +19,7 @@ void ouvrirPince();
 void fermerPince();
 int  detecterToutou();
 void calibrer();
+void waitForSpacebar();
 
 void setup() {
     Serial.begin(115200);
@@ -41,6 +42,8 @@ void setup() {
 
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
     Serial.println("Ready.");
+
+    calibrer();
 }
 
 void loop() {
@@ -68,6 +71,16 @@ void loop() {
     }
 }
 
+void waitForSpacebar() {
+    Serial.println("  → Press SPACEBAR to confirm...");
+    while (true) {
+        if (Serial.available()) {
+            char c = Serial.read();
+            if (c == ' ') return;
+        }
+    }
+}
+
 void ouvrirPince() {
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
     dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
@@ -80,17 +93,17 @@ void fermerPince() {
 
 void calibrer() {
     Serial.println("=== CALIBRATION ===");
-    dxl.torqueOff(id);  // let user move freely
+    dxl.torqueOff(id);
 
     // ── Open position ──
-    Serial.println("Move gripper to OPEN position, then wait...");
-    delay(5000);
+    Serial.println("Move gripper to OPEN position.");
+    waitForSpacebar();
     OPEN_POS = dxl.getPresentPosition(id);
     Serial.print("OPEN_POS locked: "); Serial.println(OPEN_POS);
 
     // ── Closed position ──
-    Serial.println("Move gripper to CLOSED position, then wait...");
-    delay(5000);
+    Serial.println("Move gripper to CLOSED position.");
+    waitForSpacebar();
     CLOSED_POS = dxl.getPresentPosition(id);
     Serial.print("CLOSED_POS locked: "); Serial.println(CLOSED_POS);
 
