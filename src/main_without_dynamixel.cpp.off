@@ -46,7 +46,7 @@ long posY = 0;
 long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
 
-#define SerialGripper    Serial1 //A CHANGER SELON PORTS
+#define SerialGripper    Serial2 //A CHANGER SELON PORTS
 
 //Moteur 1
 #define EN_PIN_M1 29
@@ -82,19 +82,22 @@ enum SystemState {
   DROPPING, //Pince ouverte
 };
 volatile SystemState currentState = IDLE;
+
 bool toutouAttrape = false; // Variable globale pour stocker l'état du toutou attrapé
 
-void TaskdetecterToutou (void *pvParameters);
 void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
+void TaskDetectToutou(void *pvParameters);
 void NotifySwitch();
 void NotifyBtn();
 void homeXY();
 
 EventGroupHandle_t inputEventGroup;
-EventGroupHandle_t toutouEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 TaskHandle_t detectToutouTaskHandle = NULL;
+
+SemaphoreHandle_t toutouMutex;
+SemaphoreHandle_t gripperMutex; //For serial communication with OpenRB-150
 
 #define EVT_BTN_OK (1 << 0)
 #define EVT_BTN_UP (1 << 1)
@@ -109,6 +112,9 @@ void setup() {
 
   inputEventGroup = xEventGroupCreate();
   limitEventGroup = xEventGroupCreate();
+
+  toutouMutex = xSemaphoreCreateMutex();
+  gripperMutex = xSemaphoreCreateMutex();
 
   //BOUTONS
   //----------------
@@ -162,8 +168,8 @@ void setup() {
   //RTOS
   //----------------
   xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-  xTaskCreate(TaskStateControl, "StateTask", 256, NULL, 2, NULL);
-  xTaskCreate(TaskdetecterToutou, "DetectToutouTask", 256, NULL, 2, &detectToutouTaskHandle);
+  xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 2, NULL);
+  xTaskCreate(TaskDetectToutou, "DetectToutouTask", 256, NULL, 2, &detectToutouTaskHandle);
 
 }
 
@@ -175,6 +181,11 @@ void homeXY() {
 
   // Clear any stale limit bits first
   xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X | EVT_LIMIT_Y);
+
+  MOT_A.stop(); 
+  MOT_A.setCurrentPosition(MOT_A.currentPosition());
+  MOT_B.stop(); 
+  MOT_B.setCurrentPosition(MOT_B.currentPosition());
 
   // --- Home X axis ---
   MOT_A.setSpeed(-1000);
@@ -313,13 +324,16 @@ void TaskStateControl (void *pvParameters) {
         currentState = CLOSING;
         break;
 
-      case CLOSING:{
-        //send message to OpenRB-150 pour fermer la pince
-        SerialGripper.write(0x02); //Fermer pince 
+      case CLOSING:{  
+        xSemaphoreTake(gripperMutex, portMAX_DELAY);
+        SerialGripper.write(0x02);
+        xSemaphoreGive(gripperMutex);      
         //Attendre que le toutou soit attrapé ou pas (message de retour de OpenRB-150)
         uint8_t resp1 = 0x04; //Start as "moving"
         while((resp1 &  0x01) == 0 && (resp1 & 0x02) == 0){ //tant que ni toutou attrapé ni rien attrapé
+          xSemaphoreTake(gripperMutex, portMAX_DELAY);
           SerialGripper.write(0x04); 
+          
 
           // Wait for response
           uint32_t start = millis();
@@ -327,19 +341,26 @@ void TaskStateControl (void *pvParameters) {
               if (millis() - start > 500) break; // timeout
               vTaskDelay(pdMS_TO_TICKS(10));
           }
-
+          
           if (SerialGripper.available()) resp1 = SerialGripper.read();
+          xSemaphoreGive(gripperMutex);
           vTaskDelay(pdMS_TO_TICKS(100));
         }
+
         if (resp1 & 0x01) {
           Serial.println("Toutou attrapé !");
+          xSemaphoreTake(toutouMutex, portMAX_DELAY);
           toutouAttrape = true;
+          xSemaphoreGive(toutouMutex);
           //On passe a lifting. MAIS ON DOIT CONTINUER DE DETECTER TOUTOU EN MEME TEMPS, JUSQUA DROPPING... créer une nouvelle tache ?
+          xTaskNotifyGive(detectToutouTaskHandle); // Lancer la tache de detection du toutou attrapé ou pas
         } 
         else if (resp1 & 0x02) {
           Serial.println("Rien attrapé.");
+          xSemaphoreTake(toutouMutex, portMAX_DELAY);
           toutouAttrape = false;
-          //Ajouter Variable pour PAS call ouvrirPince tantot.
+          xSemaphoreGive(toutouMutex);
+          //Variable pour PAS call ouvrirPince tantot.
         }
         currentState = LIFTING;
         break;
@@ -356,14 +377,26 @@ void TaskStateControl (void *pvParameters) {
         currentState = DROPPING;
         break;
 
-      case DROPPING: //DONE;
-        if (toutouAttrape) {
+      case DROPPING:{ //DONE;
+
+        xSemaphoreTake(toutouMutex, portMAX_DELAY);
+        bool local = toutouAttrape;
+        xSemaphoreGive(toutouMutex);
+
+        if (local) {
+          xSemaphoreTake(gripperMutex, portMAX_DELAY);
           SerialGripper.write(0x01); // ouvrir pince
+          xSemaphoreGive(gripperMutex);
+
           vTaskDelay(pdMS_TO_TICKS(1000));
+          xTaskNotifyGive(detectToutouTaskHandle); // Stop la tache de detection du toutou, et ouvrir la pince si elle est encore fermée
         }
+        xSemaphoreTake(toutouMutex, portMAX_DELAY);
         toutouAttrape = false;
+        xSemaphoreGive(toutouMutex);
         currentState = IDLE;
         break;
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(20));
@@ -449,29 +482,36 @@ void TaskDetectToutou (void *pvParameters) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     for(;;){
-      //Lire les capteurs de la pince pour detecter si le toutou est attrapé ou pas
-      if (toutouAttrape){
-        SerialGripper.write(0x04); 
-        uint8_t resp1 = 0x04; //Start as "moving"
-        
-        // Wait for response
-        uint32_t start = millis();
-        while (!SerialGripper.available()) {
-          if (millis() - start > 500) break; // timeout
-          vTaskDelay(pdMS_TO_TICKS(10));
-        }
-
-        if (SerialGripper.available()) resp1 = SerialGripper.read();
-        vTaskDelay(pdMS_TO_TICKS(100));
-
-        //Mettre à jour la variable toutouAttrape en conséquence
-        else if (resp1 & 0x02) { //Toutou laché
-          toutouAttrape = false;
-          //Variable pour PAS call ouvrirPince tantot.
-        }
+      //Lire les capteurs de la pince pour detecter si le toutou est attrapé ou pas<
+      xSemaphoreTake(gripperMutex, portMAX_DELAY);
+      SerialGripper.write(0x04); 
+      uint8_t resp1 = 0x04; //Start as "moving"
+      
+      // Wait for response
+      uint32_t start = millis();
+      while (!SerialGripper.available()) {
+        if (millis() - start > 500) break; // timeout
+        vTaskDelay(pdMS_TO_TICKS(10));
       }
+      if (SerialGripper.available()) resp1 = SerialGripper.read();
+      xSemaphoreGive(gripperMutex);
+
+      vTaskDelay(pdMS_TO_TICKS(100));
+
+      //Mettre à jour la variable toutouAttrape en conséquence
+      if (resp1 & 0x02) { //Toutou laché
+        xSemaphoreTake(toutouMutex, portMAX_DELAY);
+        toutouAttrape = false;
+        xSemaphoreGive(toutouMutex);
+        //Variable pour PAS call ouvrirPince tantot.
+      }
+
+      xSemaphoreTake(toutouMutex, portMAX_DELAY);
+      bool local = toutouAttrape;
+      xSemaphoreGive(toutouMutex);
+
       // Check if we received a new notification telling us to STOP 
-      if (ulTaskNotifyTake(pdTRUE, 0)) { 
+      if (ulTaskNotifyTake(pdTRUE, 0) || local == false) { 
         break;  // Exit detection loop immediately
       }
       vTaskDelay(pdMS_TO_TICKS(20));

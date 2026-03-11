@@ -1,5 +1,4 @@
 #include <Dynamixel2Arduino.h>
-#include <FreeRTOS_SAMD21.h>
 
 #define DXL_SERIAL      Serial1
 #define DXL_DIR_PIN     -1
@@ -12,6 +11,11 @@ int32_t CLOSED_POS = 9000;
 #define STALL_CURRENT   40 // Courant en dessous duquel on considère que le moteur est en stall (unités brutes)
 #define VEL_THRESHOLD   5 // Vitesse en dessous de laquelle on considère que le moteur est à l'arrêt (unités brutes)
 #define STALL_CONFIRM   300 // Temps de suite que le moteur doit être à l'arrêt pour confirmer un stall (ms)
+
+/*
+A FAIRE : 
+CHECKSUM ou CRC8 pour protocole communication Arduino <-> OPENRB
+*/
 
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 uint8_t  id          = 102;
@@ -106,24 +110,27 @@ void calibrer() {
 }
 
 int detecterToutou() {
+    static uint32_t stallSince = 0;  // timestamp of first stall detection
+
     int32_t pos     = dxl.getPresentPosition(id);
     int32_t vel     = dxl.getPresentVelocity(id);
     int16_t current = (int16_t)dxl.readControlTableItem(ControlTableItem::PRESENT_CURRENT, id);
 
-    Serial.print("Pos: "); Serial.print(pos);
-    Serial.print(" | Vel: "); Serial.print(vel);
-    Serial.print(" | Current: "); Serial.println(current);
-
-    //Pas de toutou attrapé
-    if (pos >= CLOSED_POS - 5) return 2;
-
-    //Toutou attrapé
-    if (abs(current) >= STALL_CURRENT && abs(vel) < VEL_THRESHOLD) {
-        delay(STALL_CONFIRM); //problématique = delai
-        current = (int16_t)dxl.readControlTableItem(ControlTableItem::PRESENT_CURRENT, id);
-        vel     = dxl.getPresentVelocity(id);
-        if (abs(current) >= STALL_CURRENT && abs(vel) < VEL_THRESHOLD) return 1;
+    if (pos >= CLOSED_POS - 5) {
+        stallSince = 0;
+        return 2;  // fully closed, nothing grabbed
     }
 
-    return 0;
+    if (abs(current) >= STALL_CURRENT && abs(vel) < VEL_THRESHOLD) {
+        if (stallSince == 0) stallSince = millis();  // first time we see stall
+        
+        if (millis() - stallSince >= STALL_CONFIRM) {
+            stallSince = 0;
+            return 1;  // confirmed stall = toutou attrapé
+        }
+    } else {
+        stallSince = 0;  // condition broke, reset timer
+    }
+
+    return 0;  // still moving / not confirmed yet
 }
