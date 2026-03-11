@@ -94,6 +94,7 @@ void homeXY();
 EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
+TaskHandle_t detectToutouTaskHandle = NULL;
 
 #define EVT_BTN_OK (1 << 0)
 #define EVT_BTN_UP (1 << 1)
@@ -103,7 +104,7 @@ TaskHandle_t motorTaskHandle = NULL;
 
 void setup() {
   Serial.begin(115200);
-  SerialGripper.begin(115200)
+  SerialGripper.begin(115200);
   delay(2000);
 
   inputEventGroup = xEventGroupCreate();
@@ -162,6 +163,7 @@ void setup() {
   //----------------
   xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
   xTaskCreate(TaskStateControl, "StateTask", 256, NULL, 2, NULL);
+  xTaskCreate(TaskdetecterToutou, "DetectToutouTask", 256, NULL, 2, &detectToutouTaskHandle);
 
 }
 
@@ -355,8 +357,11 @@ void TaskStateControl (void *pvParameters) {
         break;
 
       case DROPPING: //DONE;
-        //send message to OpenRB-150 pour ouvrir la pince
-        //Délai pour que la pince soit ouverte !
+        if (toutouAttrape) {
+          SerialGripper.write(0x01); // ouvrir pince
+          vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+        toutouAttrape = false;
         currentState = IDLE;
         break;
     }
@@ -437,6 +442,42 @@ void NotifyBtn(){
 
 }
 
+void TaskDetectToutou (void *pvParameters) {
+  (void) pvParameters;
+  for(;;){
+
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    for(;;){
+      //Lire les capteurs de la pince pour detecter si le toutou est attrapé ou pas
+      if (toutouAttrape){
+        SerialGripper.write(0x04); 
+        uint8_t resp1 = 0x04; //Start as "moving"
+        
+        // Wait for response
+        uint32_t start = millis();
+        while (!SerialGripper.available()) {
+          if (millis() - start > 500) break; // timeout
+          vTaskDelay(pdMS_TO_TICKS(10));
+        }
+
+        if (SerialGripper.available()) resp1 = SerialGripper.read();
+        vTaskDelay(pdMS_TO_TICKS(100));
+
+        //Mettre à jour la variable toutouAttrape en conséquence
+        else if (resp1 & 0x02) { //Toutou laché
+          toutouAttrape = false;
+          //Variable pour PAS call ouvrirPince tantot.
+        }
+      }
+      // Check if we received a new notification telling us to STOP 
+      if (ulTaskNotifyTake(pdTRUE, 0)) { 
+        break;  // Exit detection loop immediately
+      }
+      vTaskDelay(pdMS_TO_TICKS(20));
+    }
+  }
+}
 
 //TODO
 //Fonctions pour regler la force de la pince ?
