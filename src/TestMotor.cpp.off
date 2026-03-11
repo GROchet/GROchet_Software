@@ -4,16 +4,8 @@
 #include "event_groups.h"
 #include <AccelStepper.h>
 
-//TO consider before running for the first Time
-
-// strength of the grip
-// OPEN_POS and CLOSED_POS of the Dynamixel
-
-// speed of XY
-// MAX_POS_X and MAX_POS_Y according to the system's dimensions (CORE_XY)
-// MAX speed and acceleration of the stepper motors
-// Serial Begin, for dynamixel and stepper_motors
-
+// Code pour tester les branchement des deux moteurs, teste effectuer le 2026-03-11 par Cloé et Marco B.
+// Résulta : les moteurs fonctionnent mais les courois skipe des dents
 
 //BOUTONS
 #define BTN_PIN_UP 22
