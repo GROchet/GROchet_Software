@@ -173,7 +173,6 @@ void setup() {
   xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
   xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 2, NULL);
   xTaskCreate(TaskDetectToutou, "DetectToutouTask", 256, NULL, 2, &detectToutouTaskHandle);
-
 }
 
 void loop() {
@@ -318,12 +317,14 @@ void TaskStateControl (void *pvParameters) {
         xTaskNotifyGive(motorTaskHandle);   // Enable manual control
         xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
         xTaskNotifyGive(motorTaskHandle);   // Send stop signal
+        Serial.println("Transition to LOWERING");
         currentState = LOWERING;
         break;
 
       case LOWERING:
         //Séquence de mouvement vers le bas
         vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de fin de mouvement
+        Serial.println("Transition to CLOSING");
         currentState = CLOSING;
         break;
 
