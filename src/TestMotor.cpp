@@ -28,11 +28,9 @@ EventGroupHandle_t limitEventGroup;
 //MOTEURS
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
-int speed = 25;
+int speed = 50;
 
-//Mutex sur posX et posY ?
-long posX = 0;
-long posY = 0;
+
 
 long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
@@ -79,14 +77,20 @@ EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 
-#define EVT_BTN_OK (1 << 0)
-#define EVT_BTN_UP (1 << 1)
-#define EVT_BTN_DOWN (1 << 2)
-#define EVT_BTN_LEFT (1 << 3)
-#define EVT_BTN_RIGHT (1 << 4)
+#define BTN_OK 0
+#define BTN_UP 1
+#define BTN_DOWN 2
+#define BTN_LEFT 3
+#define BTN_RIGHT 4
 
 long targetA = 0;
 long targetB = 0;
+
+//Mutex sur posX et posY ?
+long posX = 0;
+long posY = 0;
+
+int bouton = BTN_UP;
 
 void setup() {
   Serial.begin(115200);
@@ -127,12 +131,32 @@ void setup() {
 }
 
 void loop() {
-    targetA += speed;
-    targetB += speed;
-    
-    MOT_A.moveTo(targetA);
-    MOT_B.moveTo(targetB);
+  int deltaX = 0;
+  int deltaY = 0;
 
-    MOT_A.run();
-    MOT_B.run();
+  // Calcul des deltas selon boutons 
+  if(bouton == BTN_UP)    deltaX += speed;
+  if(bouton == BTN_DOWN)  deltaX -= speed;
+  if(bouton == BTN_LEFT)  deltaY += speed;
+  if(bouton == BTN_RIGHT) deltaY -= speed;
+  
+  // Respect des software maximum/min limits
+  if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
+  if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
+  if(posX + deltaX < 0) deltaX = -posX;
+  if(posY + deltaY < 0) deltaY = -posY;
+
+  // Update positions
+  posX += deltaX;
+  posY += deltaY;
+
+  // CoreXY mapping
+  long targetA = posX + posY;
+  long targetB = posX - posY;
+    
+  MOT_A.moveTo(targetA);
+  MOT_B.moveTo(targetB);
+
+  MOT_A.run();
+  MOT_B.run();
 }

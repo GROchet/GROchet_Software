@@ -249,7 +249,7 @@ void TaskMotorControl (void *pvParameters) {
         int deltaX = 0;
         int deltaY = 0;
 
-        // Calcul des deltas selon boutons
+        // Calcul des deltas selon boutons 
         if(bits & EVT_BTN_UP)    deltaX += speed;
         if(bits & EVT_BTN_DOWN)  deltaX -= speed;
         if(bits & EVT_BTN_LEFT)  deltaY += speed;
