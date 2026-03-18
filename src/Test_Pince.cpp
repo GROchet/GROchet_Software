@@ -20,6 +20,7 @@ void fermerPince();
 int  detecterToutou();
 void calibrer();
 void waitForSpacebar();
+void moveWithKeys();
 
 void setup() {
     Serial.begin(115200);
@@ -49,7 +50,7 @@ void setup() {
 void loop() {
     ouvrirPince();
     Serial.println("Pince ouverte");
-    delay(2000);
+    delay(3000);
 
     fermerPince();
     Serial.println("Fermeture en cours...");
@@ -63,11 +64,11 @@ void loop() {
 
     if (status == 1) {
         Serial.println("Toutou attrapé !");
-        delay(3000);
+        delay(5000);
     } else if (status == 2) {
         Serial.println("Rien attrapé.");
         ouvrirPince();
-        delay(1000);
+        delay(5000); 
     }
 }
 
@@ -93,23 +94,37 @@ void fermerPince() {
 
 void calibrer() {
     Serial.println("=== CALIBRATION ===");
-    dxl.torqueOff(id);
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+    dxl.torqueOn(id);
 
-    // ── Open position ──
     Serial.println("Move gripper to OPEN position.");
-    waitForSpacebar();
+    Serial.println("  's' = close, 'w' = open, SPACE = confirm");
+    moveWithKeys();
     OPEN_POS = dxl.getPresentPosition(id);
     Serial.print("OPEN_POS locked: "); Serial.println(OPEN_POS);
 
-    // ── Closed position ──
     Serial.println("Move gripper to CLOSED position.");
-    waitForSpacebar();
+    Serial.println("  's' = close, 'w' = open, SPACE = confirm");
+    moveWithKeys();
     CLOSED_POS = dxl.getPresentPosition(id);
     Serial.print("CLOSED_POS locked: "); Serial.println(CLOSED_POS);
 
-    dxl.torqueOn(id);
     Serial.print("Range: "); Serial.println(CLOSED_POS - OPEN_POS);
     Serial.println("Calibration done.");
+}
+
+void moveWithKeys() {
+    int32_t target = dxl.getPresentPosition(id);
+    while (true) {
+        if (Serial.available()) {
+            char c = Serial.read();
+            if (c == ' ') return;                    // confirm
+            if (c == 'w') target -= 100;             // open direction
+            if (c == 's') target += 100;             // close direction
+            dxl.setGoalPosition(id, target, UNIT_RAW);
+        }
+        delay(10);
+    }
 }
 
 int detecterToutou() {

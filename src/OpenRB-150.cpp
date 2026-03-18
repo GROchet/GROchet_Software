@@ -24,10 +24,11 @@ void ouvrirPince();
 void fermerPince();
 int  detecterToutou();
 void calibrer();
+uint8_t crc8(uint8_t *data, uint8_t len);
 
 void setup() {
     Serial.begin(115200);
-    Serial3.begin(115200);  //Peut etre 1 ? Pour communication UART
+    Serial3.begin(9600);  //Pour communication UART
     delay(2000);
 
     dxl.begin(57600);
@@ -50,10 +51,15 @@ void setup() {
 }
 
 void loop() {
-    // ── Read message from Arduino ──
-    if (!Serial3.available()) return;
+    // Wait until we have 2 bytes (msg + CRC)
+    if (Serial3.available() < 2) return;
 
-    uint8_t msg = Serial3.read();
+    uint8_t msg   = Serial3.read();
+    uint8_t rxCrc = Serial3.read();
+
+    // Validate CRC — drop bad frames silently
+    if (rxCrc != crc8(&msg, 1)) return;
+
     uint8_t response = 0;
 
     // ── Act on bits ──
@@ -75,7 +81,8 @@ void loop() {
     }
 
     // ── Send response ──
-    Serial3.write(response);
+    uint8_t frame[2] = { response, crc8(&response, 1) };
+    Serial3.write(frame, 2);
 }
 
 void ouvrirPince() {
@@ -133,4 +140,16 @@ int detecterToutou() {
     }
 
     return 0;  // still moving / not confirmed yet
+}
+
+uint8_t crc8 (uint8_t *data, uint8_t len){
+  uint8_t crc = 0x00; 
+  for (uint8_t i = 0;i<len;i++){
+    crc ^= data[i];
+    for (uint8_t b = 0;b<8;b++){
+      if(crc & 0x80) crc = (crc << 1) ^ 0x07;
+      else crc <<= 1;
+    }
+  }
+  return crc;
 }

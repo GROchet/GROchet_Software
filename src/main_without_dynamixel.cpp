@@ -91,6 +91,9 @@ void TaskDetectToutou(void *pvParameters);
 void NotifySwitch();
 void NotifyBtn();
 void homeXY();
+uint8_t crc8(uint8_t *data, uint8_t len);
+void gripperSend(uint8_t msg);
+uint8_t gripperReceive(uint32_t timeoutMs = 500);
 
 EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
@@ -107,7 +110,7 @@ SemaphoreHandle_t gripperMutex; //For serial communication with OpenRB-150
 
 void setup() {
   Serial.begin(115200);
-  SerialGripper.begin(115200);
+  SerialGripper.begin(9600);
   delay(2000);
 
   inputEventGroup = xEventGroupCreate();
@@ -326,23 +329,16 @@ void TaskStateControl (void *pvParameters) {
 
       case CLOSING:{  
         xSemaphoreTake(gripperMutex, portMAX_DELAY);
-        SerialGripper.write(0x02);
+        gripperSend(0x02);
         xSemaphoreGive(gripperMutex);      
         //Attendre que le toutou soit attrapé ou pas (message de retour de OpenRB-150)
         uint8_t resp1 = 0x04; //Start as "moving"
         while((resp1 &  0x01) == 0 && (resp1 & 0x02) == 0){ //tant que ni toutou attrapé ni rien attrapé
           xSemaphoreTake(gripperMutex, portMAX_DELAY);
-          SerialGripper.write(0x04); 
-          
 
-          // Wait for response
-          uint32_t start = millis();
-          while (!SerialGripper.available()) {
-              if (millis() - start > 500) break; // timeout
-              vTaskDelay(pdMS_TO_TICKS(10));
-          }
-          
-          if (SerialGripper.available()) resp1 = SerialGripper.read();
+          gripperSend(0x04);
+          resp1 = gripperReceive(); // Wait for response with timeout
+
           xSemaphoreGive(gripperMutex);
           vTaskDelay(pdMS_TO_TICKS(100));
         }
@@ -385,7 +381,7 @@ void TaskStateControl (void *pvParameters) {
 
         if (local) {
           xSemaphoreTake(gripperMutex, portMAX_DELAY);
-          SerialGripper.write(0x01); // ouvrir pince
+          gripperSend(0x01); // ouvrir pince
           xSemaphoreGive(gripperMutex);
 
           vTaskDelay(pdMS_TO_TICKS(1000));
@@ -484,16 +480,9 @@ void TaskDetectToutou (void *pvParameters) {
     for(;;){
       //Lire les capteurs de la pince pour detecter si le toutou est attrapé ou pas<
       xSemaphoreTake(gripperMutex, portMAX_DELAY);
-      SerialGripper.write(0x04); 
+      gripperSend(0x04); 
       uint8_t resp1 = 0x04; //Start as "moving"
-      
-      // Wait for response
-      uint32_t start = millis();
-      while (!SerialGripper.available()) {
-        if (millis() - start > 500) break; // timeout
-        vTaskDelay(pdMS_TO_TICKS(10));
-      }
-      if (SerialGripper.available()) resp1 = SerialGripper.read();
+      resp1 = gripperReceive(); // Wait for response with timeout
       xSemaphoreGive(gripperMutex);
 
       vTaskDelay(pdMS_TO_TICKS(100));
@@ -517,6 +506,35 @@ void TaskDetectToutou (void *pvParameters) {
       vTaskDelay(pdMS_TO_TICKS(20));
     }
   }
+}
+
+uint8_t crc8 (uint8_t *data, uint8_t len){
+  uint8_t crc = 0x00; 
+  for (uint8_t i = 0;i<len;i++){
+    crc ^= data[i];
+    for (uint8_t b = 0;b<8;b++){
+      if(crc & 0x80) crc = (crc << 1) ^ 0x07;
+      else crc <<= 1;
+    }
+  }
+  return crc;
+}
+
+void gripperSend(uint8_t msg) {
+  uint8_t frame[2] = { msg, crc8(&msg, 1) };
+  SerialGripper.write(frame, 2);
+}
+
+uint8_t gripperReceive(uint32_t timeoutMs = 500) {
+  uint32_t start = millis();
+  while (SerialGripper.available() < 2) {
+    if (millis() - start > timeoutMs) return 0xFF; // timeout
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  uint8_t resp = SerialGripper.read();
+  uint8_t crc  = SerialGripper.read();
+  if (crc != crc8(&resp, 1)) return 0xFF; // CRC mismatch
+  return resp;
 }
 
 //TODO
