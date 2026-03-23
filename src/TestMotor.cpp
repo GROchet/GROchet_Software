@@ -28,7 +28,7 @@ EventGroupHandle_t limitEventGroup;
 //MOTEURS
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
-int speed = 50;
+int speed = 2; // il faut diminuer vitesse pour que ca fonctinne
 
 
 
@@ -80,8 +80,8 @@ TaskHandle_t motorTaskHandle = NULL;
 #define BTN_OK 0
 #define BTN_UP 1
 #define BTN_DOWN 2
-#define BTN_LEFT 3
-#define BTN_RIGHT 4
+#define BTN_LEFT 3 // dia go
+#define BTN_RIGHT 4 // roule dans le voe
 
 long targetA = 0;
 long targetB = 0;
