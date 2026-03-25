@@ -131,6 +131,7 @@ void setup() {
 }
 
 void loop() {
+  /*
   int deltaX = 0;
   int deltaY = 0;
 
@@ -153,6 +154,16 @@ void loop() {
   // CoreXY mapping
   long targetA = posX + posY;
   long targetB = posX - posY;
+    
+  MOT_A.moveTo(targetA);
+  MOT_B.moveTo(targetB);
+
+  MOT_A.run();
+  MOT_B.run();
+  */
+
+  targetA += speed;
+  targetB += speed;
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
