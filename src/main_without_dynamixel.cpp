@@ -70,6 +70,7 @@ long MAX_POS_Y = 50000;
 #define SW_TX_MZ            13 // TMC2208/TMC2224 SoftwareSerial transmit pin
 
 long liftedZPos = 0; //Position de l'axe Z quand la pince est levée, à ajuster selon le système
+long maxDownZPos = 10000; //Position de l'axe Z quand la pince est au plus bas, à ajuster selon le système
 
 AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1); //Moteur gauche
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
@@ -319,7 +320,9 @@ void TaskStateControl (void *pvParameters) {
         xTaskNotifyGive(motorTaskHandle);   // Enable manual control
         xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
         xTaskNotifyGive(motorTaskHandle);   // Send stop signal
+        currentState = IDLE;
       case IDLE://DONE
+        Serial.println("IDLE: Use buttons to move, OK to calibrate.");
         xTaskNotifyGive(motorTaskHandle);   // Enable manual control
         xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
         xTaskNotifyGive(motorTaskHandle);   // Send stop signal
@@ -330,7 +333,9 @@ void TaskStateControl (void *pvParameters) {
       case LOWERING:
         //Séquence de mouvement vers le bas
         MOT_Z.setSpeed(speed);
-        while (!(xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK)) {
+        while (1) {
+          if (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) break;
+          else if (MOT_Z.currentPosition() >= maxDownZPos) break; // On s'assure de pas descendre plus que la position levée, au cas où le limit switch ne marche pas
           MOT_Z.runSpeed(); // actually step the motor
           vTaskDelay(pdMS_TO_TICKS(1));
         }
