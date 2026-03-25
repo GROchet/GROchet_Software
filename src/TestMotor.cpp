@@ -28,12 +28,6 @@ EventGroupHandle_t limitEventGroup;
 //MOTEURS
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
-int speed = 2; // il faut diminuer vitesse pour que ca fonctinne
-
-
-
-long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
-long MAX_POS_Y = 50000;
 
 #define SerialGripper    Serial1 //A CHANGER SELON PORTS
 
@@ -80,17 +74,49 @@ TaskHandle_t motorTaskHandle = NULL;
 #define BTN_OK 0
 #define BTN_UP 1
 #define BTN_DOWN 2
-#define BTN_LEFT 3 // dia go
-#define BTN_RIGHT 4 // roule dans le voe
+#define BTN_LEFT 3
+#define BTN_RIGHT 4
 
 long targetA = 0;
 long targetB = 0;
 
 //Mutex sur posX et posY ?
-long posX = 0;
+long posX = 12870;
 long posY = 0;
 
-int bouton = BTN_UP;
+int speed = 2; // Vitesse fonctionnel
+
+long MAX_POS_X = 12870; // À déterminer ->
+long MAX_POS_Y = 30000;
+
+int bouton_direction_tester = BTN_DOWN;
+/*
+1. Test déplacement chariot X selon une direction 
+(2026-03-25 12h) Cloé
+UP -> diago (bon sens)
+DOWN -> pas bouger
+LEFT -> diago (bon sens)
+RIGHT -> pas bouger
+
+mise en commentaire du code de limite
+(2026-03-25 14h 30) Cloé
+UP -> 
+DOWN -> diago (bon sens)
+LEFT -> 
+RIGHT ->
+
+raison pourquoi déplacement diago : le moteur poulie haut tourne mais pas la poulie, Amélie a reviser vise poulie
+UP -> Ok
+DOWN -> Ok
+LEFT -> Ok
+RIGHT -> OK
+
+2. Test limite de position
+(2026-03-25 15h) Cloé
+50000 -> trop loin
+40000
+
+*/
 
 void setup() {
   Serial.begin(115200);
@@ -128,6 +154,11 @@ void setup() {
   MOT_A.setCurrentPosition(0);
   MOT_B.setCurrentPosition(0);
   MOT_Z.setCurrentPosition(0);
+
+    Serial.print("Position X :");
+    Serial.print(posX);
+    Serial.print("  Position Y :");
+    Serial.println(posX);
 }
 
 void loop() {
@@ -135,16 +166,18 @@ void loop() {
   int deltaY = 0;
 
   // Calcul des deltas selon boutons 
-  if(bouton == BTN_UP)    deltaX += speed;
-  if(bouton == BTN_DOWN)  deltaX -= speed;
-  if(bouton == BTN_LEFT)  deltaY += speed;
-  if(bouton == BTN_RIGHT) deltaY -= speed;
+  if(bouton_direction_tester == BTN_UP)    deltaX += speed;
+  if(bouton_direction_tester == BTN_DOWN)  deltaX -= speed;
+  if(bouton_direction_tester == BTN_LEFT)  deltaY += speed;
+  if(bouton_direction_tester == BTN_RIGHT) deltaY -= speed;
   
   // Respect des software maximum/min limits
+  /*
   if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
   if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
   if(posX + deltaX < 0) deltaX = -posX;
   if(posY + deltaY < 0) deltaY = -posY;
+  */
 
   // Update positions
   posX += deltaX;
@@ -157,11 +190,23 @@ void loop() {
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
 
-  MOT_A.run();
-  MOT_B.run();
+  Serial.print("Position X :");
+  Serial.print(posX);
+  Serial.print("  Position Y :");
+  Serial.println(posY);
+
+  if(((posX <= MAX_POS_X) & (posX >= 0)) & ((posX >= 0) & (posY <= MAX_POS_Y))) {
+    Serial.println("test");
+    MOT_A.run();
+    MOT_B.run();
+  }
+  //delay(500);
+
+
 
   /*
-  // Test déplacement moteur diagonal 2026-03-25 -> fonctionnelle 
+  // Test déplacement chariot X diagonal 
+  // (2026-03-25 11h) Cloé -> fonctionnelle 
   targetA -= speed;
   targetB -= speed;
     
