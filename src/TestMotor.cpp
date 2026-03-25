@@ -131,7 +131,6 @@ void setup() {
 }
 
 void loop() {
-  /*
   int deltaX = 0;
   int deltaY = 0;
 
@@ -160,14 +159,16 @@ void loop() {
 
   MOT_A.run();
   MOT_B.run();
-  */
 
-  targetA += speed;
-  targetB += speed;
+  /*
+  // Test déplacement moteur diagonal 2026-03-25 -> fonctionnelle 
+  targetA -= speed;
+  targetB -= speed;
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
 
   MOT_A.run();
   MOT_B.run();
+  */
 }
