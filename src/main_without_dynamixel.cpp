@@ -69,11 +69,14 @@ long MAX_POS_Y = 50000;
 #define SW_RX_MZ            14 // TMC2208/TMC2224 SoftwareSerial receive pin
 #define SW_TX_MZ            13 // TMC2208/TMC2224 SoftwareSerial transmit pin
 
+long liftedZPos = 0; //Position de l'axe Z quand la pince est levée, à ajuster selon le système
+
 AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1); //Moteur gauche
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
 AccelStepper MOT_Z = AccelStepper(AccelStepper::DRIVER, STEP_PIN_MZ,DIR_PIN_MZ); //Moteur Z
 
 enum SystemState {
+  DIFF_CHOOSE, //State pour choisir la difficulté (bouton OK pour valider la difficulté choisie, et passer à IDLE)
   IDLE,
   LOWERING, //On descend l'axe Z
   CLOSING, //Pince fermée
@@ -171,7 +174,7 @@ void setup() {
   //RTOS
   //----------------
   xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-  xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 2, NULL);
+  xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 1, NULL);
   xTaskCreate(TaskDetectToutou, "DetectToutouTask", 256, NULL, 2, &detectToutouTaskHandle);
 }
 
@@ -312,7 +315,10 @@ void TaskStateControl (void *pvParameters) {
   for(;;) {
 
     switch(currentState) {
-
+      case DIFF_CHOOSE:
+        xTaskNotifyGive(motorTaskHandle);   // Enable manual control
+        xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+        xTaskNotifyGive(motorTaskHandle);   // Send stop signal
       case IDLE://DONE
         xTaskNotifyGive(motorTaskHandle);   // Enable manual control
         xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -323,7 +329,14 @@ void TaskStateControl (void *pvParameters) {
 
       case LOWERING:
         //Séquence de mouvement vers le bas
-        vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de fin de mouvement
+        MOT_Z.setSpeed(speed);
+        while (!(xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK)) {
+          MOT_Z.runSpeed(); // actually step the motor
+          vTaskDelay(pdMS_TO_TICKS(1));
+        }
+        xEventGroupClearBits(inputEventGroup, EVT_BTN_OK); // clear the bit
+        MOT_Z.stop();
+
         Serial.println("Transition to CLOSING");
         currentState = CLOSING;
         break;
@@ -363,8 +376,13 @@ void TaskStateControl (void *pvParameters) {
         break;
       }
       case LIFTING:
-        //WAIT FOR X TO BE LIFTED, THEN MOVE TO DROPZONE
-        vTaskDelay(pdMS_TO_TICKS(2000)); //A remplacer par une condition de détection de la levée de la pince.
+        //WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
+        MOT_Z.setSpeed(-speed);
+        while(MOT_Z.currentPosition() > liftedZPos){
+          MOT_Z.runSpeed(); // actually step the motor
+          vTaskDelay(pdMS_TO_TICKS(5));
+        }
+        MOT_Z.stop();
         currentState = MOVING_TO_DROPZONE;
         break;
 
