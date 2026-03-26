@@ -114,7 +114,15 @@ RIGHT -> OK
 2. Test limite de position
 (2026-03-25 15h) Cloé
 50000 -> trop loin
-40000
+selon possition imprimer : 12870
+
+
+Assurer déplacement chariot X selon une direction 
+(2026-03-26 14h) Cloé
+UP -> Ok
+DOWN -> mauvaise direction (même que up)
+
+
 
 */
 
@@ -162,6 +170,33 @@ void setup() {
 }
 
 void loop() {
+  /*
+  int deltaX = 0;
+  int deltaY = 0;
+
+  //Code déplacer moteur une direction avec max
+  if(bouton_direction_tester == BTN_UP) {
+    deltaX += speed;
+    deltaY += speed;
+  }
+
+  if(bouton_direction_tester == BTN_DOWN) {
+    deltaX += speed;
+    deltaY += speed;
+  }
+
+  if(bouton_direction_tester == BTN_LEFT) {
+    deltaX += speed;
+    deltaY += speed;
+  }
+
+  if(bouton_direction_tester == BTN_RIGHT) {
+    deltaX += speed;
+    deltaY += speed;
+  } 
+  */
+
+  
   int deltaX = 0;
   int deltaY = 0;
 
@@ -177,38 +212,46 @@ void loop() {
   if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
   if(posX + deltaX < 0) deltaX = -posX;
   if(posY + deltaY < 0) deltaY = -posY;
-  */
+   */  
 
   // Update positions
   posX += deltaX;
   posY += deltaY;
 
   // CoreXY mapping
-  long targetA = posX + posY;
-  long targetB = posX - posY;
+  targetA = posX + posY;
+  targetB = posX - posY;
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
 
-  Serial.print("Position X :");
+  MOT_A.run();
+  MOT_B.run();
+
+  Serial.print("A :");
+  Serial.print(targetA);
+  Serial.print("  B :");
+  Serial.println(targetB);
+
+  /*
+  if(((posX <= MAX_POS_X) & (posX >= 0)) & ((posX >= 0) & (posY <= MAX_POS_Y))) {
+    Serial.print("Position X :");
   Serial.print(posX);
   Serial.print("  Position Y :");
-  Serial.println(posY);
-
-  if(((posX <= MAX_POS_X) & (posX >= 0)) & ((posX >= 0) & (posY <= MAX_POS_Y))) {
-    Serial.println("test");
+  Serial.println(posY);  
+  Serial.println("test");
     MOT_A.run();
     MOT_B.run();
   }
   //delay(500);
-
+  */
 
 
   /*
   // Test déplacement chariot X diagonal 
   // (2026-03-25 11h) Cloé -> fonctionnelle 
   targetA -= speed;
-  targetB -= speed;
+  targetB += speed;
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
