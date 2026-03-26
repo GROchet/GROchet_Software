@@ -80,8 +80,11 @@ TaskHandle_t motorTaskHandle = NULL;
 long targetA = 0;
 long targetB = 0;
 
+  int deltaX = 0;
+  int deltaY = 0;
+
 //Mutex sur posX et posY ?
-long posX = 12870;
+long posX = 0;
 long posY = 0;
 
 int speed = 2; // Vitesse fonctionnel
@@ -89,7 +92,7 @@ int speed = 2; // Vitesse fonctionnel
 long MAX_POS_X = 12870; // À déterminer ->
 long MAX_POS_Y = 30000;
 
-int bouton_direction_tester = BTN_DOWN;
+int bouton_direction_tester = BTN_UP;
 /*
 1. Test déplacement chariot X selon une direction 
 (2026-03-25 12h) Cloé
@@ -169,42 +172,73 @@ void setup() {
     Serial.println(posX);
 }
 
-void loop() {
-  /*
-  int deltaX = 0;
-  int deltaY = 0;
 
+void loop() {
+  int deltaA = 0;
+  int deltaB = 0;
+
+
+  bouton_direction_tester = BTN_RIGHT;
   //Code déplacer moteur une direction avec max
   if(bouton_direction_tester == BTN_UP) {
-    deltaX += speed;
-    deltaY += speed;
+    deltaA += speed;
+    deltaB += speed;
   }
 
   if(bouton_direction_tester == BTN_DOWN) {
-    deltaX += speed;
-    deltaY += speed;
+    deltaA -= speed;
+    deltaB -= speed;
   }
 
+  //bouton_direction_tester = BTN_LEFT;
   if(bouton_direction_tester == BTN_LEFT) {
-    deltaX += speed;
-    deltaY += speed;
+    deltaA += speed;
+    deltaB -= speed;
   }
 
   if(bouton_direction_tester == BTN_RIGHT) {
-    deltaX += speed;
-    deltaY += speed;
+    deltaA -= speed;
+    deltaB += speed;
   } 
-  */
 
-  
+  Serial.print("delta A :");
+  Serial.print(deltaA);
+  Serial.print("delta B :");
+  Serial.println(deltaB);
+
+  // Update positions
+  deltaX = (deltaA + deltaB) / 2;
+  deltaY = (deltaA - deltaB) / 2;
+
+  Serial.print("delta X :");
+  Serial.print(deltaX);
+  Serial.print("delta Y :");
+  Serial.println(deltaY);
+
+
+  targetA += deltaX + deltaY;
+  targetB += deltaX - deltaY;
+
+  Serial.print("A :");
+  Serial.print(targetA);
+  Serial.print("  B :");
+  Serial.println(targetB);
+    
+  MOT_A.moveTo(targetA);
+  MOT_B.moveTo(targetB);
+
+  MOT_A.run();
+  MOT_B.run();
+
+
+  /*
   int deltaX = 0;
-  int deltaY = 0;
-
+  int deltaY = 0;S
   // Calcul des deltas selon boutons 
-  if(bouton_direction_tester == BTN_UP)    deltaX += speed;
-  if(bouton_direction_tester == BTN_DOWN)  deltaX -= speed;
-  if(bouton_direction_tester == BTN_LEFT)  deltaY += speed;
-  if(bouton_direction_tester == BTN_RIGHT) deltaY -= speed;
+  if(bouton_direction_tester == BTN_UP)    deltaX = speed;
+  if(bouton_direction_tester == BTN_DOWN)  deltaX = -1 * speed;
+  if(bouton_direction_tester == BTN_LEFT)  deltaY = speed;
+  if(bouton_direction_tester == BTN_RIGHT) deltaY = -1 * speed;
   
   // Respect des software maximum/min limits
   /*
@@ -212,7 +246,7 @@ void loop() {
   if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
   if(posX + deltaX < 0) deltaX = -posX;
   if(posY + deltaY < 0) deltaY = -posY;
-   */  
+    
 
   // Update positions
   posX += deltaX;
@@ -232,7 +266,7 @@ void loop() {
   Serial.print(targetA);
   Serial.print("  B :");
   Serial.println(targetB);
-
+  */ 
   /*
   if(((posX <= MAX_POS_X) & (posX >= 0)) & ((posX >= 0) & (posY <= MAX_POS_Y))) {
     Serial.print("Position X :");
