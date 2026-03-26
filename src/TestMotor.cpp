@@ -76,13 +76,13 @@ long targetB = 0;
 int deltaX = 0;
 int deltaY = 0;
 
-long posX = 0;
+long posX = 13100;
 long posY = 0;
 
 int speed = 2; // Vitesse fonctionnel
 
-long MAX_POS_X = 12870; // À déterminer ->
-long MAX_POS_Y = 30000;
+long MAX_POS_X = 13100;
+long MAX_POS_Y = 12998;
 
 // Ajout pour test
 #define BTN_OK 0
@@ -126,7 +126,7 @@ DOWN -> Ok
 LEFT -> Ok
 RIGHT -> OK
 
-*** mettre les bouton pour controler machine -> faciliter test -> bouton pas fonctionner***
+*** mettre les boutons pour controler machine -> faciliter test -> bouton pas fonctionner***
 
 2.2 Tester déplacement combiner
 (2026-03-26 15h) Cloé
@@ -139,8 +139,17 @@ DOWN RIGHT ->OK
 UP DOWN LEFT -> OK
 UP DOWN LEFT RIGHT-> Ok
 
-3.2 Test limite de position
+3.2 Déterminer limite de position
 (2026-03-26 17h) Cloé
+Pour vitesse de 2
+X -> 13100
+Y -> 12998
+
+4.2 Code permet empécher aller or limite
+(2026-03-26 18h) Cloé
+-> pas réussi arrêter moteur dans if
+
+
 */
 
 void setup() {
@@ -194,7 +203,7 @@ void loop() {
   int deltaB = 0;
   bouton_direction_tester = 0;
 
-  bouton_direction_tester = BTN_UP;
+  //bouton_direction_tester = BTN_UP;
   if(bouton_direction_tester == BTN_UP) {
     deltaA += speed;
     deltaB += speed;
@@ -206,32 +215,56 @@ void loop() {
     deltaB -= speed;
   }
 
-  bouton_direction_tester = BTN_LEFT;
+  //bouton_direction_tester = BTN_LEFT;
   if(bouton_direction_tester == BTN_LEFT) {
     deltaA += speed;
     deltaB -= speed;
   }
 
-  bouton_direction_tester = BTN_RIGHT;
+  //bouton_direction_tester = BTN_RIGHT;
   if(bouton_direction_tester == BTN_RIGHT) {
     deltaA -= speed;
     deltaB += speed;
   } 
-  //Serial.print("delta A :"); Serial.print(deltaA); Serial.print("delta B :"); Serial.println(deltaB);
+  Serial.print("delta A :"); Serial.print(deltaA); Serial.print(" delta B :"); Serial.println(deltaB);
 
 
   deltaX = (deltaA + deltaB) / 2;
   deltaY = (deltaA - deltaB) / 2;
-  //Serial.print("delta X :"); Serial.print(deltaX); Serial.print("delta Y :"); Serial.println(deltaY);
+  Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
 
   // Update positions
   posX += deltaX;
-  posY += deltaY;
+  posY -= deltaY;
+  Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
+
+  //Vérifier respecter les limites
+  if(posX > MAX_POS_X) {
+    Serial.println("Fin X");
+    deltaX = 0;
+    posX = MAX_POS_X;
+  }
+
+  if(posX < 0) {
+    Serial.println("Début X");
+    deltaX = 0;
+    posX = 0;
+    targetA = targetA * -1;
+    targetB = targetB * -1;
+  }
+
+  if(posY > MAX_POS_Y) {
+    Serial.println("Fin Y");
+    deltaY -= speed;
+  }
+  //if(posY + deltaY < 0) deltaY = -posY;
+  Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
+
 
   // CoreXY mapping
   targetA += deltaX + deltaY;
   targetB += deltaX - deltaY;
-  //Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
+  Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
@@ -240,20 +273,16 @@ void loop() {
   MOT_B.run();
 
   /*
-  // Respect des software maximum/min limits
-  /*
-  if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
-  if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
-  if(posX + deltaX < 0) deltaX = -posX;
-  if(posY + deltaY < 0) deltaY = -posY;
-  
-  if(((posX <= MAX_POS_X) & (posX >= 0)) & ((posX >= 0) & (posY <= MAX_POS_Y))) {
+  // Code pour détermine rlimite (test 3.2)
+  if(((posX <= MAX_POS_X + 100) & (posX >= 0)) & ((posY >= 0) & (posY <= MAX_POS_Y + 100))) {
     MOT_A.run();
     MOT_B.run();
   }
-  //delay(500);
+  else {
+    Serial.println("Fin");
+    delay(10000);
+  }
   */
-
 
   /*
   // Test déplacement chariot X diagonal 
