@@ -13,8 +13,7 @@
 #define BTN_PIN_LEFT 23
 #define BTN_PIN_RIGHT 24
 #define BTN_PIN_OK 26
-#define PIN_BTN_INTERRUPT 3 //D3
-volatile TickType_t lastBtnInterrupt = 0;
+#define BTN_Interup 3
 #define DEBOUNCE_MS 20
 
 //LIMIT SWITCHES
@@ -71,19 +70,12 @@ EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 
-#define BTN_OK 0
-#define BTN_UP 1
-#define BTN_DOWN 2
-#define BTN_LEFT 3
-#define BTN_RIGHT 4
-
 long targetA = 0;
 long targetB = 0;
 
-  int deltaX = 0;
-  int deltaY = 0;
+int deltaX = 0;
+int deltaY = 0;
 
-//Mutex sur posX et posY ?
 long posX = 0;
 long posY = 0;
 
@@ -92,7 +84,14 @@ int speed = 2; // Vitesse fonctionnel
 long MAX_POS_X = 12870; // À déterminer ->
 long MAX_POS_Y = 30000;
 
-int bouton_direction_tester = BTN_UP;
+// Ajout pour test
+#define BTN_OK 0
+#define BTN_UP 1
+#define BTN_DOWN 2
+#define BTN_LEFT 3
+#define BTN_RIGHT 4
+int bouton_direction_tester = 0;
+
 /*
 1. Test déplacement chariot X selon une direction 
 (2026-03-25 12h) Cloé
@@ -120,13 +119,28 @@ RIGHT -> OK
 selon possition imprimer : 12870
 
 
-Assurer déplacement chariot X selon une direction 
-(2026-03-26 14h) Cloé
+1.2 Retester déplacement dans une direction toute direction
+(2026-03-26 15h) Cloé
 UP -> Ok
-DOWN -> mauvaise direction (même que up)
+DOWN -> Ok
+LEFT -> Ok
+RIGHT -> OK
 
+*** mettre les bouton pour controler machine -> faciliter test -> bouton pas fonctionner***
 
+2.2 Tester déplacement combiner
+(2026-03-26 15h) Cloé
+UP DOWN-> OK
+LEFT RIGHT -> Ok
+UP LEFT -> Ok
+UP RIGHT -> OK
+DOWN LEFT -> OK
+DOWN RIGHT ->OK
+UP DOWN LEFT -> OK
+UP DOWN LEFT RIGHT-> Ok
 
+3.2 Test limite de position
+(2026-03-26 17h) Cloé
 */
 
 void setup() {
@@ -166,95 +180,58 @@ void setup() {
   MOT_B.setCurrentPosition(0);
   MOT_Z.setCurrentPosition(0);
 
-    Serial.print("Position X :");
-    Serial.print(posX);
-    Serial.print("  Position Y :");
-    Serial.println(posX);
+  pinMode(BTN_PIN_UP, INPUT_PULLUP);
+  pinMode(BTN_PIN_DOWN, INPUT_PULLUP);
+  pinMode(BTN_PIN_LEFT, INPUT_PULLUP);
+  pinMode(BTN_PIN_RIGHT, INPUT_PULLUP);
+  pinMode(BTN_PIN_OK, INPUT_PULLUP);
+  pinMode(BTN_Interup, INPUT_PULLUP);
 }
 
 
 void loop() {
   int deltaA = 0;
   int deltaB = 0;
+  bouton_direction_tester = 0;
 
-
-  bouton_direction_tester = BTN_RIGHT;
-  //Code déplacer moteur une direction avec max
+  bouton_direction_tester = BTN_UP;
   if(bouton_direction_tester == BTN_UP) {
     deltaA += speed;
     deltaB += speed;
   }
 
+  bouton_direction_tester = BTN_DOWN;
   if(bouton_direction_tester == BTN_DOWN) {
     deltaA -= speed;
     deltaB -= speed;
   }
 
-  //bouton_direction_tester = BTN_LEFT;
+  bouton_direction_tester = BTN_LEFT;
   if(bouton_direction_tester == BTN_LEFT) {
     deltaA += speed;
     deltaB -= speed;
   }
 
+  bouton_direction_tester = BTN_RIGHT;
   if(bouton_direction_tester == BTN_RIGHT) {
     deltaA -= speed;
     deltaB += speed;
   } 
+  //Serial.print("delta A :"); Serial.print(deltaA); Serial.print("delta B :"); Serial.println(deltaB);
 
-  Serial.print("delta A :");
-  Serial.print(deltaA);
-  Serial.print("delta B :");
-  Serial.println(deltaB);
 
-  // Update positions
   deltaX = (deltaA + deltaB) / 2;
   deltaY = (deltaA - deltaB) / 2;
-
-  Serial.print("delta X :");
-  Serial.print(deltaX);
-  Serial.print("delta Y :");
-  Serial.println(deltaY);
-
-
-  targetA += deltaX + deltaY;
-  targetB += deltaX - deltaY;
-
-  Serial.print("A :");
-  Serial.print(targetA);
-  Serial.print("  B :");
-  Serial.println(targetB);
-    
-  MOT_A.moveTo(targetA);
-  MOT_B.moveTo(targetB);
-
-  MOT_A.run();
-  MOT_B.run();
-
-
-  /*
-  int deltaX = 0;
-  int deltaY = 0;S
-  // Calcul des deltas selon boutons 
-  if(bouton_direction_tester == BTN_UP)    deltaX = speed;
-  if(bouton_direction_tester == BTN_DOWN)  deltaX = -1 * speed;
-  if(bouton_direction_tester == BTN_LEFT)  deltaY = speed;
-  if(bouton_direction_tester == BTN_RIGHT) deltaY = -1 * speed;
-  
-  // Respect des software maximum/min limits
-  /*
-  if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
-  if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
-  if(posX + deltaX < 0) deltaX = -posX;
-  if(posY + deltaY < 0) deltaY = -posY;
-    
+  //Serial.print("delta X :"); Serial.print(deltaX); Serial.print("delta Y :"); Serial.println(deltaY);
 
   // Update positions
   posX += deltaX;
   posY += deltaY;
 
   // CoreXY mapping
-  targetA = posX + posY;
-  targetB = posX - posY;
+  targetA += deltaX + deltaY;
+  targetB += deltaX - deltaY;
+  //Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
@@ -262,18 +239,15 @@ void loop() {
   MOT_A.run();
   MOT_B.run();
 
-  Serial.print("A :");
-  Serial.print(targetA);
-  Serial.print("  B :");
-  Serial.println(targetB);
-  */ 
   /*
+  // Respect des software maximum/min limits
+  /*
+  if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
+  if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
+  if(posX + deltaX < 0) deltaX = -posX;
+  if(posY + deltaY < 0) deltaY = -posY;
+  
   if(((posX <= MAX_POS_X) & (posX >= 0)) & ((posX >= 0) & (posY <= MAX_POS_Y))) {
-    Serial.print("Position X :");
-  Serial.print(posX);
-  Serial.print("  Position Y :");
-  Serial.println(posY);  
-  Serial.println("test");
     MOT_A.run();
     MOT_B.run();
   }
