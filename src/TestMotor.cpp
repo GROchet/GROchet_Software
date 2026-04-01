@@ -76,7 +76,7 @@ long targetB = 0;
 int deltaX = 0;
 int deltaY = 0;
 
-long posX = 13100;
+long posX = 6550;
 long posY = 0;
 
 int speed = 2; // Vitesse fonctionnel
@@ -204,53 +204,94 @@ void loop() {
   bouton_direction_tester = 0;
 
   //bouton_direction_tester = BTN_UP;
-  if(bouton_direction_tester == BTN_UP) {
+  if(digitalRead(BTN_PIN_UP) == LOW) {
     deltaA += speed;
     deltaB += speed;
   }
 
-  bouton_direction_tester = BTN_DOWN;
-  if(bouton_direction_tester == BTN_DOWN) {
+  //bouton_direction_tester = BTN_DOWN;
+  if(digitalRead(BTN_PIN_DOWN) == LOW) {
     deltaA -= speed;
     deltaB -= speed;
   }
 
   //bouton_direction_tester = BTN_LEFT;
-  if(bouton_direction_tester == BTN_LEFT) {
+  if(digitalRead(BTN_PIN_LEFT) == LOW) {
     deltaA += speed;
     deltaB -= speed;
   }
 
   //bouton_direction_tester = BTN_RIGHT;
-  if(bouton_direction_tester == BTN_RIGHT) {
+  if(digitalRead(BTN_PIN_RIGHT) == LOW) {
     deltaA -= speed;
     deltaB += speed;
   } 
-  Serial.print("delta A :"); Serial.print(deltaA); Serial.print(" delta B :"); Serial.println(deltaB);
-
+  //Serial.print("delta A :"); Serial.print(deltaA); Serial.print(" delta B :"); Serial.println(deltaB);
 
   deltaX = (deltaA + deltaB) / 2;
   deltaY = (deltaA - deltaB) / 2;
-  Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
+  //Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
 
   // Update positions
   posX += deltaX;
   posY -= deltaY;
-  Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
+  //Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
 
-  //Vérifier respecter les limites
   if(posX > MAX_POS_X) {
+    //Permet juste déplacement selon axe des y théoriquement
+    targetA += deltaY;
+    targetB -= deltaY;
     Serial.println("Fin X");
-    deltaX = 0;
-    posX = MAX_POS_X;
+  }
+  else if (posX < 0) {
+    targetA += deltaY;
+    targetB -= deltaY;
+    Serial.println("Début X");
+  }
+  // avoir techniquement un else if pour position zero limite siwchet ***
+  else {
+    targetA += deltaX + deltaY;
+    targetB += deltaX - deltaY;
   }
 
-  if(posX < 0) {
+  // CoreXY mapping
+  //targetA = deltaX + deltaY;
+  //targetB = deltaX - deltaY;
+
+  
+  //Vérifier respecter les limites
+  /*
+  if(posX > MAX_POS_X) {
+    Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
+    Serial.println("Fin X");
+    Serial.print("delta A :"); Serial.print(deltaA); Serial.print(" delta B :"); Serial.println(deltaB);
+    Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
+    Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
+    
+    posX = MAX_POS_X;
+    targetA = deltaY;
+    targetB = -deltaY;
+    MOT_A.stop();
+    MOT_B.stop();
+    Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
+  }
+  else if(posX < 0) {
+    Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
     Serial.println("Début X");
-    deltaX = 0;
+    Serial.print("delta A :"); Serial.print(deltaA); Serial.print(" delta B :"); Serial.println(deltaB);
+    Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
+    Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
+
     posX = 0;
-    targetA = targetA * -1;
-    targetB = targetB * -1;
+    targetA = deltaY;
+    targetB = -deltaY;
+    MOT_A.stop();
+    MOT_B.stop();
+    Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
+  }
+  else {
+    targetA = deltaX + deltaY;
+    targetB = deltaX - deltaY;
   }
 
   if(posY > MAX_POS_Y) {
@@ -258,19 +299,29 @@ void loop() {
     deltaY -= speed;
   }
   //if(posY + deltaY < 0) deltaY = -posY;
-  Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
+  //Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
+  */
 
+  //Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
 
-  // CoreXY mapping
-  targetA += deltaX + deltaY;
-  targetB += deltaX - deltaY;
-  Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
     
   MOT_A.moveTo(targetA);
   MOT_B.moveTo(targetB);
 
-  MOT_A.run();
-  MOT_B.run();
+  bool toujoursMvtA = true;
+  bool toujoursMvtB = true;
+  toujoursMvtA = MOT_A.run();
+  toujoursMvtB = MOT_B.run();
+  /*
+  while(toujoursMvtA || toujoursMvtB) {
+    toujoursMvtA = MOT_A.run();
+    toujoursMvtB = MOT_B.run();
+  }
+  */
+  //Serial.println("Fin roulement");
+
+  //MOT_A.run();
+  //MOT_B.run();
 
   /*
   // Code pour détermine rlimite (test 3.2)
