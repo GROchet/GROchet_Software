@@ -70,8 +70,8 @@ EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 
-long targetA = 0;
-long targetB = 0;
+float targetA = 0;
+float targetB = 0;
 
 int deltaX = 0;
 int deltaY = 0;
@@ -79,7 +79,7 @@ int deltaY = 0;
 long posX = 6550;
 long posY = 0;
 
-int speed = 2; // Vitesse fonctionnel
+float speed = 1000; // Vitesse commence à bouger -> 26
 
 long MAX_POS_X = 13100;
 long MAX_POS_Y = 12998;
@@ -148,6 +148,13 @@ Y -> 12998
 4.2 Code permet empécher aller or limite
 (2026-03-26 18h) Cloé
 -> pas réussi arrêter moteur dans if
+
+5. Test bouton pour déplacer core xy direction précise
+(2026-04-01) -À Cloé
+Les mvt corespond au bouton appuyer
+Lors relacher bouton décélération trop lente
+
+6. Modifier programme pour fonctionner en vitesse
 
 
 */
@@ -236,23 +243,29 @@ void loop() {
   posX += deltaX;
   posY -= deltaY;
   //Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
-
+  /*
   if(posX > MAX_POS_X) {
     //Permet juste déplacement selon axe des y théoriquement
-    targetA += deltaY;
-    targetB -= deltaY;
+    targetA = deltaY;
+    targetB = -deltaY;
     Serial.println("Fin X");
   }
   else if (posX < 0) {
-    targetA += deltaY;
-    targetB -= deltaY;
+    targetA = deltaY;
+    targetB = -deltaY;
     Serial.println("Début X");
   }
   // avoir techniquement un else if pour position zero limite siwchet ***
   else {
-    targetA += deltaX + deltaY;
-    targetB += deltaX - deltaY;
+    targetA = deltaX + deltaY;
+    targetB = deltaX - deltaY;
   }
+    */
+
+  targetA = deltaX + deltaY;
+  targetB = deltaX - deltaY;
+
+  
 
   // CoreXY mapping
   //targetA = deltaX + deltaY;
@@ -304,14 +317,19 @@ void loop() {
 
   //Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
 
-    
-  MOT_A.moveTo(targetA);
-  MOT_B.moveTo(targetB);
+  if ((targetA == 0) && (targetB == 0)) {
+    MOT_A.stop(); // essayer avoir meullieur arrêt
+    MOT_B.stop();
+    Serial.println("Fin");
 
-  bool toujoursMvtA = true;
-  bool toujoursMvtB = true;
-  toujoursMvtA = MOT_A.run();
-  toujoursMvtB = MOT_B.run();
+  } else {
+    MOT_A.setSpeed(targetA);
+    MOT_B.setSpeed(targetB);
+  
+    MOT_A.runSpeed();
+    MOT_B.runSpeed();
+  }
+
   /*
   while(toujoursMvtA || toujoursMvtB) {
     toujoursMvtA = MOT_A.run();
