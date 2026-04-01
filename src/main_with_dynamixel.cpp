@@ -21,7 +21,7 @@
 //-------------------
 int16_t temps[] = {50,100,150}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
 int16_t force[] = {50,100,150}; //A ajuster selon les tests, en unités brutes du dynamixel
-int16_t speed[] = {50,100,150}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
+int16_t speed[] = {1000,1250,1500}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
 int8_t difficulty = 0; // 0 = easy, 1 = medium, 2 = hard. A ajuster selon les tests
 
 String ledColor = "rose"; //A ajuster selon les tests, couleur de la LED pour chaque difficulté (easy, medium, hard)
@@ -79,14 +79,18 @@ uint8_t  id          = 102;
 
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
-int speeds = 50;
 
-//Mutex sur posX et posY ?
-long posX = 0;
+float targetA = 0;
+float targetB = 0;
+
+int deltaX = 0;
+int deltaY = 0;
+ 
+long posX = 6550;
 long posY = 0;
 
-long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
-long MAX_POS_Y = 50000;
+long MAX_POS_X = 13100;
+long MAX_POS_Y = 12998;
 
 //Moteur 1
 #define EN_PIN_M1 29
@@ -137,6 +141,7 @@ bool toutouAttrape = false; // Variable globale pour stocker l'état du toutou a
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
+void TaskCommJson (void *pvParameters);
 void NotifySwitch();
 void NotifyBtn();
 void homeXY();
@@ -230,6 +235,7 @@ void setup() {
 	toutouMutex = xSemaphoreCreateMutex();
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
+	xTaskCreate(TaskCommJson, "CommTask", 512, NULL, 3, NULL);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 1, NULL);
 }
 
@@ -294,69 +300,54 @@ void TaskMotorControl (void *pvParameters) {
 
 		bits = xEventGroupGetBits(inputEventGroup);
 		limitBits = xEventGroupGetBits(limitEventGroup);
-		/*
-		//Limit Switch Protection
-		if ((limitBits & EVT_LIMIT_X) && posX <= 0){
-			MOT_A.stop();
-			MOT_B.stop();
-			posX = 0;
 
-			// Cancel any queued motion
-			MOT_A.moveTo(MOT_A.currentPosition());
-			MOT_B.moveTo(MOT_B.currentPosition());
-		}
-
-		if ((limitBits & EVT_LIMIT_Y) && posY <= 0){
-			MOT_A.stop();
-			MOT_B.stop();
-			posY = 0;
-
-			MOT_A.moveTo(MOT_A.currentPosition());
-			MOT_B.moveTo(MOT_B.currentPosition());
-		}*/
-
-		//When a Button is pressed
 		if (bits & (EVT_BTN_LEFT | EVT_BTN_RIGHT | EVT_BTN_UP | EVT_BTN_DOWN)){
-			int deltaX = 0;
-			int deltaY = 0;
+			int deltaA = 0;
+			int deltaB = 0;
 
 			// Calcul des deltas selon boutons
-			if(bits & EVT_BTN_UP)    deltaX += speeds;
-			if(bits & EVT_BTN_DOWN)  deltaX -= speeds;
-			if(bits & EVT_BTN_LEFT)  deltaY += speeds;
-			if(bits & EVT_BTN_RIGHT) deltaY -= speeds;
-		
-			// Respect des limit switches minimum
-			if(deltaX < 0 && (limitBits & EVT_LIMIT_X)) deltaX = 0;
-			if(deltaY < 0 && (limitBits & EVT_LIMIT_Y)) deltaY = 0;
-
-			// Respect des software maximum/min limits
-			if(posX + deltaX > MAX_POS_X) deltaX = MAX_POS_X - posX;
-			if(posY + deltaY > MAX_POS_Y) deltaY = MAX_POS_Y - posY;
-			if(posX + deltaX < 0) deltaX = -posX;
-			if(posY + deltaY < 0) deltaY = -posY;
-
-			// Update positions
+			if(bits & EVT_BTN_UP){
+			    deltaA += speed[difficulty];
+				deltaB += speed[difficulty];
+			}
+			if(bits & EVT_BTN_DOWN){
+			    deltaA -= speed[difficulty];
+				deltaB -= speed[difficulty];
+			}
+			if(bits & EVT_BTN_LEFT){
+			    deltaA += speed[difficulty];
+				deltaB -= speed[difficulty];
+			}
+			if(bits & EVT_BTN_RIGHT){
+			    deltaA -= speed[difficulty];
+				deltaB += speed[difficulty];
+			}
+			deltaX = (deltaA + deltaB) / 2;
+  			deltaY = (deltaA - deltaB) / 2;
+			
 			posX += deltaX;
-			posY += deltaY;
+  			posY -= deltaY;
 
-			// CoreXY mapping
-			long targetA = posX + posY;
-			long targetB = posX - posY;
+			targetA = deltaX + deltaY;
+  			targetB = deltaX - deltaY;
 
-			MOT_A.moveTo(targetA);
-			MOT_B.moveTo(targetB);
+			if ((targetA == 0) && (targetB == 0)) {
+				MOT_A.stop(); // essayer avoir meullieur arrêt
+				MOT_B.stop();			
+			} 
+			else {
+				MOT_A.setSpeed(targetA);
+				MOT_B.setSpeed(targetB);
+			
+				MOT_A.runSpeed();
+				MOT_B.runSpeed();
+			}
 		}
-
-		// always update steppers
-		MOT_A.run();
-		MOT_B.run();
-
 		// Check if we received a new notification telling us to STOP
 		if (ulTaskNotifyTake(pdTRUE, 0)) {
 			break;  // Exit manual mode immediately
 		}
-		vTaskDelay(pdMS_TO_TICKS(5));
+		vTaskDelay(pdMS_TO_TICKS(10));
 		}
 	}
 }
@@ -595,8 +586,6 @@ void calibrerPinceEtAxeZ(){
 	liftedZPos = MOT_Z.currentPosition();
 
 }
-
-
 void moveWithKeys() {
     int32_t target = dxl.getPresentPosition(id);
     while (true) {
