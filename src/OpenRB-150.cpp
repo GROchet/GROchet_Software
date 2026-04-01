@@ -3,19 +3,15 @@
 #define DXL_SERIAL      Serial1
 #define DXL_DIR_PIN     -1
 
-int32_t OPEN_POS = 1083;
-int32_t CLOSED_POS = 9000;
+int16_t OPEN_POS = 3305;
+int16_t CLOSED_POS = 6705;
+int16_t ACTUAL_POS = 0;
 
 #define MOVE_CURRENT    300 // Courant à appliquer pour déplacer la pince (unités brutes)
 #define GRIP_CURRENT    50 // Courant à appliquer pour fermer la pince (unités brutes)
 #define STALL_CURRENT   40 // Courant en dessous duquel on considère que le moteur est en stall (unités brutes)
 #define VEL_THRESHOLD   5 // Vitesse en dessous de laquelle on considère que le moteur est à l'arrêt (unités brutes)
 #define STALL_CONFIRM   300 // Temps de suite que le moteur doit être à l'arrêt pour confirmer un stall (ms)
-
-/*
-A FAIRE : 
-CHECKSUM ou CRC8 pour protocole communication Arduino <-> OPENRB
-*/
 
 Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
 uint8_t  id          = 102;
@@ -24,6 +20,7 @@ void ouvrirPince();
 void fermerPince();
 int  detecterToutou();
 void calibrer();
+
 uint8_t crc8(uint8_t *data, uint8_t len);
 
 void setup() {
@@ -45,6 +42,8 @@ void setup() {
     dxl.torqueOff(id);
     dxl.setOperatingMode(id, OP_EXTENDED_POSITION);
     dxl.torqueOn(id);
+
+    ACTUAL_POS = dxl.getPresentPosition(id); // Lire la position actuelle à l'initialisation
 
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
     Serial.println("Ready.");
@@ -81,8 +80,26 @@ void loop() {
     }
 
     // ── Send response ──
-    uint8_t frame[2] = { response, crc8(&response, 1) };
-    Serial3.write(frame, 2);
+    ACTUAL_POS = dxl.getPresentPosition(id); // On lit la position actuelle à chaque requete pour l'envoyer dans la réponse, comme ça on a toujours la position à jour dans Unity sans avoir besoin d'une requete spécifique pour ça
+    uint8_t frame[8];
+    frame[0] = response;
+
+    // OPEN_POS
+    frame[1] = OPEN_POS & 0xFF;
+    frame[2] = (OPEN_POS >> 8) & 0xFF;
+
+    // CLOSED_POS
+    frame[3] = CLOSED_POS & 0xFF;
+    frame[4] = (CLOSED_POS >> 8) & 0xFF;
+
+    // ACTUAL_POS
+    frame[5] = ACTUAL_POS & 0xFF;
+    frame[6] = (ACTUAL_POS >> 8) & 0xFF;
+
+    // CRC
+    frame[7] = crc8(frame, 7);
+
+    Serial3.write(frame, 8);
 }
 
 void ouvrirPince() {
@@ -109,15 +126,15 @@ void calibrer() {
     Serial.println("Move gripper to CLOSED position, then wait...");
     delay(5000);
     CLOSED_POS = dxl.getPresentPosition(id);
-    Serial.print("CLOSED_POS locked: "); Serial.println(CLOSED_POS);
+    Serial.print("CLOSED_POS confirmée: "); Serial.println(CLOSED_POS);
 
     dxl.torqueOn(id);
-    Serial.print("Range: "); Serial.println(CLOSED_POS - OPEN_POS);
-    Serial.println("Calibration done.");
+    Serial.print("Plage de valeur: "); Serial.println(CLOSED_POS - OPEN_POS);
+    Serial.println("Calibration finie.");
 }
 
 int detecterToutou() {
-    static uint32_t stallSince = 0;  // timestamp of first stall detection
+    static uint32_t stallSince = 0;  // temps depuis la première détection de stall
 
     int32_t pos     = dxl.getPresentPosition(id);
     int32_t vel     = dxl.getPresentVelocity(id);
@@ -125,21 +142,21 @@ int detecterToutou() {
 
     if (pos >= CLOSED_POS - 5) {
         stallSince = 0;
-        return 2;  // fully closed, nothing grabbed
+        return 2;  // fermé au complet, rien attrapé
     }
 
     if (abs(current) >= STALL_CURRENT && abs(vel) < VEL_THRESHOLD) {
-        if (stallSince == 0) stallSince = millis();  // first time we see stall
+        if (stallSince == 0) stallSince = millis();  // premiere détection de stall
         
         if (millis() - stallSince >= STALL_CONFIRM) {
             stallSince = 0;
-            return 1;  // confirmed stall = toutou attrapé
+            return 1;  // stall confirmé = toutou attrapé
         }
     } else {
         stallSince = 0;  // condition broke, reset timer
     }
 
-    return 0;  // still moving / not confirmed yet
+    return 0;  // Encore en mouvement, pas encore de conclusion sur toutou attrapé ou pas
 }
 
 uint8_t crc8 (uint8_t *data, uint8_t len){

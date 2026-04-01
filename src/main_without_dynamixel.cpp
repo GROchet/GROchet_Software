@@ -3,18 +3,20 @@
 #include <semphr.h>
 #include "event_groups.h"
 #include <AccelStepper.h>
+#include <ArduinoJson.h>
 
-//TO consider before running for the first Time
+//À considérer avant de Run la premiere fois :
 
-// strength of the grip
-// OPEN_POS and CLOSED_POS of the Dynamixel
+// Force de la pince
+// OPEN_POS et CLOSED_POS du dynamixel (pince)
 
-// speed of XY
+// vitesse du CoreXY
 // MAX_POS_X and MAX_POS_Y according to the system's dimensions (CORE_XY)
 // MAX speed and acceleration of the stepper motors
 // Serial Begin, for dynamixel and stepper_motors
 
 
+StaticJsonDocument<200> doc; 
 
 //BOUTONS
 #define BTN_PIN_UP 22
@@ -46,7 +48,7 @@ long posY = 0;
 long MAX_POS_X = 50000; // Adjust to your system's max travel in steps
 long MAX_POS_Y = 50000;
 
-#define SerialGripper    Serial2 //A CHANGER SELON PORTS
+#define SerialGripper    Serial2
 
 //Moteur 1
 #define EN_PIN_M1 29
@@ -112,8 +114,46 @@ SemaphoreHandle_t gripperMutex; //For serial communication with OpenRB-150
 #define EVT_BTN_LEFT (1 << 3)
 #define EVT_BTN_RIGHT (1 << 4)
 
+struct GripperData {
+  uint8_t response;
+  int16_t openPos;
+  int16_t closedPos;
+  int16_t actualPos;
+  bool valid;
+};
+
+GripperData gripperReceive(uint32_t timeoutMs = 500) {
+  GripperData data;
+  data.valid = false;
+
+  uint32_t start = millis();
+
+  while (SerialGripper.available() < 8) {
+    if (millis() - start > timeoutMs) return data;
+    vTaskDelay(pdMS_TO_TICKS(5));
+  }
+
+  uint8_t frame[8];
+  SerialGripper.readBytes(frame, 8);
+
+  // CRC check
+  if (frame[7] != crc8(frame, 7)) {
+    return data; // invalid
+  }
+
+  // Parse
+  data.response = frame[0];
+
+  data.openPos   = frame[1] | (frame[2] << 8);
+  data.closedPos = frame[3] | (frame[4] << 8);
+  data.actualPos = frame[5] | (frame[6] << 8);
+
+  data.valid = true;
+  return data;
+}
+
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   SerialGripper.begin(9600);
   delay(2000);
 
@@ -131,7 +171,7 @@ void setup() {
   pinMode(BTN_PIN_RIGHT, INPUT_PULLUP);
   pinMode(BTN_PIN_OK, INPUT_PULLUP);
   pinMode(PIN_BTN_INTERRUPT, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, FALLING);
 
   //LIMIT SWITCHES
   //----------------
@@ -311,7 +351,6 @@ void TaskMotorControl (void *pvParameters) {
 
 void TaskStateControl (void *pvParameters) {
   (void) pvParameters;
-  //aucune autre tache ne modifie CurrentState, comme ca on a pas besoin de le protéger.
 
   for(;;) {
 
@@ -321,6 +360,7 @@ void TaskStateControl (void *pvParameters) {
         xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
         xTaskNotifyGive(motorTaskHandle);   // Send stop signal
         currentState = IDLE;
+        break;
       case IDLE://DONE
         Serial.println("IDLE: Use buttons to move, OK to calibrate.");
         xTaskNotifyGive(motorTaskHandle);   // Enable manual control
@@ -333,11 +373,11 @@ void TaskStateControl (void *pvParameters) {
       case LOWERING:
         //Séquence de mouvement vers le bas
         MOT_Z.setSpeed(speed);
-        while (1) {
+        while(1) {
           if (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) break;
           else if (MOT_Z.currentPosition() >= maxDownZPos) break; // On s'assure de pas descendre plus que la position levée, au cas où le limit switch ne marche pas
           MOT_Z.runSpeed(); // actually step the motor
-          vTaskDelay(pdMS_TO_TICKS(1));
+          vTaskDelay(pdMS_TO_TICKS(2));
         }
         xEventGroupClearBits(inputEventGroup, EVT_BTN_OK); // clear the bit
         MOT_Z.stop();
@@ -349,18 +389,22 @@ void TaskStateControl (void *pvParameters) {
       case CLOSING:{  
         xSemaphoreTake(gripperMutex, portMAX_DELAY);
         gripperSend(0x02);
-        xSemaphoreGive(gripperMutex);      
         //Attendre que le toutou soit attrapé ou pas (message de retour de OpenRB-150)
         uint8_t resp1 = 0x04; //Start as "moving"
         while((resp1 &  0x01) == 0 && (resp1 & 0x02) == 0){ //tant que ni toutou attrapé ni rien attrapé
-          xSemaphoreTake(gripperMutex, portMAX_DELAY);
-
           gripperSend(0x04);
-          resp1 = gripperReceive(); // Wait for response with timeout
-
-          xSemaphoreGive(gripperMutex);
-          vTaskDelay(pdMS_TO_TICKS(100));
+          //Receive
+          GripperData g = gripperReceive();
+          if (!g.valid) {
+            // timeout or CRC fail
+            continue;
+          }
+          uint8_t resp1 = g.response; 
+          
+          // Wait for response with timeout
+          vTaskDelay(pdMS_TO_TICKS(50));
         }
+        xSemaphoreGive(gripperMutex);
 
         if (resp1 & 0x01) {
           Serial.println("Toutou attrapé !");
@@ -509,7 +553,7 @@ void TaskDetectToutou (void *pvParameters) {
       resp1 = gripperReceive(); // Wait for response with timeout
       xSemaphoreGive(gripperMutex);
 
-      vTaskDelay(pdMS_TO_TICKS(100));
+      vTaskDelay(pdMS_TO_TICKS(50));
 
       //Mettre à jour la variable toutouAttrape en conséquence
       if (resp1 & 0x02) { //Toutou laché
@@ -551,7 +595,7 @@ void gripperSend(uint8_t msg) {
 
 uint8_t gripperReceive(uint32_t timeoutMs = 500) {
   uint32_t start = millis();
-  while (SerialGripper.available() < 2) {
+  while (SerialGripper.available() < 8) { // Wait for 8 bytes (response + CRC + position data)
     if (millis() - start > timeoutMs) return 0xFF; // timeout
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -563,6 +607,6 @@ uint8_t gripperReceive(uint32_t timeoutMs = 500) {
 
 //TODO
 //Fonctions pour regler la force de la pince ?
-//Code Axe Z
 //FonctionS pour setter les zéros de l'axe Z et Pince ? lors de l'init
 //Set speed et non position pour stepper motor.
+// LIMITES AXE Z
