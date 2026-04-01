@@ -17,25 +17,6 @@ AccelStepper MOT_Z(AccelStepper::DRIVER, STEP_PIN_MZ, DIR_PIN_MZ);
 
 long stepIncrement = 100; // Number of steps per key press
 
-
-
-uint8_t crc8 (uint8_t *data, uint8_t len){
-  uint8_t crc = 0x00; 
-  for (uint8_t i = 0;i<len;i++){
-    crc ^= data[i];
-    for (uint8_t b = 0;b<8;b++){
-      if(crc & 0x80) crc = (crc << 1) ^ 0x07;
-      else crc <<= 1;
-    }
-  }
-  return crc;
-}
-
-void gripperSend(uint8_t msg) {
-  uint8_t frame[2] = { msg, crc8(&msg, 1) };
-  SerialGripper.write(frame, 2);
-}
-
 void setup() {
   Serial.begin(115200);
   SerialGripper.begin(9600);
@@ -62,10 +43,10 @@ void loop() {
       MOT_Z.moveTo(MOT_Z.currentPosition() - stepIncrement);
     }
     else if (c == 'x') {
-        gripperSend(0x02);
+        fermerPince();
     }
     else if (c == ' '){
-        gripperSend(0x01);
+        ouvrirPince();
     }
   }
 
