@@ -135,8 +135,6 @@ enum SystemState {
 };
 
 volatile SystemState currentState = SETUP;
-bool toutouAttrape = false; // Variable globale pour stocker l'état du toutou attrapé
-
 
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
@@ -155,8 +153,6 @@ void moveWithKeys();
 EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 TaskHandle_t detectToutouTaskHandle = NULL;
-
-SemaphoreHandle_t toutouMutex;
 
 void setup() {
 	Serial.begin(115200); // OU 115200 selon ce qui est choisi pour le debug
@@ -232,10 +228,8 @@ void setup() {
 	inputEventGroup = xEventGroupCreate();
 	limitEventGroup = xEventGroupCreate();
 
-	toutouMutex = xSemaphoreCreateMutex();
-
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-	xTaskCreate(TaskCommJson, "CommTask", 512, NULL, 3, NULL);
+	//xTaskCreate(TaskCommJson, "CommTask", 512, NULL, 3, NULL);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 1, NULL);
 }
 
@@ -376,7 +370,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 	    case LOWERING:
 			//Séquence de mouvement vers le bas
-			MOT_Z.setSpeed(speeds);
+			MOT_Z.setSpeed(speed[difficulty]);
 			while(1) {
 				if (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) break;
 				else if (MOT_Z.currentPosition() >= maxDownZPos) break; // On s'assure de pas descendre plus que la position min, au cas où le limit switch ne marche pas
@@ -393,13 +387,14 @@ void TaskStateControl (void *pvParameters) {
 			fermerPince();
 			while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
 				vTaskDelay(pdMS_TO_TICKS(50));
+				ACTUAL_POS = dxl.getPresentPosition(id);
 			}		
 			currentState = LIFTING;
 			break;
 	    }
 	    case LIFTING:
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
-			MOT_Z.setSpeed(-speeds);
+			MOT_Z.setSpeed(-speed[difficulty]);
 			while(MOT_Z.currentPosition() > liftedZPos-50){
 				MOT_Z.runSpeed(); // actually step the motor
 				vTaskDelay(pdMS_TO_TICKS(5));
@@ -416,7 +411,10 @@ void TaskStateControl (void *pvParameters) {
 
 	    case DROPPING:{ //DONE;
 			ouvrirPince();
-			vTaskDelay(pdMS_TO_TICKS(1000));
+			while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
+				vTaskDelay(pdMS_TO_TICKS(50));
+				ACTUAL_POS = dxl.getPresentPosition(id);
+			}
 			currentState = IDLE;
 			break;
 	    }
@@ -425,6 +423,7 @@ void TaskStateControl (void *pvParameters) {
   }
 }
 
+/*
 void TaskCommJson(void *pvParameters) {
     (void) pvParameters;
 
@@ -433,7 +432,7 @@ void TaskCommJson(void *pvParameters) {
         Serial.println(jsonMsg);
         vTaskDelay(pdMS_TO_TICKS(250));
     }
-}
+}*/
 
 void NotifySwitch(){
 	//PENDANT SETUP, ON VEUT QUE LES (2 ou 3) LIMITSWITCHES SERVENT A TROUVER LE ZERO
@@ -533,13 +532,13 @@ String buildStatusJson() {
 
     doc["led_color"] = ledColor;
 
-    // Buttons
-    JsonObject buttons = doc["buttons"].to<JsonObject>();
-    buttons["haut"] = digitalRead(BTN_PIN_UP) == LOW;
-    buttons["bas"] = digitalRead(BTN_PIN_DOWN) == LOW;
-    buttons["gauche"] = digitalRead(BTN_PIN_LEFT) == LOW;
-    buttons["droite"] = digitalRead(BTN_PIN_RIGHT) == LOW;
-    buttons["ok"] = digitalRead(BTN_PIN_OK) == LOW;
+	JsonObject buttons = doc["buttons"].to<JsonObject>();
+	EventBits_t bits = xEventGroupGetBits(inputEventGroup);
+	buttons["haut"] = (bits & EVT_BTN_UP) != 0;
+	buttons["bas"] = (bits & EVT_BTN_DOWN) != 0;
+	buttons["gauche"] = (bits & EVT_BTN_LEFT) != 0;
+	buttons["droite"] = (bits & EVT_BTN_RIGHT) != 0;
+	buttons["ok"] = (bits & EVT_BTN_OK) != 0;
 
     // System state
     doc["system_state"] = (int) currentState;
@@ -562,6 +561,8 @@ String buildStatusJson() {
     z_axis["max_height"] = maxDownZPos;
     z_axis["min_height"] = liftedZPos;
     z_axis["current_height"] = MOT_Z.currentPosition();
+
+
 
     String output;
     serializeJson(doc, output);
