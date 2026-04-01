@@ -182,7 +182,7 @@ void setup() {
 	pinMode(BTN_PIN_RIGHT, INPUT_PULLUP);
 	pinMode(BTN_PIN_OK, INPUT_PULLUP);
 	pinMode(PIN_BTN_INTERRUPT, INPUT_PULLUP);
-	attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, FALLING);
+	attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, CHANGE);
 
 	//LIMIT SWITCHES
 	//----------------
@@ -370,10 +370,10 @@ void TaskStateControl (void *pvParameters) {
 			break;
 	    case LOWERING:
 			//Séquence de mouvement vers le bas
-			MOT_Z.setSpeed(speed[difficulty]);
+			MOT_Z.setSpeed(-speed[difficulty]);
 			while(1) {
 				if (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) break;
-				else if (MOT_Z.currentPosition() >= maxDownZPos) break; // On s'assure de pas descendre plus que la position min, au cas où le limit switch ne marche pas
+				else if (MOT_Z.currentPosition() > maxDownZPos+50) break; // On s'assure de pas descendre plus que la position min, au cas où le limit switch ne marche pas
 				MOT_Z.runSpeed(); // actually step the motor
 				vTaskDelay(pdMS_TO_TICKS(2));
 			}
@@ -394,8 +394,8 @@ void TaskStateControl (void *pvParameters) {
 	    }
 	    case LIFTING:
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
-			MOT_Z.setSpeed(-speed[difficulty]);
-			while(MOT_Z.currentPosition() > liftedZPos-50){
+			MOT_Z.setSpeed(speed[difficulty]);
+			while(MOT_Z.currentPosition() < liftedZPos-50){
 				MOT_Z.runSpeed(); // actually step the motor
 				vTaskDelay(pdMS_TO_TICKS(5));
 			}
@@ -595,8 +595,8 @@ void moveWithKeys() {
             if (c == ' ') return;                    // confirm
             if (c == 'w') target -= 100;             // open direction
             if (c == 's') target += 100;             // close direction
-			if (c=='a') MOT_Z.moveTo(MOT_Z.currentPosition() - 100); // left
-			if (c=='d') MOT_Z.moveTo(MOT_Z.currentPosition() + 100); // right
+			if (c=='a') MOT_Z.moveTo(MOT_Z.currentPosition() - 100); // DOWN
+			if (c=='d') MOT_Z.moveTo(MOT_Z.currentPosition() + 100); // UP
 
             dxl.setGoalPosition(id, target, UNIT_RAW);
         }
