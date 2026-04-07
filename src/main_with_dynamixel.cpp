@@ -142,13 +142,11 @@ void TaskStateControl (void *pvParameters);
 void TaskCommJsonReceive (void *pvParameters);
 void TaskCommJsonSend(void *pvParameters);
 void NotifySwitch();
-void NotifyBtn();
+void NotifyOkButton();
 void homeXY();
 String buildStatusJson();
 void ouvrirPince();
 void fermerPince();
-void calibrerPinceEtAxeZ();
-void moveWithKeys();
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
@@ -183,7 +181,7 @@ void setup() {
 	pinMode(BTN_PIN_RIGHT, INPUT_PULLUP);
 	pinMode(BTN_PIN_OK, INPUT_PULLUP);
 	pinMode(PIN_BTN_INTERRUPT, INPUT_PULLUP);
-	attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyBtn, CHANGE);
+	attachInterrupt(digitalPinToInterrupt(PIN_BTN_INTERRUPT), NotifyOkButton, FALLING); // Only OK
 
 	//LIMIT SWITCHES
 	//----------------
@@ -230,8 +228,8 @@ void setup() {
 	limitEventGroup = xEventGroupCreate();
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 1, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 2, NULL);
+	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 4, NULL);
+	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 1, NULL);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 2, NULL);
 }
 
@@ -283,69 +281,33 @@ void homeXY() {
 
 }
 
-void TaskMotorControl (void *pvParameters) {
-	(void) pvParameters;
-	EventBits_t bits;
-	EventBits_t limitBits;
+void TaskMotorControl(void *pvParameters) {
+    (void) pvParameters;
 
-	for(;;){
+    for (;;) {
+        int deltaA = 0;
+        int deltaB = 0;
 
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        // Read direction buttons directly (X/Y only)
+        if (digitalRead(BTN_PIN_UP) == LOW)    { deltaA += speed[difficulty]; deltaB += speed[difficulty]; }
+        if (digitalRead(BTN_PIN_DOWN) == LOW)  { deltaA -= speed[difficulty]; deltaB -= speed[difficulty]; }
+        if (digitalRead(BTN_PIN_LEFT) == LOW)  { deltaA += speed[difficulty]; deltaB -= speed[difficulty]; }
+        if (digitalRead(BTN_PIN_RIGHT) == LOW) { deltaA -= speed[difficulty]; deltaB += speed[difficulty]; }
 
-		for(;;){
+        if (deltaA != 0 || deltaB != 0) {
+            MOT_A.move(deltaA);
+            MOT_B.move(deltaB);
+        } else {
+            MOT_A.stop();
+            MOT_B.stop();
+        }
 
-		bits = xEventGroupGetBits(inputEventGroup);
-		limitBits = xEventGroupGetBits(limitEventGroup);
+        // Only run the X/Y motors
+        MOT_A.run();
+        MOT_B.run();
 
-		if (bits & (EVT_BTN_LEFT | EVT_BTN_RIGHT | EVT_BTN_UP | EVT_BTN_DOWN)){
-			int deltaA = 0;
-			int deltaB = 0;
-
-			// Calcul des deltas selon boutons
-			if(bits & EVT_BTN_UP){
-			    deltaA += speed[difficulty];
-				deltaB += speed[difficulty];
-			}
-			if(bits & EVT_BTN_DOWN){
-			    deltaA -= speed[difficulty];
-				deltaB -= speed[difficulty];
-			}
-			if(bits & EVT_BTN_LEFT){
-			    deltaA += speed[difficulty];
-				deltaB -= speed[difficulty];
-			}
-			if(bits & EVT_BTN_RIGHT){
-			    deltaA -= speed[difficulty];
-				deltaB += speed[difficulty];
-			}
-			deltaX = (deltaA + deltaB) / 2;
-  			deltaY = (deltaA - deltaB) / 2;
-			
-			posX += deltaX;
-  			posY -= deltaY;
-
-			targetA = deltaX + deltaY;
-  			targetB = deltaX - deltaY;
-
-			if ((targetA == 0) && (targetB == 0)) {
-				MOT_A.stop(); // essayer avoir meullieur arrêt
-				MOT_B.stop();			
-			} 
-			else {
-				MOT_A.setSpeed(targetA);
-				MOT_B.setSpeed(targetB);
-			
-				MOT_A.runSpeed();
-				MOT_B.runSpeed();
-			}
-		}
-		// Check if we received a new notification telling us to STOP
-		if (ulTaskNotifyTake(pdTRUE, 0)) {
-			break;  // Exit manual mode immediately
-		}
-		vTaskDelay(pdMS_TO_TICKS(10));
-		}
-	}
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
 }
 
 void TaskStateControl (void *pvParameters) {
@@ -355,7 +317,7 @@ void TaskStateControl (void *pvParameters) {
 
 	switch(currentState) {
 		case SETUP:
-			calibrerPinceEtAxeZ();
+			//calibrerPinceEtAxeZ();
 			currentState = IDLE;
 			break;
 		case DIFF_CHOOSE:
@@ -450,33 +412,14 @@ void NotifySwitch(){
 		portYIELD_FROM_ISR();
 	}
 }
-volatile EventBits_t lastButtonState = 0;
 
-void NotifyBtn() {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    // Ignore bouncing
-    uint32_t now = xTaskGetTickCountFromISR();
+void NotifyOkButton() {
+    TickType_t now = xTaskGetTickCountFromISR();
     if (now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) return;
     lastBtnInterrupt = now;
 
-    // Pour chaque bouton, mettre le bit = état actuel (LOW = appuyé, HIGH = relâché)
-    xEventGroupSetBitsFromISR(inputEventGroup,
-        (digitalRead(BTN_PIN_UP)   == LOW ? EVT_BTN_UP    : 0) |
-        (digitalRead(BTN_PIN_DOWN) == LOW ? EVT_BTN_DOWN  : 0) |
-        (digitalRead(BTN_PIN_LEFT) == LOW ? EVT_BTN_LEFT  : 0) |
-        (digitalRead(BTN_PIN_RIGHT)== LOW ? EVT_BTN_RIGHT : 0) |
-        (digitalRead(BTN_PIN_OK)   == LOW ? EVT_BTN_OK    : 0),
-        &xHigherPriorityTaskWoken
-    );
-
-    // Clear les bits pour les boutons relâchés
-    if (digitalRead(BTN_PIN_UP)   != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_UP);
-    if (digitalRead(BTN_PIN_DOWN) != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_DOWN);
-    if (digitalRead(BTN_PIN_LEFT) != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_LEFT);
-    if (digitalRead(BTN_PIN_RIGHT)!= LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_RIGHT);
-    if (digitalRead(BTN_PIN_OK)   != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_OK);
-
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_OK, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
@@ -628,28 +571,28 @@ void TaskCommJsonReceive(void *pvParameters) {
 
                 // Z
                 else if (strcmp(action, "deplacer_z_haut") == 0) {
-                    MOT_Z.moveTo(MOT_Z.currentPosition() + 100);
+                    //MOT_Z.moveTo(MOT_Z.currentPosition() + 100);
                 }
                 else if (strcmp(action, "deplacer_z_bas") == 0) {
-                    MOT_Z.moveTo(MOT_Z.currentPosition() - 100);
+                    //MOT_Z.moveTo(MOT_Z.currentPosition() - 100);
                 }
                 else if (strcmp(action, "position_haut_z") == 0) {
-                    MOT_Z.moveTo(liftedZPos);
+                    //MOT_Z.moveTo(liftedZPos);
                 }
                 else if (strcmp(action, "position_bas_z") == 0) {
-                    MOT_Z.moveTo(maxDownZPos);
+                    //MOT_Z.moveTo(maxDownZPos);
                 }
             }
 
             // ── PERSONNALISATION ─────────────────────────────
             else if (strcmp(type, "personnalisation") == 0) {
-                if (doc.containsKey("difficulte")) {
+                if (doc["difficulte"].is<int>()) {
                     difficulty = doc["difficulte"];
                     temps[difficulty]  = doc["temps"];
                     force[difficulty]  = doc["force"];
                     speed[difficulty]  = doc["vitesse"];
                 }
-                if (doc.containsKey("couleur")) {
+                if (doc["couleur"].is<const char*>()) {
                     ledColor = doc["couleur"].as<String>();
                 }
             }
@@ -668,43 +611,6 @@ void TaskCommJsonReceive(void *pvParameters) {
         }
 
         vTaskDelay(pdMS_TO_TICKS(50));
-    }
-}
-
-//PLACEHOLDER
-void calibrerPinceEtAxeZ(){
-    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-    dxl.torqueOn(id);
-
-    moveWithKeys();
-    OPEN_POS = dxl.getPresentPosition(id);
-
-    moveWithKeys();
-    CLOSED_POS = dxl.getPresentPosition(id);
-
-	moveWithKeys();
-	maxDownZPos = MOT_Z.currentPosition();
-
-	moveWithKeys();
-	liftedZPos = MOT_Z.currentPosition();
-
-}
-
-void moveWithKeys() {
-    int32_t target = dxl.getPresentPosition(id);
-    while (true) {
-        if (Serial.available()) {
-            char c = Serial.read();
-            if (c == ' ') return;                    // confirm
-            if (c == 'w') target -= 100;             // open direction
-            if (c == 's') target += 100;             // close direction
-			if (c=='a') MOT_Z.moveTo(MOT_Z.currentPosition() - 100); // DOWN
-			if (c=='d') MOT_Z.moveTo(MOT_Z.currentPosition() + 100); // UP
-
-            dxl.setGoalPosition(id, target, UNIT_RAW);
-        }
-		MOT_Z.run();
-		vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
