@@ -134,12 +134,13 @@ enum SystemState {
   DROPPING, //Pince ouverte
 };
 
-volatile SystemState currentState = SETUP;
+volatile SystemState currentState = IDLE;
 
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
-void TaskCommJson (void *pvParameters);
+void TaskCommJsonReceive (void *pvParameters);
+void TaskCommJsonSend(void *pvParameters);
 void NotifySwitch();
 void NotifyBtn();
 void homeXY();
@@ -229,8 +230,9 @@ void setup() {
 	limitEventGroup = xEventGroupCreate();
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-	//xTaskCreate(TaskCommJson, "CommTask", 512, NULL, 3, NULL);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 1, NULL);
+	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 2, NULL);
+	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 2, NULL);
 }
 
 void loop() {
@@ -423,8 +425,7 @@ void TaskStateControl (void *pvParameters) {
   }
 }
 
-/*
-void TaskCommJson(void *pvParameters) {
+void TaskCommJsonSend(void *pvParameters) {
     (void) pvParameters;
 
     for(;;) {
@@ -432,10 +433,10 @@ void TaskCommJson(void *pvParameters) {
         Serial.println(jsonMsg);
         vTaskDelay(pdMS_TO_TICKS(250));
     }
-}*/
+}
 
 void NotifySwitch(){
-	//PENDANT SETUP, ON VEUT QUE LES (2 ou 3) LIMITSWITCHES SERVENT A TROUVER LE ZERO
+	//PENDANT SETUP, ON VEUT QUE LES 2 LIMITSWITCHES SERVENT A TROUVER LE ZERO
 	//En Situation normale, on veut que les limit switch servent à detecter les obstacles et à arrêter le moteur pour pas que ça arrache tout
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
@@ -449,59 +450,34 @@ void NotifySwitch(){
 		portYIELD_FROM_ISR();
 	}
 }
+volatile EventBits_t lastButtonState = 0;
 
-void NotifyBtn(){
-	//METTRE UNE QUEUE ?
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+void NotifyBtn() {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-	//Ignore button bouncing
-	uint32_t now = xTaskGetTickCountFromISR();
-	if (now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) {
-		return;
-	}
-	lastBtnInterrupt = now;
+    // Ignore bouncing
+    uint32_t now = xTaskGetTickCountFromISR();
+    if (now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) return;
+    lastBtnInterrupt = now;
 
-	bool up_state = digitalRead(BTN_PIN_UP) == LOW;
-	bool down_state = digitalRead(BTN_PIN_DOWN) == LOW;
-	bool left_state = digitalRead(BTN_PIN_LEFT) == LOW;
-	bool right_state = digitalRead(BTN_PIN_RIGHT) == LOW;
-	bool ok_state = digitalRead(BTN_PIN_OK) == LOW;
+    // Pour chaque bouton, mettre le bit = état actuel (LOW = appuyé, HIGH = relâché)
+    xEventGroupSetBitsFromISR(inputEventGroup,
+        (digitalRead(BTN_PIN_UP)   == LOW ? EVT_BTN_UP    : 0) |
+        (digitalRead(BTN_PIN_DOWN) == LOW ? EVT_BTN_DOWN  : 0) |
+        (digitalRead(BTN_PIN_LEFT) == LOW ? EVT_BTN_LEFT  : 0) |
+        (digitalRead(BTN_PIN_RIGHT)== LOW ? EVT_BTN_RIGHT : 0) |
+        (digitalRead(BTN_PIN_OK)   == LOW ? EVT_BTN_OK    : 0),
+        &xHigherPriorityTaskWoken
+    );
 
-	//Si 2 boutons appuyés en meme temps, on garde que le plus prioritaire (OK > AUTRES BOUTONS)
-	if (ok_state) {
-		xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_OK, &xHigherPriorityTaskWoken);
-	}
-	else {
-		xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_OK);
-		if (up_state) {
-		xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_UP, &xHigherPriorityTaskWoken);
-		}
-		else {
-		xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_UP);
-		}
-		if (down_state) {
-		xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_DOWN, &xHigherPriorityTaskWoken);
-		}
-		else {
-		xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_DOWN);
-		}
-		if (left_state) {
-		xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_LEFT, &xHigherPriorityTaskWoken);
-		}
-		else {
-		xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_LEFT);
-		}
-		if (right_state) {
-		xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_RIGHT, &xHigherPriorityTaskWoken);
-		}
-		else {
-		xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_RIGHT);
-		}
-	}
+    // Clear les bits pour les boutons relâchés
+    if (digitalRead(BTN_PIN_UP)   != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_UP);
+    if (digitalRead(BTN_PIN_DOWN) != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_DOWN);
+    if (digitalRead(BTN_PIN_LEFT) != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_LEFT);
+    if (digitalRead(BTN_PIN_RIGHT)!= LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_RIGHT);
+    if (digitalRead(BTN_PIN_OK)   != LOW) xEventGroupClearBitsFromISR(inputEventGroup, EVT_BTN_OK);
 
-	if(xHigherPriorityTaskWoken == pdTRUE){
-		portYIELD_FROM_ISR();
-	}
+    if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
 void ouvrirPince() {
@@ -515,7 +491,7 @@ void fermerPince() {
 }
 
 String buildStatusJson() {
-    DynamicJsonDocument doc(2048);  // or JsonDocument doc(1024) for Static
+    StaticJsonDocument<1024> doc;   // or JsonDocument doc(1024) for Static
 
     // Temps et niveaux
     doc["time_facile"] = temps[0];
@@ -562,11 +538,137 @@ String buildStatusJson() {
     z_axis["min_height"] = liftedZPos;
     z_axis["current_height"] = MOT_Z.currentPosition();
 
-
-
     String output;
     serializeJson(doc, output);
     return output;
+}
+
+void TaskCommJsonReceive(void *pvParameters) {
+    (void) pvParameters;
+
+    for (;;) {
+
+        // Check for incoming JSON
+        if (Serial.available()) {
+            String incoming = Serial.readStringUntil('\n');
+            incoming.trim();
+
+            StaticJsonDocument<512> doc;
+            DeserializationError err = deserializeJson(doc, incoming);
+            if (err) {
+                vTaskDelay(pdMS_TO_TICKS(50));
+                continue; // ignore malformed JSON
+            }
+
+            const char* type   = doc["type"];
+            const char* action = doc["action"];
+            const char* champ  = doc["champ"];
+
+            // ── COMMANDES ────────────────────────────────────
+            if (strcmp(type, "commande") == 0) {
+
+                if (strcmp(action, "urgence") == 0) {
+                    MOT_A.stop(); MOT_B.stop(); MOT_Z.stop();
+                    currentState = IDLE;
+                }
+                else if (strcmp(action, "reinitialiser") == 0) {
+                    currentState = SETUP;
+                }
+                else if (strcmp(action, "init") == 0) {
+                    homeXY();
+                }
+
+                // Pince
+                else if (strcmp(action, "ouvrir_pince") == 0)  ouvrirPince();
+                else if (strcmp(action, "fermer_pince") == 0)  fermerPince();
+                else if (strcmp(action, "moitie_pince") == 0) {
+                    int32_t mid = (OPEN_POS + CLOSED_POS) / 2;
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                    dxl.setGoalPosition(id, mid, UNIT_RAW);
+                }
+                else if (strcmp(action, "ouvrir_manuel") == 0){
+                    int32_t target = dxl.getPresentPosition(id) - 100;
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                    dxl.setGoalPosition(id, target, UNIT_RAW);
+                }
+                else if (strcmp(action, "fermer_manuel") == 0) {
+                    int32_t target = dxl.getPresentPosition(id) + 100;
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                    dxl.setGoalPosition(id, target, UNIT_RAW);
+                }
+
+                // XY
+                else if (strcmp(action, "deplacer_x_plus") == 0) {
+                    posX += speed[difficulty];
+                    MOT_A.moveTo(posX + posY); 
+                    MOT_B.moveTo(posX - posY);
+                }
+                else if (strcmp(action, "deplacer_x_moins") == 0) {
+                    posX -= speed[difficulty];
+                    MOT_A.moveTo(posX + posY); 
+                    MOT_B.moveTo(posX - posY);
+                }
+                else if (strcmp(action, "deplacer_y_plus") == 0) {
+                    posY += speed[difficulty];
+                    MOT_A.moveTo(posX + posY); 
+                    MOT_B.moveTo(posX - posY);
+                }
+                else if (strcmp(action, "deplacer_y_moins") == 0) {
+                    posY -= speed[difficulty];
+                    MOT_A.moveTo(posX + posY); 
+                    MOT_B.moveTo(posX - posY);
+                }
+                else if (strcmp(action, "position_initiale_xy") == 0) homeXY();
+                else if (strcmp(action, "position_milieu_xy") == 0) {
+                    posX = MAX_POS_X / 2; 
+                    posY = MAX_POS_Y / 2;
+                    MOT_A.moveTo(posX + posY); 
+                    MOT_B.moveTo(posX - posY);
+                }
+
+                // Z
+                else if (strcmp(action, "deplacer_z_haut") == 0) {
+                    MOT_Z.moveTo(MOT_Z.currentPosition() + 100);
+                }
+                else if (strcmp(action, "deplacer_z_bas") == 0) {
+                    MOT_Z.moveTo(MOT_Z.currentPosition() - 100);
+                }
+                else if (strcmp(action, "position_haut_z") == 0) {
+                    MOT_Z.moveTo(liftedZPos);
+                }
+                else if (strcmp(action, "position_bas_z") == 0) {
+                    MOT_Z.moveTo(maxDownZPos);
+                }
+            }
+
+            // ── PERSONNALISATION ─────────────────────────────
+            else if (strcmp(type, "personnalisation") == 0) {
+                if (doc.containsKey("difficulte")) {
+                    difficulty = doc["difficulte"];
+                    temps[difficulty]  = doc["temps"];
+                    force[difficulty]  = doc["force"];
+                    speed[difficulty]  = doc["vitesse"];
+                }
+                if (doc.containsKey("couleur")) {
+                    ledColor = doc["couleur"].as<String>();
+                }
+            }
+
+            // ── REMPLACEMENT ─────────────────────────────────
+            else if (strcmp(type, "remplacement") == 0) {
+                int32_t valeur = doc["valeur"];
+
+                if      (strcmp(champ, "pince_ouverte")  == 0) OPEN_POS     = valeur;
+                else if (strcmp(champ, "pince_fermee")   == 0) CLOSED_POS   = valeur;
+                else if (strcmp(champ, "valeurmax_x")    == 0) MAX_POS_X    = valeur;
+                else if (strcmp(champ, "valeurmax_y")    == 0) MAX_POS_Y    = valeur;
+                else if (strcmp(champ, "valeurmax_z")    == 0) maxDownZPos  = valeur;
+                else if (strcmp(champ, "valeurmin_z")    == 0) liftedZPos   = valeur;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
 }
 
 //PLACEHOLDER
@@ -587,6 +689,7 @@ void calibrerPinceEtAxeZ(){
 	liftedZPos = MOT_Z.currentPosition();
 
 }
+
 void moveWithKeys() {
     int32_t target = dxl.getPresentPosition(id);
     while (true) {
@@ -606,10 +709,13 @@ void moveWithKeys() {
 }
 
 //TODO
-//Fonctions pour regler la force de la pince ?
-//FonctionS pour setter les zéros de l'axe Z et Pince ? lors de l'init
-//Set speed et non position pour stepper motor.
 
-// Calibration pince ? entiereemnt dans communication JSON ?
-// Calibration Axe Z ? entierement dans communication JSON ?
-// mode Setup ?!
+//Recevoir les messages par Json
+	//Verifier etat Reinitialiser vs Init
+	//Gerer bouton urgence
+
+//Fonction Homing not done
+//Limit switches in CoreXY
+//Probleme frein sur Core XY, du aux boutons
+//Probleme pour sortir du IDLE, bouton ok semble ne pas marcher
+//Ajouter interface retro
