@@ -95,8 +95,8 @@ int deltaY = 0;
 long posX = 6550;
 long posY = 0;
 
-long MAX_POS_X = 13100;
-long MAX_POS_Y = 12998;
+long MAX_POS_X = 7100;
+long MAX_POS_Y = 6299;
 
 //Moteur 1
 #define EN_PIN_M1 29
@@ -251,22 +251,24 @@ void milieu() {
 	MOT_B.setCurrentPosition(MOT_B.currentPosition());
 
     // ── Compute XY target based on currentPosition ──
-    // --- Home X axis ---
-    long targetX = 0;
-    long targetY = 0;
+    long posX = 0;
+    long posY = 0;
+    float posMillieuX = MAX_POS_X / 2;
+    float posMillieuY = MAX_POS_Y / 2;
 
-	while (targetX != (MAX_POS_X / 2)) {
+    // --- Home X axis ---
+	while ((posX < (posMillieuX + 2)) | (posX > (posMillieuX - 2))) {
         long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
         long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
 
-        targetX = curX;
-        targetY = curY;
+        posX = curX;
+        posY = curY;
 
-        // Down
-        targetX -= 100;
+        if (posX > posMillieuX) { posX -= 100;}
+        if (posX < posMillieuX) { posX += 100;}
 
-        MOT_A.moveTo(targetX + targetY);
-        MOT_B.moveTo(targetX - targetY);
+        MOT_A.moveTo(posX + posY);
+        MOT_B.moveTo(posX - posY);
 
         MOT_A.run();
         MOT_B.run();
@@ -275,21 +277,20 @@ void milieu() {
 
 	MOT_A.setCurrentPosition(0);
 	MOT_B.setCurrentPosition(0);
-	posX = 0;
 
 	// --- Home Y axis ---
-	while (digitalRead(LMTSW_Y) != LOW) {
+	while ((posY < (posMillieuY + 100)) | (posY > (posMillieuY - 100))) {
         long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
         long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
 
-        long targetX = curX;
-        long targetY = curY;
+        posX = curX;
+        posY = curY;
 
-        // Left
-        targetY += 100;
+        if (posY > posMillieuY) { posY += 100;}
+        if (posY < posMillieuY) { posY -= 100;}
 
-        MOT_A.moveTo(targetX + targetY);
-        MOT_B.moveTo(targetX - targetY);
+        MOT_A.moveTo(posX + posY);
+        MOT_B.moveTo(posX - posY);
 
         MOT_A.run();
         MOT_B.run();
@@ -298,9 +299,6 @@ void milieu() {
 
 	MOT_A.setCurrentPosition(0);
 	MOT_B.setCurrentPosition(0);
-	posY = 0;
-
-	//xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
 }
 
 void homeXY() {
@@ -365,7 +363,7 @@ void TaskStateControl (void *pvParameters) {
 	switch(currentState) {
 		case SETUP:
 			//calibrerPinceEtAxeZ();
-            homeXY();
+            milieu();
 			currentState = IDLE;
 			break;
 		case DIFF_CHOOSE:
