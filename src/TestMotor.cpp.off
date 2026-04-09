@@ -261,6 +261,9 @@ void loop() {
   float posB = MOT_B.currentPosition();
   posX = (posA + posB) /2;
   posY = (posB - posA) /2;
+
+
+  /**/
   //Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
   
   if(((posX + deltaX) < MAX_POS_X) && ((posX + deltaX) > 0) && ((posY + deltaY) < MAX_POS_Y) && ((posY + deltaY) > 0)) {
@@ -415,6 +418,10 @@ void loop() {
     delay(10000);
   }
   */
+        if ((posX > MAX_POS_X) & (digitalRead(BTN_PIN_UP) == LOW)) { deltaA -= speed[difficulty]; deltaB -= speed[difficulty]; }
+        if ((digitalRead(LMTSW_X) == LOW) & (digitalRead(BTN_PIN_DOWN) == LOW)) { deltaA += speed[difficulty]; deltaB += speed[difficulty]; }
+        if ((digitalRead(LMTSW_Y) == LOW) & (digitalRead(BTN_PIN_LEFT) == LOW)) { deltaA -= speed[difficulty]; deltaB += speed[difficulty]; }
+        if ((posY > MAX_POS_Y) & (digitalRead(BTN_PIN_RIGHT) == LOW)) { deltaA += speed[difficulty]; deltaB -= speed[difficulty]; }
 
   /*
   // Test déplacement chariot X diagonal 
