@@ -118,8 +118,8 @@ long MAX_POS_Y = 12998;
 #define STEP_PIN_MZ 34
 #define SW_RX_MZ            14 // TMC2208/TMC2224 SoftwareSerial receive pin
 #define SW_TX_MZ            13 // TMC2208/TMC2224 SoftwareSerial transmit pin
-long liftedZPos = 0; //Position de l'axe Z quand la pince est levée, à ajuster selon le système
-long maxDownZPos = 10000; //Position de l'axe Z quand la pince est au plus bas, à ajuster selon le système
+long liftedZPos = 10000; //Position de l'axe Z quand la pince est levée, à ajuster selon le système
+long maxDownZPos = 6000; //Position de l'axe Z quand la pince est au plus bas, à ajuster selon le système
 
 AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1); //Moteur gauche
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
@@ -740,20 +740,16 @@ void TaskCommJsonReceive(void *pvParameters) {
                 else if (strcmp(action, "ouvrir_pince") == 0) {
                     ouvrirPince();
  
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"ouvrir_pince\"}");
                 }
  
                 else if (strcmp(action, "fermer_pince") == 0) {
                     fermerPince();
  
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"fermer_pince\"}");
                 }
 
                 else if(strcmp(action, "moitie_pince") == 0) {
                     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
                     dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
-
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"moitie_pince\"}");
                 }
  
                 else if (strcmp(action, "dep_droite") == 0 ||
@@ -778,52 +774,28 @@ void TaskCommJsonReceive(void *pvParameters) {
                     MOT_A.moveTo(targetX + targetY);
                     MOT_B.moveTo(targetX - targetY);
                     jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"");
-                    Serial.print(action);
-                    Serial.print("\",\"targetX\":");
-                    Serial.print(targetX);
-                    Serial.print(",\"targetY\":");
-                    Serial.print(targetY);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "dep_z_haut") == 0) {
                     long cible = MOT_Z.currentPosition() + 300;
                     MOT_Z.moveTo(cible);
                     jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"dep_z_haut\",\"targetZ\":");
-                    Serial.print(cible);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "dep_z_bas") == 0) {
                     long cible = MOT_Z.currentPosition() - 300;
                     MOT_Z.moveTo(cible);
                     jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"dep_z_bas\",\"targetZ\":");
-                    Serial.print(cible);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "pos_haut_z") == 0) {
                     MOT_Z.moveTo(liftedZPos);
                     jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_haut_z\",\"targetZ\":");
-                    Serial.print(liftedZPos);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "pos_bas_z") == 0) {
                     MOT_Z.moveTo(maxDownZPos);
                     jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_bas_z\",\"targetZ\":");
-                    Serial.print(maxDownZPos);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "pos_milieu_xy") == 0) {
@@ -843,12 +815,10 @@ void TaskCommJsonReceive(void *pvParameters) {
                 else if (strcmp(action, "ouvrir_manuel") == 0) {
                         dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
                         dxl.setGoalPosition(id,dxl.getPresentPosition(id) - 200 , UNIT_RAW);
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"ouvrir_manuel\"}");
                 }
                 else if (strcmp(action, "fermer_manuel") == 0) {
                     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
                     dxl.setGoalPosition(id,dxl.getPresentPosition(id) + 200 , UNIT_RAW);
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"fermer_manuel\"}");
                 }
  
                 else {
@@ -861,33 +831,21 @@ void TaskCommJsonReceive(void *pvParameters) {
             // =========================================================
             else if (strcmp(type, "pers") == 0) {
  
-                if (doc["couleur"].is<const char*>()) {
-                    ledColor = doc["couleur"].as<String>();
+                if (doc["clr"].is<const char*>()) {
+                    ledColor = doc["clr"].as<String>();
                 }
  
-                if (doc["difficulte"].is<const char*>()) {
-                    String diff = doc["difficulte"].as<String>();
+                if (doc["diff"].is<const char*>()) {
+                    String diff = doc["diff"].as<String>();
  
-                    if (diff == "facile") difficulty = 0;
-                    else if (diff == "moyen") difficulty = 1;
-                    else if (diff == "expert") difficulty = 2;
+                    if (diff == "fac") difficulty = 0;
+                    else if (diff == "moy") difficulty = 1;
+                    else if (diff == "exp") difficulty = 2;
  
-                    temps[difficulty] = doc["temps"] | temps[difficulty];
-                    force[difficulty] = doc["force"] | force[difficulty];
-                    speed[difficulty] = doc["vitesse"] | speed[difficulty];
+                    temps[difficulty] = doc["t"] | temps[difficulty];
+                    force[difficulty] = doc["F"] | force[difficulty];
+                    speed[difficulty] = doc["v"] | speed[difficulty];
                 }
- 
-                Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"personnalisation\",\"couleur\":\"");
-                Serial.print(ledColor);
-                Serial.print("\",\"difficulty\":");
-                Serial.print(difficulty);
-                Serial.print(",\"temps\":");
-                Serial.print(temps[difficulty]);
-                Serial.print(",\"force\":");
-                Serial.print(force[difficulty]);
-                Serial.print(",\"vitesse\":");
-                Serial.print(speed[difficulty]);
-                Serial.println("}");
             }
  
             // =========================================================
