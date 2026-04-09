@@ -1,0 +1,172 @@
+#include <Dynamixel2Arduino.h>
+
+#define DXL_SERIAL      Serial1
+#define DXL_DIR_PIN     -1
+
+int16_t OPEN_POS = 3305;
+int16_t CLOSED_POS = 6705;
+int16_t ACTUAL_POS = 0;
+
+#define MOVE_CURRENT    300 // Courant à appliquer pour déplacer la pince (unités brutes)
+#define GRIP_CURRENT    50 // Courant à appliquer pour fermer la pince (unités brutes)
+#define STALL_CURRENT   40 // Courant en dessous duquel on considère que le moteur est en stall (unités brutes)
+#define VEL_THRESHOLD   5 // Vitesse en dessous de laquelle on considère que le moteur est à l'arrêt (unités brutes)
+#define STALL_CONFIRM   300 // Temps de suite que le moteur doit être à l'arrêt pour confirmer un stall (ms)
+
+Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN);
+uint8_t  id          = 102;
+
+void ouvrirPince();
+void fermerPince();
+int  detecterToutou();
+void calibrer();
+
+uint8_t crc8(uint8_t *data, uint8_t len);
+
+void setup() {
+    Serial.begin(115200);
+    Serial3.begin(9600);  //Pour communication UART
+    delay(2000);
+
+    dxl.begin(57600);
+    dxl.setPortProtocolVersion(2.0);
+
+    for (uint8_t i = 1; i < 253; i++) {
+        if (dxl.ping(i)) {
+            Serial.print("Found Dynamixel ID: ");
+            Serial.println(i);
+            id = i;
+        }
+    }
+
+    dxl.torqueOff(id);
+    dxl.setOperatingMode(id, OP_EXTENDED_POSITION);
+    dxl.torqueOn(id);
+
+    ACTUAL_POS = dxl.getPresentPosition(id); // Lire la position actuelle à l'initialisation
+
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+    Serial.println("Ready.");
+}
+
+void loop() {
+    // Wait until we have 2 bytes (msg + CRC)
+    if (Serial3.available() < 2) return;
+
+    uint8_t msg   = Serial3.read();
+    uint8_t rxCrc = Serial3.read();
+
+    // Validate CRC — drop bad frames silently
+    if (rxCrc != crc8(&msg, 1)) return;
+
+    uint8_t response = 0;
+
+    // ── Act on bits ──
+    if (msg & 0x01) ouvrirPince();
+    if (msg & 0x02) fermerPince();
+    if (msg & 0x08) {
+        calibrer();
+        response |= 0x08; // Calibration done
+    }
+
+    if (msg & 0x04) { //4 = bit qui dit de verifier toutou
+        int status = detecterToutou();
+        if (status == 1) response |= 0x01;  // toutou_attrape
+        if (status == 2) {
+            ouvrirPince(); // éviter de staller le moteur
+            response |= 0x02;  // rien attrapé
+        }
+        if (status == 0) response |= 0x04;  // en mouvement (ni toutou attrapé ni rien attrapé)
+    }
+
+    // ── Send response ──
+    ACTUAL_POS = dxl.getPresentPosition(id); // On lit la position actuelle à chaque requete pour l'envoyer dans la réponse, comme ça on a toujours la position à jour dans Unity sans avoir besoin d'une requete spécifique pour ça
+    uint8_t frame[8];
+    frame[0] = response;
+
+    // OPEN_POS
+    frame[1] = OPEN_POS & 0xFF;
+    frame[2] = (OPEN_POS >> 8) & 0xFF;
+
+    // CLOSED_POS
+    frame[3] = CLOSED_POS & 0xFF;
+    frame[4] = (CLOSED_POS >> 8) & 0xFF;
+
+    // ACTUAL_POS
+    frame[5] = ACTUAL_POS & 0xFF;
+    frame[6] = (ACTUAL_POS >> 8) & 0xFF;
+
+    // CRC
+    frame[7] = crc8(frame, 7);
+
+    Serial3.write(frame, 8);
+}
+
+void ouvrirPince() {
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+    dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
+}
+
+void fermerPince() {
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+    dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
+}
+
+void calibrer() {
+    Serial.println("=== CALIBRATION ===");
+    dxl.torqueOff(id);  // let user move freely
+
+    // ── Open position ──
+    Serial.println("Move gripper to OPEN position, then wait...");
+    delay(5000);
+    OPEN_POS = dxl.getPresentPosition(id);
+    Serial.print("OPEN_POS locked: "); Serial.println(OPEN_POS);
+
+    // ── Closed position ──
+    Serial.println("Move gripper to CLOSED position, then wait...");
+    delay(5000);
+    CLOSED_POS = dxl.getPresentPosition(id);
+    Serial.print("CLOSED_POS confirmée: "); Serial.println(CLOSED_POS);
+
+    dxl.torqueOn(id);
+    Serial.print("Plage de valeur: "); Serial.println(CLOSED_POS - OPEN_POS);
+    Serial.println("Calibration finie.");
+}
+
+int detecterToutou() {
+    static uint32_t stallSince = 0;  // temps depuis la première détection de stall
+
+    int32_t pos     = dxl.getPresentPosition(id);
+    int32_t vel     = dxl.getPresentVelocity(id);
+    int16_t current = (int16_t)dxl.readControlTableItem(ControlTableItem::PRESENT_CURRENT, id);
+
+    if (pos >= CLOSED_POS - 5) {
+        stallSince = 0;
+        return 2;  // fermé au complet, rien attrapé
+    }
+
+    if (abs(current) >= STALL_CURRENT && abs(vel) < VEL_THRESHOLD) {
+        if (stallSince == 0) stallSince = millis();  // premiere détection de stall
+        
+        if (millis() - stallSince >= STALL_CONFIRM) {
+            stallSince = 0;
+            return 1;  // stall confirmé = toutou attrapé
+        }
+    } else {
+        stallSince = 0;  // condition broke, reset timer
+    }
+
+    return 0;  // Encore en mouvement, pas encore de conclusion sur toutou attrapé ou pas
+}
+
+uint8_t crc8 (uint8_t *data, uint8_t len){
+  uint8_t crc = 0x00; 
+  for (uint8_t i = 0;i<len;i++){
+    crc ^= data[i];
+    for (uint8_t b = 0;b<8;b++){
+      if(crc & 0x80) crc = (crc << 1) ^ 0x07;
+      else crc <<= 1;
+    }
+  }
+  return crc;
+}
