@@ -151,7 +151,8 @@ void NotifySwitch();
 void NotifyOkButton();
 void homeXY();
 String buildStatusJson();
-void bougerPince(int GOAL);
+void ouvrirPince();
+void fermerPince();
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
@@ -303,7 +304,7 @@ void TaskStateControl (void *pvParameters) {
 	switch(currentState) {
 		case SETUP:
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            bougerPince(OPEN_POS);
+            ouvrirPince();
             homeXY();
 			currentState = IDLE;
 			break;
@@ -322,18 +323,17 @@ void TaskStateControl (void *pvParameters) {
 	    case LOWERING:
 			//Séquence de mouvement vers le bas
             while(1){ // Tant que l'axe Z n'est pas presque au plus bas
-                MOT_Z.moveTo(MOT_Z.currentPosition() + 100) ; // Update internal position
+                MOT_Z.moveTo(MOT_Z.currentPosition() - 100) ; // Update internal position
                 if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || abs(MOT_Z.currentPosition()-maxDownZPos) < 50) {
                     MOT_Z.stop();
                     break; // Sortir de la boucle pour arrêter la descente
                 }
             }
-			xEventGroupClearBits(inputEventGroup, EVT_BTN_OK);
 			currentState = CLOSING;
 			break;
 
 	    case CLOSING:{  
-			bougerPince(CLOSED_POS);
+			fermerPince();
 			currentState = LIFTING;
 			break;
 	    }
@@ -353,7 +353,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case DROPPING:{ //DONE;
-			bougerPince(OPEN_POS);
+			ouvrirPince();
 			currentState = IDLE;
 			break;
 	    }
@@ -535,11 +535,11 @@ void TaskMotorControl(void *pvParameters) {
             long targetX = curX;
             long targetY = curY;
 
-            if (up & (curX <= MAX_POS_X))               targetX += btnIncrement;
-            if (down & (digitalRead(LMTSW_X) != LOW))   targetX -= btnIncrement;
-            if (left & (digitalRead(LMTSW_Y) != LOW))   targetY += btnIncrement; 
-            if (right  & (curY <= MAX_POS_Y))           targetY -= btnIncrement;
-             
+            if (up)    targetX += btnIncrement;
+            if (down)  targetX -= btnIncrement;
+            if (left)  targetY += btnIncrement; 
+            if (right) targetY -= btnIncrement; 
+
             // ── Set moveTo targets if there is any movement ──
             posX = targetX; 
             posY = targetY; 
@@ -581,10 +581,19 @@ void NotifyOkButton() {
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
-void bougerPince(int GOAL) {
+void ouvrirPince() {
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-    dxl.setGoalPosition(id, GOAL, UNIT_RAW);
-    while (abs(ACTUAL_POS-GOAL) < 50) { // Tant que la pince n'est pas presque rendue
+    dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
+    while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
+        vTaskDelay(pdMS_TO_TICKS(50));
+        ACTUAL_POS = dxl.getPresentPosition(id);
+    }
+}
+
+void fermerPince() {
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+    dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
+    while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
         vTaskDelay(pdMS_TO_TICKS(50));
         ACTUAL_POS = dxl.getPresentPosition(id);
     }
@@ -666,14 +675,14 @@ void TaskCommJsonReceive(void *pvParameters) {
             Serial.println("\"}");*/
  
             if (incoming.length() == 0) {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
+                //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
                 vTaskDelay(pdMS_TO_TICKS(20));
                 continue;
             }
  
             StaticJsonDocument<512> doc;
             DeserializationError err = deserializeJson(doc, incoming);
- 
+            /*
             if (err) {
                 Serial.print("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"json invalide\",\"brut\":\"");
                 for (int i = 0; i < incoming.length(); i++) {
@@ -686,12 +695,12 @@ void TaskCommJsonReceive(void *pvParameters) {
                 Serial.println("\"}");
                 vTaskDelay(pdMS_TO_TICKS(20));
                 continue;
-            }
+            }*/
  
             const char* type = doc["type"];
  
             if (!type) {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
+                //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
                 vTaskDelay(pdMS_TO_TICKS(20));
                 continue;
             }
@@ -703,7 +712,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                 const char* action = doc["action"];
  
                 if (!action) {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
+                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
                 }
  
                 else if (strcmp(action, "urgence") == 0) {
@@ -726,15 +735,20 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else if (strcmp(action, "ouvrir_pince") == 0) {
-                    bougerPince(OPEN_POS);
+                    ouvrirPince();
                 }
  
                 else if (strcmp(action, "fermer_pince") == 0) {
-                    bougerPince(CLOSED_POS);		
+                    fermerPince();		
                 }
 
                 else if(strcmp(action, "moitie_pince") == 0) {
-                    bougerPince((OPEN_POS + CLOSED_POS) / 2);
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+                    dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
+                    while (abs(ACTUAL_POS - (OPEN_POS + CLOSED_POS) / 2) > 50) { // Tant que la pince n'est pas presque à la moitié
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        ACTUAL_POS = dxl.getPresentPosition(id);
+                    }
                 }
  
                 else if (strcmp(action, "dep_droite") == 0 ||
@@ -762,13 +776,13 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else if (strcmp(action, "dep_z_haut") == 0) {
-                    long cible = MOT_Z.currentPosition() - 200;
+                    long cible = MOT_Z.currentPosition() + 200;
                     MOT_Z.moveTo(cible);
                     jsonMoveActive = true;
                 }
  
                 else if (strcmp(action, "dep_z_bas") == 0) {
-                    long cible = MOT_Z.currentPosition() + 200;
+                    long cible = MOT_Z.currentPosition() - 200;
                     MOT_Z.moveTo(cible);
                     jsonMoveActive = true;
                 }
@@ -793,15 +807,25 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
                 else if (strcmp(action, "ouvrir_manuel") == 0) {
                     int32_t target = dxl.getPresentPosition(id) - 200;
-                    bougerPince(target);
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                    dxl.setGoalPosition(id,target, UNIT_RAW);
+                    while (ACTUAL_POS > target + 20) { // Tant que la pince n'est pas presque ouverte
+                        vTaskDelay(pdMS_TO_TICKS(20));
+                        ACTUAL_POS = dxl.getPresentPosition(id);
+                    }
                 }
                 else if (strcmp(action, "fermer_manuel") == 0) {
                     int32_t target = dxl.getPresentPosition(id) + 200;
-                    bougerPince(target);
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                    dxl.setGoalPosition(id,target, UNIT_RAW);
+                    while (ACTUAL_POS < target - 20) { // Tant que la pince n'est pas presque fermee
+                        vTaskDelay(pdMS_TO_TICKS(20));
+                        ACTUAL_POS = dxl.getPresentPosition(id);
+                    }
                 }
  
                 else {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
+                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
                 }
             }
  
@@ -835,7 +859,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                 int32_t valeur = doc["valeur"] | 0;
  
                 if (!champ) {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
+                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
                 }
                 else if (strcmp(champ, "pince_ouverte") == 0) {
                     OPEN_POS = valeur;
@@ -850,13 +874,13 @@ void TaskCommJsonReceive(void *pvParameters) {
                     MAX_POS_Y = valeur;
                 }
                 else if (strcmp(champ, "valeurmax_z") == 0) {
-                    maxDownZPos = valeur;
-                }
-                else if (strcmp(champ, "valeurmin_z") == 0) {
                     liftedZPos = valeur;
                 }
+                else if (strcmp(champ, "valeurmin_z") == 0) {
+                    maxDownZPos = valeur;
+                }
                 else {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
+                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
                 }
             }
  
@@ -864,7 +888,7 @@ void TaskCommJsonReceive(void *pvParameters) {
             // TYPE INCONNU
             // =========================================================
             else {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
+                //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
             }
         }
  
@@ -879,8 +903,11 @@ void TaskCommJsonReceive(void *pvParameters) {
 	//Verifier etat Reinitialiser vs Init
 	//Gerer bouton urgence
 
+//Limit switches in CoreXY
+
 //Ajouter interface retro
 
 //Mettre un bool pour autoriser les boutons qui gerent les moteurs. only dans IDLE
 
+//Fonction bouger pince qui prends en argument la position, et attends : Normaliser fcts fermerPince, ouvrirPince. ajouter motie pince
 //Pareil pour axe Z
