@@ -244,49 +244,117 @@ void setup() {
 void loop() {
 }
 
-void homeXY() {
-
-	// Clear any stale limit bits first
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X | EVT_LIMIT_Y);
-
+void milieu() {
 	MOT_A.stop(); 
 	MOT_A.setCurrentPosition(MOT_A.currentPosition());
 	MOT_B.stop(); 
 	MOT_B.setCurrentPosition(MOT_B.currentPosition());
 
-	// --- Home X axis ---
-	MOT_A.setSpeed(-1000);
-	MOT_B.setSpeed(-1000);
+    // ── Compute XY target based on currentPosition ──
+    // --- Home X axis ---
+    long targetX = 0;
+    long targetY = 0;
 
-	while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_X)) {
-		MOT_A.runSpeed();
-		MOT_B.runSpeed();
-		vTaskDelay(pdMS_TO_TICKS(5));
+	while (targetX != (MAX_POS_X / 2)) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+
+        targetX = curX;
+        targetY = curY;
+
+        // Down
+        targetX -= 100;
+
+        MOT_A.moveTo(targetX + targetY);
+        MOT_B.moveTo(targetX - targetY);
+
+        MOT_A.run();
+        MOT_B.run();
+		vTaskDelay(pdMS_TO_TICKS(15));
 	}
 
 	MOT_A.setCurrentPosition(0);
 	MOT_B.setCurrentPosition(0);
 	posX = 0;
 
-	// Clear bit so it doesn't interfere with Y
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X);
-
 	// --- Home Y axis ---
-	MOT_A.setSpeed(-1000);
-	MOT_B.setSpeed(1000);
+	while (digitalRead(LMTSW_Y) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
 
-	while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_Y)) {
-		MOT_A.runSpeed();
-		MOT_B.runSpeed();
-		vTaskDelay(pdMS_TO_TICKS(5));
+        long targetX = curX;
+        long targetY = curY;
+
+        // Left
+        targetY += 100;
+
+        MOT_A.moveTo(targetX + targetY);
+        MOT_B.moveTo(targetX - targetY);
+
+        MOT_A.run();
+        MOT_B.run();
+		vTaskDelay(pdMS_TO_TICKS(15));
 	}
 
 	MOT_A.setCurrentPosition(0);
 	MOT_B.setCurrentPosition(0);
 	posY = 0;
 
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
+	//xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
+}
 
+void homeXY() {
+	MOT_A.stop(); 
+	MOT_A.setCurrentPosition(MOT_A.currentPosition());
+	MOT_B.stop(); 
+	MOT_B.setCurrentPosition(MOT_B.currentPosition());
+
+    // ── Compute XY target based on currentPosition ──
+    // --- Home X axis ---
+	while (digitalRead(LMTSW_X) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+
+        long targetX = curX;
+        long targetY = curY;
+
+        // Down
+        targetX -= 100;
+
+        MOT_A.moveTo(targetX + targetY);
+        MOT_B.moveTo(targetX - targetY);
+
+        MOT_A.run();
+        MOT_B.run();
+		vTaskDelay(pdMS_TO_TICKS(15));
+	}
+
+	MOT_A.setCurrentPosition(0);
+	MOT_B.setCurrentPosition(0);
+	posX = 0;
+
+	// --- Home Y axis ---
+	while (digitalRead(LMTSW_Y) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+
+        long targetX = curX;
+        long targetY = curY;
+
+        // Left
+        targetY += 100;
+
+        MOT_A.moveTo(targetX + targetY);
+        MOT_B.moveTo(targetX - targetY);
+
+        MOT_A.run();
+        MOT_B.run();
+		vTaskDelay(pdMS_TO_TICKS(15));
+	}
+
+	MOT_A.setCurrentPosition(0);
+	MOT_B.setCurrentPosition(0);
+	posY = 0;
 }
 
 void TaskStateControl (void *pvParameters) {
@@ -297,6 +365,7 @@ void TaskStateControl (void *pvParameters) {
 	switch(currentState) {
 		case SETUP:
 			//calibrerPinceEtAxeZ();
+            homeXY();
 			currentState = IDLE;
 			break;
 		case DIFF_CHOOSE:
@@ -348,7 +417,7 @@ void TaskStateControl (void *pvParameters) {
 
 	    case MOVING_TO_DROPZONE: //DONE
 			//Séquence de mouvement vers la dropzone
-			//homeXY();
+			homeXY();
 			currentState = DROPPING;
 			break;
 
@@ -539,10 +608,10 @@ void TaskMotorControl(void *pvParameters) {
             long targetX = curX;
             long targetY = curY;
 
-            if (up)    targetX += btnIncrement;
-            if (down)  targetX -= btnIncrement;
-            if (left)  targetY += btnIncrement; 
-            if (right) targetY -= btnIncrement; 
+            if (up & (curX <= MAX_POS_X))               targetX += btnIncrement;
+            if (down & (digitalRead(LMTSW_X) != LOW))   targetX -= btnIncrement;
+            if (left & (digitalRead(LMTSW_Y) != LOW))   targetY += btnIncrement; 
+            if (right  & (curY <= MAX_POS_Y))           targetY -= btnIncrement; 
 
             // ── Set moveTo targets if there is any movement ──
             MOT_A.moveTo(targetX + targetY);

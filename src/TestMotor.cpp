@@ -222,7 +222,47 @@ float speed = 1000; // Vitesse commence à bouger -> 26
 float MAX_POS_X = 6269.0;
 float MAX_POS_Y = 6217.0;
 
+const long btnIncrement = 100;
+
 void loop() {
+   // ── Read buttons ──
+        bool up    = digitalRead(BTN_PIN_UP)    == LOW;
+        bool down  = digitalRead(BTN_PIN_DOWN)  == LOW;
+        bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+        bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+
+        btnUp = up; btnDown = down; btnLeft = left; btnRight = right;
+        
+        if(btnUp || btnDown || btnLeft || btnRight) {
+            // ── Compute XY target based on currentPosition ──
+            long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+            long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+
+            long targetX = curX;
+            long targetY = curY;
+
+            if (up)    targetX += btnIncrement;
+            if (down)  targetX -= btnIncrement;
+            if (left)  targetY += btnIncrement; 
+            if (right) targetY -= btnIncrement; 
+
+            if (up & (curX > MAX_POS_X))               targetX -= btnIncrement;
+            if (down & (digitalRead(LMTSW_X) == LOW))  targetX += btnIncrement;
+            if (left & (digitalRead(LMTSW_Y) == LOW))  targetY -= btnIncrement; 
+            if (right & (curY > MAX_POS_Y))            targetY += btnIncrement; 
+
+            // ── Set moveTo targets if there is any movement ──
+            MOT_A.moveTo(targetX + targetY);
+            MOT_B.moveTo(targetX - targetY);
+        }
+        // ── Run motors periodically ──
+        MOT_A.run();
+        MOT_B.run();
+        MOT_Z.run(); // Z can be moved by other tasks/JSON commands
+
+        vTaskDelay(pdMS_TO_TICKS(15));
+
+/*
   int deltaA = 0;
   int deltaB = 0;
   bouton_direction_tester = 0;
@@ -262,8 +302,6 @@ void loop() {
   posX = (posA + posB) /2;
   posY = (posB - posA) /2;
 
-
-  /**/
   //Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
   
   if(((posX + deltaX) < MAX_POS_X) && ((posX + deltaX) > 0) && ((posY + deltaY) < MAX_POS_Y) && ((posY + deltaY) > 0)) {
@@ -324,7 +362,7 @@ void loop() {
     MOT_A.runSpeed();
     MOT_B.runSpeed();
   }
-
+  */
    /*
   if(posX > MAX_POS_X) {
     //Permet juste déplacement selon axe des y théoriquement
