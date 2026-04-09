@@ -151,8 +151,7 @@ void NotifySwitch();
 void NotifyOkButton();
 void homeXY();
 String buildStatusJson();
-void ouvrirPince();
-void fermerPince();
+void bougerPince(int GOAL);
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
@@ -304,7 +303,7 @@ void TaskStateControl (void *pvParameters) {
 	switch(currentState) {
 		case SETUP:
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            ouvrirPince();
+            bougerPince(OPEN_POS);
             homeXY();
 			currentState = IDLE;
 			break;
@@ -334,7 +333,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case CLOSING:{  
-			fermerPince();
+			bougerPince(CLOSED_POS);
 			currentState = LIFTING;
 			break;
 	    }
@@ -354,7 +353,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case DROPPING:{ //DONE;
-			ouvrirPince();
+			bougerPince(OPEN_POS);
 			currentState = IDLE;
 			break;
 	    }
@@ -582,19 +581,10 @@ void NotifyOkButton() {
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
-void ouvrirPince() {
+void bougerPince(int GOAL) {
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-    dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
-    while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
-        vTaskDelay(pdMS_TO_TICKS(50));
-        ACTUAL_POS = dxl.getPresentPosition(id);
-    }
-}
-
-void fermerPince() {
-    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
-    dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
-    while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
+    dxl.setGoalPosition(id, GOAL, UNIT_RAW);
+    while (abs(ACTUAL_POS-GOAL) < 50) { // Tant que la pince n'est pas presque rendue
         vTaskDelay(pdMS_TO_TICKS(50));
         ACTUAL_POS = dxl.getPresentPosition(id);
     }
@@ -736,20 +726,15 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else if (strcmp(action, "ouvrir_pince") == 0) {
-                    ouvrirPince();
+                    bougerPince(OPEN_POS);
                 }
  
                 else if (strcmp(action, "fermer_pince") == 0) {
-                    fermerPince();		
+                    bougerPince(CLOSED_POS);		
                 }
 
                 else if(strcmp(action, "moitie_pince") == 0) {
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
-                    dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
-                    while (abs(ACTUAL_POS - (OPEN_POS + CLOSED_POS) / 2) > 50) { // Tant que la pince n'est pas presque à la moitié
-                        vTaskDelay(pdMS_TO_TICKS(50));
-                        ACTUAL_POS = dxl.getPresentPosition(id);
-                    }
+                    bougerPince((OPEN_POS + CLOSED_POS) / 2);
                 }
  
                 else if (strcmp(action, "dep_droite") == 0 ||
@@ -808,21 +793,11 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
                 else if (strcmp(action, "ouvrir_manuel") == 0) {
                     int32_t target = dxl.getPresentPosition(id) - 200;
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id,target, UNIT_RAW);
-                    while (ACTUAL_POS > target + 20) { // Tant que la pince n'est pas presque ouverte
-                        vTaskDelay(pdMS_TO_TICKS(20));
-                        ACTUAL_POS = dxl.getPresentPosition(id);
-                    }
+                    bougerPince(target);
                 }
                 else if (strcmp(action, "fermer_manuel") == 0) {
                     int32_t target = dxl.getPresentPosition(id) + 200;
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id,target, UNIT_RAW);
-                    while (ACTUAL_POS < target - 20) { // Tant que la pince n'est pas presque fermee
-                        vTaskDelay(pdMS_TO_TICKS(20));
-                        ACTUAL_POS = dxl.getPresentPosition(id);
-                    }
+                    bougerPince(target);
                 }
  
                 else {
@@ -904,11 +879,8 @@ void TaskCommJsonReceive(void *pvParameters) {
 	//Verifier etat Reinitialiser vs Init
 	//Gerer bouton urgence
 
-//Limit switches in CoreXY
-
 //Ajouter interface retro
 
 //Mettre un bool pour autoriser les boutons qui gerent les moteurs. only dans IDLE
 
-//Fonction bouger pince qui prends en argument la position, et attends : Normaliser fcts fermerPince, ouvrirPince. ajouter motie pince
 //Pareil pour axe Z
