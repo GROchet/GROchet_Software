@@ -70,20 +70,6 @@ EventGroupHandle_t inputEventGroup;
 EventGroupHandle_t toutouEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 
-float targetA = 0;
-float targetB = 0;
-
-int deltaX = 0;
-int deltaY = 0;
-
-long posX = 6550;
-long posY = 0;
-
-float speed = 1000; // Vitesse commence à bouger -> 26
-
-long MAX_POS_X = 13100;
-long MAX_POS_Y = 12998;
-
 // Ajout pour test
 #define BTN_OK 0
 #define BTN_UP 1
@@ -150,11 +136,29 @@ Y -> 12998
 -> pas réussi arrêter moteur dans if
 
 5. Test bouton pour déplacer core xy direction précise
-(2026-04-01) -À Cloé
+(2026-04-01) -> Cloé
 Les mvt corespond au bouton appuyer
 Lors relacher bouton décélération trop lente
 
 6. Modifier programme pour fonctionner en vitesse
+(2026-04-01) -> Cloé
+Fonctionnel
+
+7. Trouver range vitesse
+1000 -> parfait 
+max -> 2000 (selon moi)
+1500 -> rapide
+250 -> très lent
+350 -> plus lent
+
+Vitesse : 350 à 2000
+
+8. Déterminer limite de position 
+position max x = 6269.0
+position max y = -6217.0
+
+
+
 
 
 */
@@ -204,6 +208,19 @@ void setup() {
   pinMode(BTN_Interup, INPUT_PULLUP);
 }
 
+float targetA = 0;
+float targetB = 0;
+
+float deltaX = 0;
+float deltaY = 0;
+
+float posX = 0;
+float posY = 0;
+
+float speed = 1000; // Vitesse commence à bouger -> 26
+
+float MAX_POS_X = 6269.0;
+float MAX_POS_Y = 6217.0;
 
 void loop() {
   int deltaA = 0;
@@ -240,10 +257,72 @@ void loop() {
   //Serial.print("delta X :"); Serial.print(deltaX); Serial.print(" delta Y :"); Serial.println(deltaY);
 
   // Update positions
-  posX += deltaX;
-  posY -= deltaY;
+  float posA = MOT_A.currentPosition();
+  float posB = MOT_B.currentPosition();
+  posX = (posA + posB) /2;
+  posY = (posB - posA) /2;
   //Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
-  /*
+  
+  if(((posX + deltaX) < MAX_POS_X) && ((posX + deltaX) > 0) && ((posY + deltaY) < MAX_POS_Y) && ((posY + deltaY) > 0)) {
+    targetA = deltaX + deltaY;
+    targetB = deltaX - deltaY;
+  }
+  else if(posX > MAX_POS_X) {
+    //Permet juste déplacement selon axe des y théoriquement
+    targetA = deltaY;
+    targetB = -deltaY;
+    Serial.println("Fin X");
+  }
+  else if (posX < 0) {
+    targetA = deltaY;
+    targetB = -deltaY;
+    Serial.println("Début X");
+  }
+  else {
+    targetA = deltaX + deltaY;
+    targetB = deltaX - deltaY;
+  }
+
+  else if(posY > MAX_POS_Y) {
+    //Permet juste déplacement selon axe des y théoriquement
+    targetA = deltaX;
+    targetB = -deltaX;
+    Serial.println("Fin Y");
+  }
+  else if (posY < 0) {
+    targetA = deltaX;
+    targetB = -deltaX;
+    Serial.println("Début Y");
+  }
+  else {
+    targetA = deltaX + deltaY;
+    targetB = deltaX - deltaY;
+  }
+ 
+
+
+
+  if ((targetA == 0) && (targetB == 0)) {
+    MOT_A.stop(); // essayer avoir meullieur arrêt
+    MOT_B.stop();
+
+    delay(200);
+    int positionA = MOT_A.currentPosition();
+    int positionB = MOT_B.currentPosition();
+    Serial.print("Position A :"); Serial.print(posA);
+    Serial.print("Position B :"); Serial.println(posB);
+    Serial.print("Position X :"); Serial.print(posX); Serial.print("  Position Y :"); Serial.println(posY);
+    Serial.println("---------------------------");
+  } 
+  else {
+    MOT_A.setSpeed(targetA);
+    MOT_B.setSpeed(targetB);
+  
+    MOT_A.runSpeed();
+    MOT_B.runSpeed();
+  }
+
+   /*
   if(posX > MAX_POS_X) {
     //Permet juste déplacement selon axe des y théoriquement
     targetA = deltaY;
@@ -261,11 +340,6 @@ void loop() {
     targetB = deltaX - deltaY;
   }
     */
-
-  targetA = deltaX + deltaY;
-  targetB = deltaX - deltaY;
-
-  
 
   // CoreXY mapping
   //targetA = deltaX + deltaY;
@@ -317,18 +391,7 @@ void loop() {
 
   //Serial.print("A :"); Serial.print(targetA); Serial.print("  B :"); Serial.println(targetB);
 
-  if ((targetA == 0) && (targetB == 0)) {
-    MOT_A.stop(); // essayer avoir meullieur arrêt
-    MOT_B.stop();
-    Serial.println("Fin");
 
-  } else {
-    MOT_A.setSpeed(targetA);
-    MOT_B.setSpeed(targetB);
-  
-    MOT_A.runSpeed();
-    MOT_B.runSpeed();
-  }
 
   /*
   while(toujoursMvtA || toujoursMvtB) {
