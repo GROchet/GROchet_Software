@@ -44,6 +44,12 @@ volatile TickType_t lastBtnInterrupt = 0;
 #define EVT_BTN_LEFT (1 << 3)
 #define EVT_BTN_RIGHT (1 << 4)
 
+// Global variables (only motor task writes)
+volatile bool btnUp = false;
+volatile bool btnDown = false;
+volatile bool btnLeft = false;
+volatile bool btnRight = false;
+
 // -------------------
 //LIMIT SWITCHES
 // -------------------
@@ -134,7 +140,7 @@ enum SystemState {
   DROPPING, //Pince ouverte
 };
 
-volatile SystemState currentState = IDLE;
+volatile SystemState currentState = SETUP;
 
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
@@ -152,6 +158,8 @@ void fermerPince();
 EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 TaskHandle_t detectToutouTaskHandle = NULL;
+
+volatile bool jsonMoveActive = false;
 
 void setup() {
 	Serial.begin(115200); // OU 115200 selon ce qui est choisi pour le debug
@@ -228,9 +236,9 @@ void setup() {
 	limitEventGroup = xEventGroupCreate();
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 4, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 1, NULL);
-	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 2, NULL);
+	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 3, NULL);
+	//xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
+	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
 }
 
 void loop() {
@@ -279,35 +287,6 @@ void homeXY() {
 
 	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
 
-}
-
-void TaskMotorControl(void *pvParameters) {
-    (void) pvParameters;
-
-    for (;;) {
-        int deltaA = 0;
-        int deltaB = 0;
-
-        // Read direction buttons directly (X/Y only)
-        if (digitalRead(BTN_PIN_UP) == LOW)    { deltaA += speed[difficulty]; deltaB += speed[difficulty]; }
-        if (digitalRead(BTN_PIN_DOWN) == LOW)  { deltaA -= speed[difficulty]; deltaB -= speed[difficulty]; }
-        if (digitalRead(BTN_PIN_LEFT) == LOW)  { deltaA += speed[difficulty]; deltaB -= speed[difficulty]; }
-        if (digitalRead(BTN_PIN_RIGHT) == LOW) { deltaA -= speed[difficulty]; deltaB += speed[difficulty]; }
-
-        if (deltaA != 0 || deltaB != 0) {
-            MOT_A.move(deltaA);
-            MOT_B.move(deltaB);
-        } else {
-            MOT_A.stop();
-            MOT_B.stop();
-        }
-
-        // Only run the X/Y motors
-        MOT_A.run();
-        MOT_B.run();
-
-        vTaskDelay(pdMS_TO_TICKS(20));
-    }
 }
 
 void TaskStateControl (void *pvParameters) {
@@ -387,13 +366,194 @@ void TaskStateControl (void *pvParameters) {
   }
 }
 
+struct StatusCache {
+    int posX = -1;
+    int posY = -1;
+    int zPos = -1;
+    int state = -1;
+    int ACTUAL_POS = -1;
+    int difficulty = -1;
+    int temps[3] = {-1,-1,-1};
+    int force[3] = {-1,-1,-1};
+    int speed[3] = {-1,-1,-1};
+    int OPEN_POS = -1;
+    int CLOSED_POS = -1;
+    int MAX_POS_X = -1;
+    int MAX_POS_Y = -1;
+    int liftedZPos = -1;
+    int maxDownZPos = -1;
+    String ledColor = "";
+    EventBits_t buttons = 0;
+};
+
 void TaskCommJsonSend(void *pvParameters) {
     (void) pvParameters;
 
-    for(;;) {
-        String jsonMsg = buildStatusJson();
-        Serial.println(jsonMsg);
-        vTaskDelay(pdMS_TO_TICKS(250));
+    struct {
+        long posX = -1;
+        long posY = -1;
+        long zPos = -1;
+        int state = -1;
+        int ACTUAL_POS = -1;
+        int difficulty = -1;
+        int temps[3] = {-1,-1,-1};
+        int force[3] = {-1,-1,-1};
+        int speed[3] = {-1,-1,-1};
+        int OPEN_POS = -1;
+        int CLOSED_POS = -1;
+        long MAX_POS_X = -1;
+        long MAX_POS_Y = -1;
+        long liftedZPos = -1;
+        long maxDownZPos = -1;
+        long maxHeight = -1;
+        long minHeight = -1;
+        String ledColor = "";
+        bool btnUp = false;
+        bool btnDown = false;
+        bool btnLeft = false;
+        bool btnRight = false;
+        bool btnOk = false;
+    } last;
+
+    for (;;) {
+        bool changed = false;
+
+        // --- Positions ---
+        long z = MOT_Z.currentPosition();
+        if (posX != last.posX) { last.posX = posX; changed = true; }
+        if (posY != last.posY) { last.posY = posY; changed = true; }
+        if (z != last.zPos) { last.zPos = z; changed = true; }
+
+        // --- System State ---
+        if ((int)currentState != last.state) { last.state = (int)currentState; changed = true; }
+        if (ACTUAL_POS != last.ACTUAL_POS) { last.ACTUAL_POS = ACTUAL_POS; changed = true; }
+        if (difficulty != last.difficulty) { last.difficulty = difficulty; changed = true; }
+
+        // --- Temps / Force / Speed ---
+        for (int i = 0; i < 3; i++) {
+            if (temps[i] != last.temps[i]) { last.temps[i] = temps[i]; changed = true; }
+            if (force[i] != last.force[i]) { last.force[i] = force[i]; changed = true; }
+            if (speed[i] != last.speed[i]) { last.speed[i] = speed[i]; changed = true; }
+        }
+
+        // --- Pince ---
+        if (OPEN_POS != last.OPEN_POS) { last.OPEN_POS = OPEN_POS; changed = true; }
+        if (CLOSED_POS != last.CLOSED_POS) { last.CLOSED_POS = CLOSED_POS; changed = true; }
+
+        // --- Limits ---
+        if (MAX_POS_X != last.MAX_POS_X) { last.MAX_POS_X = MAX_POS_X; changed = true; }
+        if (MAX_POS_Y != last.MAX_POS_Y) { last.MAX_POS_Y = MAX_POS_Y; changed = true; }
+        if (liftedZPos != last.liftedZPos) { last.liftedZPos = liftedZPos; changed = true; }
+        if (maxDownZPos != last.maxDownZPos) { last.maxDownZPos = maxDownZPos; changed = true; }
+
+        // --- LED ---
+        if (ledColor != last.ledColor) { last.ledColor = ledColor; changed = true; }
+
+        // --- Buttons ---
+        bool up    = btnUp;
+        bool down  = btnDown;
+        bool left  = btnLeft;
+        bool right = btnRight;
+        bool ok    = (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) != 0;
+
+        if (up != last.btnUp) { last.btnUp = up; changed = true; }
+        if (down != last.btnDown) { last.btnDown = down; changed = true; }
+        if (left != last.btnLeft) { last.btnLeft = left; changed = true; }
+        if (right != last.btnRight) { last.btnRight = right; changed = true; }
+        if (ok != last.btnOk) { last.btnOk = ok; changed = true; }
+
+        // --- Send JSON ---
+        if (changed) {
+            StaticJsonDocument<2048> doc; // Increase size for more variables
+
+            doc["posX"] = posX;
+            doc["posY"] = posY;
+            doc["zPos"] = z;
+            doc["state"] = (int)currentState;
+            doc["difficulty"] = difficulty;
+
+            // --- Pince ---
+            JsonObject pince = doc.createNestedObject("pince");
+            pince["pos_ouverte"] = OPEN_POS;
+            pince["pos_fermee"]  = CLOSED_POS;
+            pince["pos_actuelle"] = ACTUAL_POS;
+
+            // --- Limits ---
+            JsonObject limits = doc.createNestedObject("limits");
+            limits["maxPosX"] = MAX_POS_X;
+            limits["maxPosY"] = MAX_POS_Y;
+            limits["maxHeight"] = liftedZPos;
+            limits["minHeight"] = maxDownZPos;
+
+            // --- Difficulty-dependent values ---
+            // --- Difficulty-dependent values ---
+			doc["time_facile"] = temps[0];
+			doc["time_medium"] = temps[1];
+			doc["time_expert"] = temps[2];
+
+			doc["force_facile"] = force[0];
+			doc["force_medium"] = force[1];
+			doc["force_expert"] = force[2];
+
+			doc["speed_facile"] = speed[0];
+			doc["speed_medium"] = speed[1];
+			doc["speed_expert"] = speed[2];
+
+            doc["ledColor"] = ledColor;
+
+            JsonObject buttons = doc.createNestedObject("buttons");
+            buttons["haut"]   = up;
+            buttons["bas"]    = down;
+            buttons["gauche"] = left;
+            buttons["droite"] = right;
+            buttons["ok"]     = ok;
+
+            String output;
+            serializeJson(doc, output);
+            Serial.println(output);
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+void TaskMotorControl(void *pvParameters) {
+    (void) pvParameters;
+
+    const long btnIncrement = 100; // increment for buttons, can also use speed[difficulty]
+
+    for (;;) {
+        // ── Read buttons ──
+        bool up    = digitalRead(BTN_PIN_UP)    == LOW;
+        bool down  = digitalRead(BTN_PIN_DOWN)  == LOW;
+        bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+        bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+
+        btnUp = up; btnDown = down; btnLeft = left; btnRight = right;
+        
+        if(btnUp || btnDown || btnLeft || btnRight) {
+            // ── Compute XY target based on currentPosition ──
+            long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+            long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+
+            long targetX = curX;
+            long targetY = curY;
+
+            if (up)    targetX += btnIncrement;
+            if (down)  targetX -= btnIncrement;
+            if (left)  targetY += btnIncrement; 
+            if (right) targetY -= btnIncrement; 
+
+            // ── Set moveTo targets if there is any movement ──
+            MOT_A.moveTo(targetX + targetY);
+            MOT_B.moveTo(targetX - targetY);
+        }
+        // ── Run motors periodically ──
+        MOT_A.run();
+        MOT_B.run();
+        MOT_Z.run(); // Z can be moved by other tasks/JSON commands
+
+        vTaskDelay(pdMS_TO_TICKS(15));
     }
 }
 
@@ -415,10 +575,11 @@ void NotifySwitch(){
 
 void NotifyOkButton() {
     TickType_t now = xTaskGetTickCountFromISR();
-    if (now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) return;
+    if ((now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) || digitalRead(BTN_PIN_OK) == HIGH) return;
     lastBtnInterrupt = now;
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	if (digitalRead(BTN_PIN_OK) == LOW)
     xEventGroupSetBitsFromISR(inputEventGroup, EVT_BTN_OK, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
@@ -488,131 +649,292 @@ String buildStatusJson() {
 
 void TaskCommJsonReceive(void *pvParameters) {
     (void) pvParameters;
-
+    Serial.println("{\"boot\":\"TaskCommJsonReceive started\"}");
+    Serial.setTimeout(200);
+ 
     for (;;) {
-
-        // Check for incoming JSON
         if (Serial.available()) {
             String incoming = Serial.readStringUntil('\n');
             incoming.trim();
-
+ 
+            // =========================
+            // DEBUG : montrer exactement ce qui a été reçu
+            // =========================
+            Serial.print("{\"debug_rx\":\"");
+            for (int i = 0; i < incoming.length(); i++) {
+                char c = incoming[i];
+ 
+                if (c == '\"') Serial.print("\\\"");
+                else if (c == '\\') Serial.print("\\\\");
+                else Serial.print(c);
+            }
+            Serial.println("\"}");
+ 
+            if (incoming.length() == 0) {
+                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
+                vTaskDelay(pdMS_TO_TICKS(20));
+                continue;
+            }
+ 
             StaticJsonDocument<512> doc;
             DeserializationError err = deserializeJson(doc, incoming);
+ 
             if (err) {
-                vTaskDelay(pdMS_TO_TICKS(50));
-                continue; // ignore malformed JSON
-            }
-
-            const char* type   = doc["type"];
-            const char* action = doc["action"];
-            const char* champ  = doc["champ"];
-
-            // ── COMMANDES ────────────────────────────────────
-            if (strcmp(type, "commande") == 0) {
-
-                if (strcmp(action, "urgence") == 0) {
-                    MOT_A.stop(); MOT_B.stop(); MOT_Z.stop();
-                    currentState = IDLE;
+                Serial.print("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"json invalide\",\"brut\":\"");
+                for (int i = 0; i < incoming.length(); i++) {
+                    char c = incoming[i];
+ 
+                    if (c == '\"') Serial.print("\\\"");
+                    else if (c == '\\') Serial.print("\\\\");
+                    else Serial.print(c);
                 }
+                Serial.println("\"}");
+                vTaskDelay(pdMS_TO_TICKS(20));
+                continue;
+            }
+ 
+            const char* type = doc["type"];
+ 
+            if (!type) {
+                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
+                vTaskDelay(pdMS_TO_TICKS(20));
+                continue;
+            }
+ 
+            // =========================================================
+            // TYPE = COMMANDE
+            // =========================================================
+            if (strcmp(type, "commande") == 0) {
+                const char* action = doc["action"];
+ 
+                if (!action) {
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
+                }
+ 
+                else if (strcmp(action, "urgence") == 0) {
+                    MOT_A.stop();
+                    MOT_B.stop();
+                    MOT_Z.stop();
+                    jsonMoveActive = false;
+                    currentState = IDLE;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"urgence\",\"state\":");
+                    Serial.print((int)currentState);
+                    Serial.println("}");
+                }
+ 
                 else if (strcmp(action, "reinitialiser") == 0) {
                     currentState = SETUP;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"reinitialiser\",\"state\":");
+                    Serial.print((int)currentState);
+                    Serial.println("}");
                 }
+ 
                 else if (strcmp(action, "init") == 0) {
                     homeXY();
+ 
+                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"init\"}");
+                }
+ 
+                else if (strcmp(action, "ouvrir_pince") == 0) {
+                    ouvrirPince();
+ 
+                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"ouvrir_pince\"}");
+                }
+ 
+                else if (strcmp(action, "fermer_pince") == 0) {
+                    fermerPince();
+ 
+                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"fermer_pince\"}");
                 }
 
-                // Pince
-                else if (strcmp(action, "ouvrir_pince") == 0)  ouvrirPince();
-                else if (strcmp(action, "fermer_pince") == 0)  fermerPince();
-                else if (strcmp(action, "moitie_pince") == 0) {
-                    int32_t mid = (OPEN_POS + CLOSED_POS) / 2;
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id, mid, UNIT_RAW);
+                else if(strcmp(action, "moitie_pince") == 0) {
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+                    dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
+
+                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"moitie_pince\"}");
                 }
-                else if (strcmp(action, "ouvrir_manuel") == 0){
-                    int32_t target = dxl.getPresentPosition(id) - 100;
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id, target, UNIT_RAW);
+ 
+                else if (strcmp(action, "dep_droite") == 0 ||
+                         strcmp(action, "dep_gauche") == 0 ||
+                         strcmp(action, "dep_haut") == 0 ||
+                         strcmp(action, "dep_bas") == 0) {
+ 
+                    long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+                    long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+ 
+                    long deltaXlocal = 0;
+                    long deltaYlocal = 0;
+ 
+                    if (strcmp(action, "dep_droite") == 0)  deltaYlocal = -200;
+                    if (strcmp(action, "dep_gauche") == 0) deltaYlocal = 200;
+                    if (strcmp(action, "dep_haut") == 0)  deltaXlocal = 200;
+                    if (strcmp(action, "dep_bas") == 0) deltaXlocal = -200;
+ 
+                    long targetX = curX + deltaXlocal;
+                    long targetY = curY + deltaYlocal;
+ 
+                    MOT_A.moveTo(targetX + targetY);
+                    MOT_B.moveTo(targetX - targetY);
+                    jsonMoveActive = true;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"");
+                    Serial.print(action);
+                    Serial.print("\",\"targetX\":");
+                    Serial.print(targetX);
+                    Serial.print(",\"targetY\":");
+                    Serial.print(targetY);
+                    Serial.println("}");
+                }
+ 
+                else if (strcmp(action, "dep_z_haut") == 0) {
+                    long cible = MOT_Z.currentPosition() + 300;
+                    MOT_Z.moveTo(cible);
+                    jsonMoveActive = true;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"dep_z_haut\",\"targetZ\":");
+                    Serial.print(cible);
+                    Serial.println("}");
+                }
+ 
+                else if (strcmp(action, "dep_z_bas") == 0) {
+                    long cible = MOT_Z.currentPosition() - 300;
+                    MOT_Z.moveTo(cible);
+                    jsonMoveActive = true;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"dep_z_bas\",\"targetZ\":");
+                    Serial.print(cible);
+                    Serial.println("}");
+                }
+ 
+                else if (strcmp(action, "pos_haut_z") == 0) {
+                    MOT_Z.moveTo(liftedZPos);
+                    jsonMoveActive = true;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_haut_z\",\"targetZ\":");
+                    Serial.print(liftedZPos);
+                    Serial.println("}");
+                }
+ 
+                else if (strcmp(action, "pos_bas_z") == 0) {
+                    MOT_Z.moveTo(maxDownZPos);
+                    jsonMoveActive = true;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_bas_z\",\"targetZ\":");
+                    Serial.print(maxDownZPos);
+                    Serial.println("}");
+                }
+ 
+                else if (strcmp(action, "pos_milieu_xy") == 0) {
+                    long targetX = MAX_POS_X / 2;
+                    long targetY = MAX_POS_Y / 2;
+ 
+                    MOT_A.moveTo(targetX + targetY);
+                    MOT_B.moveTo(targetX - targetY);
+                    jsonMoveActive = true;
+ 
+                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_milieu_xy\",\"targetX\":");
+                    Serial.print(targetX);
+                    Serial.print(",\"targetY\":");
+                    Serial.print(targetY);
+                    Serial.println("}");
+                }
+                else if (strcmp(action, "ouvrir_manuel") == 0) {
+                        dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                        dxl.setGoalPosition(id,dxl.getPresentPosition(id) - 200 , UNIT_RAW);
+                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"ouvrir_manuel\"}");
                 }
                 else if (strcmp(action, "fermer_manuel") == 0) {
-                    int32_t target = dxl.getPresentPosition(id) + 100;
                     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id, target, UNIT_RAW);
+                    dxl.setGoalPosition(id,dxl.getPresentPosition(id) + 200 , UNIT_RAW);
+                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"fermer_manuel\"}");
                 }
-
-                // XY
-                else if (strcmp(action, "deplacer_x_plus") == 0) {
-                    posX += speed[difficulty];
-                    MOT_A.moveTo(posX + posY); 
-                    MOT_B.moveTo(posX - posY);
-                }
-                else if (strcmp(action, "deplacer_x_moins") == 0) {
-                    posX -= speed[difficulty];
-                    MOT_A.moveTo(posX + posY); 
-                    MOT_B.moveTo(posX - posY);
-                }
-                else if (strcmp(action, "deplacer_y_plus") == 0) {
-                    posY += speed[difficulty];
-                    MOT_A.moveTo(posX + posY); 
-                    MOT_B.moveTo(posX - posY);
-                }
-                else if (strcmp(action, "deplacer_y_moins") == 0) {
-                    posY -= speed[difficulty];
-                    MOT_A.moveTo(posX + posY); 
-                    MOT_B.moveTo(posX - posY);
-                }
-                else if (strcmp(action, "position_initiale_xy") == 0) homeXY();
-                else if (strcmp(action, "position_milieu_xy") == 0) {
-                    posX = MAX_POS_X / 2; 
-                    posY = MAX_POS_Y / 2;
-                    MOT_A.moveTo(posX + posY); 
-                    MOT_B.moveTo(posX - posY);
-                }
-
-                // Z
-                else if (strcmp(action, "deplacer_z_haut") == 0) {
-                    //MOT_Z.moveTo(MOT_Z.currentPosition() + 100);
-                }
-                else if (strcmp(action, "deplacer_z_bas") == 0) {
-                    //MOT_Z.moveTo(MOT_Z.currentPosition() - 100);
-                }
-                else if (strcmp(action, "position_haut_z") == 0) {
-                    //MOT_Z.moveTo(liftedZPos);
-                }
-                else if (strcmp(action, "position_bas_z") == 0) {
-                    //MOT_Z.moveTo(maxDownZPos);
+ 
+                else {
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
                 }
             }
-
-            // ── PERSONNALISATION ─────────────────────────────
-            else if (strcmp(type, "personnalisation") == 0) {
-                if (doc["difficulte"].is<int>()) {
-                    difficulty = doc["difficulte"];
-                    temps[difficulty]  = doc["temps"];
-                    force[difficulty]  = doc["force"];
-                    speed[difficulty]  = doc["vitesse"];
-                }
+ 
+            // =========================================================
+            // TYPE = PERSONNALISATION
+            // =========================================================
+            else if (strcmp(type, "pers") == 0) {
+ 
                 if (doc["couleur"].is<const char*>()) {
                     ledColor = doc["couleur"].as<String>();
                 }
+ 
+                if (doc["difficulte"].is<const char*>()) {
+                    String diff = doc["difficulte"].as<String>();
+ 
+                    if (diff == "facile") difficulty = 0;
+                    else if (diff == "moyen") difficulty = 1;
+                    else if (diff == "expert") difficulty = 2;
+ 
+                    temps[difficulty] = doc["temps"] | temps[difficulty];
+                    force[difficulty] = doc["force"] | force[difficulty];
+                    speed[difficulty] = doc["vitesse"] | speed[difficulty];
+                }
+ 
+                Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"personnalisation\",\"couleur\":\"");
+                Serial.print(ledColor);
+                Serial.print("\",\"difficulty\":");
+                Serial.print(difficulty);
+                Serial.print(",\"temps\":");
+                Serial.print(temps[difficulty]);
+                Serial.print(",\"force\":");
+                Serial.print(force[difficulty]);
+                Serial.print(",\"vitesse\":");
+                Serial.print(speed[difficulty]);
+                Serial.println("}");
             }
-
-            // ── REMPLACEMENT ─────────────────────────────────
-            else if (strcmp(type, "remplacement") == 0) {
-                int32_t valeur = doc["valeur"];
-
-                if      (strcmp(champ, "pince_ouverte")  == 0) OPEN_POS     = valeur;
-                else if (strcmp(champ, "pince_fermee")   == 0) CLOSED_POS   = valeur;
-                else if (strcmp(champ, "valeurmax_x")    == 0) MAX_POS_X    = valeur;
-                else if (strcmp(champ, "valeurmax_y")    == 0) MAX_POS_Y    = valeur;
-                else if (strcmp(champ, "valeurmax_z")    == 0) maxDownZPos  = valeur;
-                else if (strcmp(champ, "valeurmin_z")    == 0) liftedZPos   = valeur;
+ 
+            // =========================================================
+            // TYPE = REMPLACEMENT
+            // =========================================================
+            else if (strcmp(type, "rep") == 0) {
+                const char* champ = doc["champ"];
+                int32_t valeur = doc["valeur"] | 0;
+ 
+                if (!champ) {
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
+                }
+                else if (strcmp(champ, "pince_ouverte") == 0) {
+                    OPEN_POS = valeur;
+                }
+                else if (strcmp(champ, "pince_fermee") == 0) {
+                    CLOSED_POS = valeur;
+                }
+                else if (strcmp(champ, "valeurmax_x") == 0) {
+                    MAX_POS_X = valeur;
+                }
+                else if (strcmp(champ, "valeurmax_y") == 0) {
+                    MAX_POS_Y = valeur;
+                }
+                else if (strcmp(champ, "valeurmax_z") == 0) {
+                    maxDownZPos = valeur;
+                }
+                else if (strcmp(champ, "valeurmin_z") == 0) {
+                    liftedZPos = valeur;
+                }
+                else {
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
+                }
+            }
+ 
+            // =========================================================
+            // TYPE INCONNU
+            // =========================================================
+            else {
+                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
             }
         }
-
-        vTaskDelay(pdMS_TO_TICKS(50));
+ 
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
+
 
 //TODO
 
@@ -622,6 +944,4 @@ void TaskCommJsonReceive(void *pvParameters) {
 
 //Fonction Homing not done
 //Limit switches in CoreXY
-//Probleme frein sur Core XY, du aux boutons
-//Probleme pour sortir du IDLE, bouton ok semble ne pas marcher
 //Ajouter interface retro
