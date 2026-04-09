@@ -536,11 +536,11 @@ void TaskMotorControl(void *pvParameters) {
             long targetX = curX;
             long targetY = curY;
 
-            if (up)    targetX += btnIncrement;
-            if (down)  targetX -= btnIncrement;
-            if (left)  targetY += btnIncrement; 
-            if (right) targetY -= btnIncrement; 
-
+            if (up & (curX <= MAX_POS_X))               targetX += btnIncrement;
+            if (down & (digitalRead(LMTSW_X) != LOW))   targetX -= btnIncrement;
+            if (left & (digitalRead(LMTSW_Y) != LOW))   targetY += btnIncrement; 
+            if (right  & (curY <= MAX_POS_Y))           targetY -= btnIncrement;
+             
             // ── Set moveTo targets if there is any movement ──
             posX = targetX; 
             posY = targetY; 
