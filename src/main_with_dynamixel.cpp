@@ -237,7 +237,7 @@ void setup() {
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 3, NULL);
-	//xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
+	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
 }
 
@@ -313,16 +313,14 @@ void TaskStateControl (void *pvParameters) {
 			break;
 	    case LOWERING:
 			//Séquence de mouvement vers le bas
-			MOT_Z.setSpeed(-speed[difficulty]);
-			while(1) {
-				if (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) break;
-				else if (MOT_Z.currentPosition() > maxDownZPos+50) break; // On s'assure de pas descendre plus que la position min, au cas où le limit switch ne marche pas
-				MOT_Z.runSpeed(); // actually step the motor
-				vTaskDelay(pdMS_TO_TICKS(2));
-			}
-			xEventGroupClearBits(inputEventGroup, EVT_BTN_OK); // clear the bit
-			MOT_Z.stop();
-
+            while(1){ // Tant que l'axe Z n'est pas presque au plus bas
+                MOT_Z.moveTo(MOT_Z.currentPosition() + 100) ; // Update internal position
+                if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || MOT_Z.currentPosition() >= maxDownZPos - 50) {
+                    MOT_Z.stop();
+                    break; // Sortir de la boucle pour arrêter la descente
+                }
+            }
+			xEventGroupClearBits(inputEventGroup, EVT_BTN_OK); // clear the bit, estce necessaire ?
 			currentState = CLOSING;
 			break;
 
@@ -337,12 +335,8 @@ void TaskStateControl (void *pvParameters) {
 	    }
 	    case LIFTING:
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
-			MOT_Z.setSpeed(speed[difficulty]);
-			while(MOT_Z.currentPosition() < liftedZPos-50){
-				MOT_Z.runSpeed(); // actually step the motor
-				vTaskDelay(pdMS_TO_TICKS(5));
-			}
-			MOT_Z.stop();
+			MOT_Z.moveTo(liftedZPos);
+            vTaskDelay(pdMS_TO_TICKS(5000));
 			currentState = MOVING_TO_DROPZONE;
 			break;
 
@@ -470,34 +464,34 @@ void TaskCommJsonSend(void *pvParameters) {
             doc["posY"] = posY;
             doc["zPos"] = z;
             doc["state"] = (int)currentState;
-            doc["difficulty"] = difficulty;
+            //doc["diff"] = difficulty; Pour dire a Laurence quelle difficulté le joueur joue
 
             // --- Pince ---
             JsonObject pince = doc.createNestedObject("pince");
-            pince["pos_ouverte"] = OPEN_POS;
-            pince["pos_fermee"]  = CLOSED_POS;
-            pince["pos_actuelle"] = ACTUAL_POS;
+            pince["pos_o"] = OPEN_POS;
+            pince["pos_f"]  = CLOSED_POS;
+            pince["pos_act"] = ACTUAL_POS;
 
             // --- Limits ---
             JsonObject limits = doc.createNestedObject("limits");
             limits["maxPosX"] = MAX_POS_X;
             limits["maxPosY"] = MAX_POS_Y;
-            limits["maxHeight"] = liftedZPos;
-            limits["minHeight"] = maxDownZPos;
+            limits["maxH"] = liftedZPos;
+            limits["minH"] = maxDownZPos;
 
             // --- Difficulty-dependent values ---
             // --- Difficulty-dependent values ---
-			doc["time_facile"] = temps[0];
-			doc["time_medium"] = temps[1];
-			doc["time_expert"] = temps[2];
+			doc["t_f"] = temps[0];
+			doc["t_m"] = temps[1];
+			doc["t_e"] = temps[2];
 
-			doc["force_facile"] = force[0];
-			doc["force_medium"] = force[1];
-			doc["force_expert"] = force[2];
+			doc["f_f"] = force[0];
+			doc["f_m"] = force[1];
+			doc["f_e"] = force[2];
 
-			doc["speed_facile"] = speed[0];
-			doc["speed_medium"] = speed[1];
-			doc["speed_expert"] = speed[2];
+			doc["s_f"] = speed[0];
+			doc["s_m"] = speed[1];
+			doc["s_e"] = speed[2];
 
             doc["ledColor"] = ledColor;
 
@@ -649,26 +643,25 @@ String buildStatusJson() {
 
 void TaskCommJsonReceive(void *pvParameters) {
     (void) pvParameters;
-    Serial.println("{\"boot\":\"TaskCommJsonReceive started\"}");
+    //Serial.println("{\"boot\":\"TaskCommJsonReceive started\"}");
     Serial.setTimeout(200);
  
     for (;;) {
         if (Serial.available()) {
             String incoming = Serial.readStringUntil('\n');
             incoming.trim();
- 
+            /*
             // =========================
             // DEBUG : montrer exactement ce qui a été reçu
             // =========================
-            Serial.print("{\"debug_rx\":\"");
             for (int i = 0; i < incoming.length(); i++) {
                 char c = incoming[i];
- 
+                
                 if (c == '\"') Serial.print("\\\"");
                 else if (c == '\\') Serial.print("\\\\");
                 else Serial.print(c);
             }
-            Serial.println("\"}");
+            Serial.println("\"}");*/
  
             if (incoming.length() == 0) {
                 Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
@@ -715,41 +708,45 @@ void TaskCommJsonReceive(void *pvParameters) {
                     MOT_A.stop();
                     MOT_B.stop();
                     MOT_Z.stop();
+                    while(1){
+                        delay(1000);
+                    }
                     jsonMoveActive = false;
                     currentState = IDLE;
  
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"urgence\",\"state\":");
-                    Serial.print((int)currentState);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "reinitialiser") == 0) {
                     currentState = SETUP;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"reinitialiser\",\"state\":");
-                    Serial.print((int)currentState);
-                    Serial.println("}");
                 }
  
                 else if (strcmp(action, "init") == 0) {
-                    homeXY();
- 
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"init\"}");
+                    //homeXY();
                 }
  
                 else if (strcmp(action, "ouvrir_pince") == 0) {
                     ouvrirPince();
- 
+                    while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
+				        vTaskDelay(pdMS_TO_TICKS(50));
+				        ACTUAL_POS = dxl.getPresentPosition(id);
+			        }
                 }
  
                 else if (strcmp(action, "fermer_pince") == 0) {
                     fermerPince();
- 
+                    while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
+				        vTaskDelay(pdMS_TO_TICKS(50));
+				        ACTUAL_POS = dxl.getPresentPosition(id);
+			        }		
                 }
 
                 else if(strcmp(action, "moitie_pince") == 0) {
                     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
                     dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
+                    while (abs(ACTUAL_POS - (OPEN_POS + CLOSED_POS) / 2) > 50) { // Tant que la pince n'est pas presque à la moitié
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        ACTUAL_POS = dxl.getPresentPosition(id);
+                    }
                 }
  
                 else if (strcmp(action, "dep_droite") == 0 ||
@@ -777,13 +774,13 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else if (strcmp(action, "dep_z_haut") == 0) {
-                    long cible = MOT_Z.currentPosition() + 300;
+                    long cible = MOT_Z.currentPosition() - 200;
                     MOT_Z.moveTo(cible);
                     jsonMoveActive = true;
                 }
  
                 else if (strcmp(action, "dep_z_bas") == 0) {
-                    long cible = MOT_Z.currentPosition() - 300;
+                    long cible = MOT_Z.currentPosition() + 200;
                     MOT_Z.moveTo(cible);
                     jsonMoveActive = true;
                 }
@@ -805,20 +802,24 @@ void TaskCommJsonReceive(void *pvParameters) {
                     MOT_A.moveTo(targetX + targetY);
                     MOT_B.moveTo(targetX - targetY);
                     jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_milieu_xy\",\"targetX\":");
-                    Serial.print(targetX);
-                    Serial.print(",\"targetY\":");
-                    Serial.print(targetY);
-                    Serial.println("}");
                 }
                 else if (strcmp(action, "ouvrir_manuel") == 0) {
-                        dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                        dxl.setGoalPosition(id,dxl.getPresentPosition(id) - 200 , UNIT_RAW);
+                    int32_t target = dxl.getPresentPosition(id) - 200;
+                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+                    dxl.setGoalPosition(id,target, UNIT_RAW);
+                    while (ACTUAL_POS > target + 20) { // Tant que la pince n'est pas presque ouverte
+                        vTaskDelay(pdMS_TO_TICKS(20));
+                        ACTUAL_POS = dxl.getPresentPosition(id);
+                    }
                 }
                 else if (strcmp(action, "fermer_manuel") == 0) {
+                    int32_t target = dxl.getPresentPosition(id) + 200;
                     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id,dxl.getPresentPosition(id) + 200 , UNIT_RAW);
+                    dxl.setGoalPosition(id,target, UNIT_RAW);
+                    while (ACTUAL_POS < target - 20) { // Tant que la pince n'est pas presque ouverte
+                        vTaskDelay(pdMS_TO_TICKS(20));
+                        ACTUAL_POS = dxl.getPresentPosition(id);
+                    }
                 }
  
                 else {
