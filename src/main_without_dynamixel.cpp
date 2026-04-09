@@ -21,8 +21,8 @@ StaticJsonDocument<200> doc;
 //BOUTONS
 #define BTN_PIN_UP 22
 #define BTN_PIN_DOWN 25
-#define BTN_PIN_LEFT 23
-#define BTN_PIN_RIGHT 24
+#define BTN_PIN_LEFT 24
+#define BTN_PIN_RIGHT 23
 #define BTN_PIN_OK 26
 #define PIN_BTN_INTERRUPT 3 //D3
 volatile TickType_t lastBtnInterrupt = 0;
@@ -39,7 +39,7 @@ EventGroupHandle_t limitEventGroup;
 //MOTEURS
 #define FULLSTEP 4 // 4 fils par moteurs
 #define STEPS_REV 4096
-int speed = 50;
+int speed = 25;
 
 //Mutex sur posX et posY ?
 long posX = 0;
@@ -308,7 +308,7 @@ void TaskMotorControl (void *pvParameters) {
         int deltaX = 0;
         int deltaY = 0;
 
-        // Calcul des deltas selon boutons
+        // Calcul des deltas selon boutons 
         if(bits & EVT_BTN_UP)    deltaX += speed;
         if(bits & EVT_BTN_DOWN)  deltaX -= speed;
         if(bits & EVT_BTN_LEFT)  deltaY += speed;
