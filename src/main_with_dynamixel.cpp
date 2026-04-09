@@ -92,7 +92,7 @@ float targetB = 0;
 int deltaX = 0;
 int deltaY = 0;
  
-long posX = 6550;
+long posX = 0;
 long posY = 0;
 
 long MAX_POS_X = 13100;
@@ -245,48 +245,55 @@ void loop() {
 }
 
 void homeXY() {
-
-	// Clear any stale limit bits first
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X | EVT_LIMIT_Y);
-
-	MOT_A.stop(); 
-	MOT_A.setCurrentPosition(MOT_A.currentPosition());
-	MOT_B.stop(); 
-	MOT_B.setCurrentPosition(MOT_B.currentPosition());
-
-	// --- Home X axis ---
-	MOT_A.setSpeed(-1000);
-	MOT_B.setSpeed(-1000);
-
-	while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_X)) {
-		MOT_A.runSpeed();
-		MOT_B.runSpeed();
-		vTaskDelay(pdMS_TO_TICKS(5));
-	}
-
-	MOT_A.setCurrentPosition(0);
-	MOT_B.setCurrentPosition(0);
-	posX = 0;
-
-	// Clear bit so it doesn't interfere with Y
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X);
-
-	// --- Home Y axis ---
-	MOT_A.setSpeed(-1000);
-	MOT_B.setSpeed(1000);
-
-	while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_Y)) {
-		MOT_A.runSpeed();
-		MOT_B.runSpeed();
-		vTaskDelay(pdMS_TO_TICKS(5));
-	}
-
-	MOT_A.setCurrentPosition(0);
-	MOT_B.setCurrentPosition(0);
-	posY = 0;
-
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
-
+    MOT_A.stop();
+    MOT_B.stop();
+ 
+    // ── Compute XY target based on currentPosition ──
+    // --- Home X axis ---
+    while (digitalRead(LMTSW_X) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+ 
+        posX = curX;
+        posY = curY;
+ 
+        // Down
+        posX -= 100;
+ 
+        MOT_A.moveTo(posX + posY);
+        MOT_B.moveTo(posX - posY);
+ 
+        MOT_A.run();
+        MOT_B.run();
+        vTaskDelay(pdMS_TO_TICKS(15));
+    }
+ 
+    MOT_A.setCurrentPosition(0);
+    MOT_B.setCurrentPosition(0);
+    posX = 0;
+ 
+    // --- Home Y axis ---
+    while (digitalRead(LMTSW_Y) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+ 
+        posX = curX;
+        posY = curY;
+ 
+        // Left
+        posY += 100;
+ 
+        MOT_A.moveTo(posX + posY);
+        MOT_B.moveTo(posX - posY);
+ 
+        MOT_A.run();
+        MOT_B.run();
+        vTaskDelay(pdMS_TO_TICKS(15));
+    }
+ 
+    MOT_A.setCurrentPosition(0);
+    MOT_B.setCurrentPosition(0);
+    posY = 0;
 }
 
 void TaskStateControl (void *pvParameters) {
@@ -296,7 +303,9 @@ void TaskStateControl (void *pvParameters) {
 
 	switch(currentState) {
 		case SETUP:
-			//calibrerPinceEtAxeZ();
+			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            ouvrirPince();
+            homeXY();
 			currentState = IDLE;
 			break;
 		case DIFF_CHOOSE:
@@ -315,43 +324,37 @@ void TaskStateControl (void *pvParameters) {
 			//Séquence de mouvement vers le bas
             while(1){ // Tant que l'axe Z n'est pas presque au plus bas
                 MOT_Z.moveTo(MOT_Z.currentPosition() + 100) ; // Update internal position
-                if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || MOT_Z.currentPosition() >= maxDownZPos - 50) {
+                if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || abs(MOT_Z.currentPosition()-maxDownZPos) < 50) {
                     MOT_Z.stop();
                     break; // Sortir de la boucle pour arrêter la descente
                 }
             }
-			xEventGroupClearBits(inputEventGroup, EVT_BTN_OK); // clear the bit, estce necessaire ?
+			xEventGroupClearBits(inputEventGroup, EVT_BTN_OK);
 			currentState = CLOSING;
 			break;
 
 	    case CLOSING:{  
 			fermerPince();
-			while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
-				vTaskDelay(pdMS_TO_TICKS(50));
-				ACTUAL_POS = dxl.getPresentPosition(id);
-			}		
 			currentState = LIFTING;
 			break;
 	    }
 	    case LIFTING:
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
 			MOT_Z.moveTo(liftedZPos);
-            vTaskDelay(pdMS_TO_TICKS(5000));
+            while(abs(MOT_Z.currentPosition() - liftedZPos) < 50) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+            }
 			currentState = MOVING_TO_DROPZONE;
 			break;
 
 	    case MOVING_TO_DROPZONE: //DONE
 			//Séquence de mouvement vers la dropzone
-			//homeXY();
+			homeXY();
 			currentState = DROPPING;
 			break;
 
 	    case DROPPING:{ //DONE;
 			ouvrirPince();
-			while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
-				vTaskDelay(pdMS_TO_TICKS(50));
-				ACTUAL_POS = dxl.getPresentPosition(id);
-			}
 			currentState = IDLE;
 			break;
 	    }
@@ -464,7 +467,7 @@ void TaskCommJsonSend(void *pvParameters) {
             doc["posY"] = posY;
             doc["zPos"] = z;
             doc["state"] = (int)currentState;
-            //doc["diff"] = difficulty; Pour dire a Laurence quelle difficulté le joueur joue
+            doc["diff"] = difficulty; //Pour dire a Laurence quelle difficulté le joueur joue
 
             // --- Pince ---
             JsonObject pince = doc.createNestedObject("pince");
@@ -539,6 +542,8 @@ void TaskMotorControl(void *pvParameters) {
             if (right) targetY -= btnIncrement; 
 
             // ── Set moveTo targets if there is any movement ──
+            posX = targetX; 
+            posY = targetY; 
             MOT_A.moveTo(targetX + targetY);
             MOT_B.moveTo(targetX - targetY);
         }
@@ -546,7 +551,6 @@ void TaskMotorControl(void *pvParameters) {
         MOT_A.run();
         MOT_B.run();
         MOT_Z.run(); // Z can be moved by other tasks/JSON commands
-
         vTaskDelay(pdMS_TO_TICKS(15));
     }
 }
@@ -581,11 +585,19 @@ void NotifyOkButton() {
 void ouvrirPince() {
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
     dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
+    while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
+        vTaskDelay(pdMS_TO_TICKS(50));
+        ACTUAL_POS = dxl.getPresentPosition(id);
+    }
 }
 
 void fermerPince() {
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
     dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
+    while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
+        vTaskDelay(pdMS_TO_TICKS(50));
+        ACTUAL_POS = dxl.getPresentPosition(id);
+    }
 }
 
 String buildStatusJson() {
@@ -709,7 +721,6 @@ void TaskCommJsonReceive(void *pvParameters) {
                     MOT_B.stop();
                     MOT_Z.stop();
                     while(1){
-                        delay(1000);
                     }
                     jsonMoveActive = false;
                     currentState = IDLE;
@@ -721,23 +732,15 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else if (strcmp(action, "init") == 0) {
-                    //homeXY();
+                    homeXY();
                 }
  
                 else if (strcmp(action, "ouvrir_pince") == 0) {
                     ouvrirPince();
-                    while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
-				        vTaskDelay(pdMS_TO_TICKS(50));
-				        ACTUAL_POS = dxl.getPresentPosition(id);
-			        }
                 }
  
                 else if (strcmp(action, "fermer_pince") == 0) {
-                    fermerPince();
-                    while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
-				        vTaskDelay(pdMS_TO_TICKS(50));
-				        ACTUAL_POS = dxl.getPresentPosition(id);
-			        }		
+                    fermerPince();		
                 }
 
                 else if(strcmp(action, "moitie_pince") == 0) {
@@ -765,11 +768,11 @@ void TaskCommJsonReceive(void *pvParameters) {
                     if (strcmp(action, "dep_haut") == 0)  deltaXlocal = 200;
                     if (strcmp(action, "dep_bas") == 0) deltaXlocal = -200;
  
-                    long targetX = curX + deltaXlocal;
-                    long targetY = curY + deltaYlocal;
+                    posX = curX + deltaXlocal;
+                    posY = curY + deltaYlocal;
  
-                    MOT_A.moveTo(targetX + targetY);
-                    MOT_B.moveTo(targetX - targetY);
+                    MOT_A.moveTo(posX + posY);
+                    MOT_B.moveTo(posX - posY);
                     jsonMoveActive = true;
                 }
  
@@ -796,11 +799,11 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else if (strcmp(action, "pos_milieu_xy") == 0) {
-                    long targetX = MAX_POS_X / 2;
-                    long targetY = MAX_POS_Y / 2;
+                    posX = MAX_POS_X / 2;
+                    posY = MAX_POS_Y / 2;
  
-                    MOT_A.moveTo(targetX + targetY);
-                    MOT_B.moveTo(targetX - targetY);
+                    MOT_A.moveTo(posX + posY);
+                    MOT_B.moveTo(posX - posY);
                     jsonMoveActive = true;
                 }
                 else if (strcmp(action, "ouvrir_manuel") == 0) {
@@ -816,7 +819,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                     int32_t target = dxl.getPresentPosition(id) + 200;
                     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
                     dxl.setGoalPosition(id,target, UNIT_RAW);
-                    while (ACTUAL_POS < target - 20) { // Tant que la pince n'est pas presque ouverte
+                    while (ACTUAL_POS < target - 20) { // Tant que la pince n'est pas presque fermee
                         vTaskDelay(pdMS_TO_TICKS(20));
                         ACTUAL_POS = dxl.getPresentPosition(id);
                     }
@@ -901,6 +904,11 @@ void TaskCommJsonReceive(void *pvParameters) {
 	//Verifier etat Reinitialiser vs Init
 	//Gerer bouton urgence
 
-//Fonction Homing not done
 //Limit switches in CoreXY
+
 //Ajouter interface retro
+
+//Mettre un bool pour autoriser les boutons qui gerent les moteurs. only dans IDLE
+
+//Fonction bouger pince qui prends en argument la position, et attends : Normaliser fcts fermerPince, ouvrirPince. ajouter motie pince
+//Pareil pour axe Z
