@@ -449,14 +449,17 @@ void homeXY();
 String buildStatusJson();
 void ouvrirPince();
 void fermerPince();
+
+void TaskChooseDiff(void *pvParameters);
 int transformationIntermediaire(int x, int y);
-int transformationCoordonnees(int x, in y);
+int transformationCoordonnees(int x, int y);
 void allumeLED(int x, int y, uint32_t couleur);
 void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur);
 int trouverIndexAlphabet(char c);
 void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur);
 int longueurMot(const char *mot);
 void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
+void ecranAccueil(const char *mot);
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
@@ -775,7 +778,7 @@ void TaskCommJsonSend(void *pvParameters) {
             doc["posY"] = posY;
             doc["zPos"] = z;
             doc["state"] = (int)currentState;
-            doc["diff"] = difficulty; //Pour dire a Laurence quelle difficulté le joueur joue
+            doc["diff"] = difficulty; //Pour dire a Laurence quelle difficulte le joueur joue
 
             // --- Pince ---
             JsonObject pince = doc.createNestedObject("pince");
@@ -1212,10 +1215,10 @@ void TaskCommJsonReceive(void *pvParameters) {
 void TaskChooseDiff(void *pvParameters) {
     (void) pvParameters;
     for (;;) {
-
-        xWaitForNotification(); // wait for taskhandle diff_choose
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
         static bool prevLeft = false;
         static bool prevRight = false;
+
         for(;;){
             bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
             bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
@@ -1397,6 +1400,35 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
   }
 }
 
+void taskEcranAccueil(void *pvParameters)
+{
+    for (;;){
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
+        for(;;){
+            static int decalage = 0;
+            pixels.clear();
+            for (int i = -3; i < 28; i += 3)
+            {
+            allumeLED(i + decalage, 1, pixels.Color(25, 0, 25));
+            allumeLED(i + 1 + decalage, 1, pixels.Color(25, 10, 0));
+            allumeLED(i + 2 + decalage, 1, pixels.Color(0, 5, 15));
+            allumeLED(i + decalage, 11, pixels.Color(25, 0, 25));
+            allumeLED(i + 1 + decalage, 11, pixels.Color(25, 10, 0));
+            allumeLED(i + 2 + decalage, 11, pixels.Color(0, 5, 15));
+            }
+
+            ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
+            pixels.show();
+            vTaskDelay(pdMS_TO_TICKS(100));
+            decalage++;
+            if (decalage == 3) decalage = 0;
+            
+            
+            if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
+        }
+    }
+}
+ 
 
 
 //TODO
@@ -1413,3 +1445,5 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
 
 //Fonction bouger pince qui prends en argument la position, et attends : Normaliser fcts fermerPince, ouvrirPince. ajouter motie pince
 //Pareil pour axe Z
+
+//Ecran affichage parametre pour UI retro
