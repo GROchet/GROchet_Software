@@ -5,6 +5,7 @@
 #include <AccelStepper.h>
 #include <ArduinoJson.h>
 #include <Dynamixel2Arduino.h>
+#include <Adafruit_NeoPixel.h>
 
 //À considérer avant de Run la premiere fois :
 
@@ -125,6 +126,301 @@ AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1);
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
 AccelStepper MOT_Z = AccelStepper(AccelStepper::DRIVER, STEP_PIN_MZ,DIR_PIN_MZ); //Moteur Z
 
+//--------------------
+// Interface utilisateur
+//--------------------
+
+#define PIN 5
+#define NUMPIXELS 182 * 2
+#define DELAY 0
+#define largeur 14
+#define hauteur 13
+#define largeurLettre 4
+
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+uint32_t BLANC = pixels.Color(15, 15, 15);
+uint32_t ROUGE = pixels.Color(15, 0, 0);
+uint32_t JAUNE = pixels.Color(15, 15, 0);
+uint32_t ORANGE = pixels.Color(20, 5, 0);
+
+// Transformation des lettres et chiffres en matrice 5x3
+// Nombre de caractères, nombre de lignes par lettre et nombre de colonnes par lettre
+byte alphabet[39][5][3] = {
+    {// A
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// B
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// C
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// D
+     {1, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 0}},
+ 
+    {// E
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// F
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 0, 0}},
+ 
+    {// G
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// H
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// I
+     {1, 1, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {1, 1, 1}},
+ 
+    {// J
+     {1, 1, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {1, 1, 0}},
+ 
+    {// K
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// L
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// M
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// N
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// O
+     {0, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0}},
+ 
+    {// P
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 0, 0}},
+ 
+    {// Q
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// R
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 1, 0},
+     {1, 0, 1}},
+ 
+    {// S
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1}},
+ 
+    {// T
+     {1, 1, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0}},
+ 
+    {// U
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// V
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0}},
+ 
+    {// W
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1}},
+ 
+    {// X
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// Y
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0}},
+ 
+    {// Z
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 1, 0},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// 0
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 1
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0}},
+ 
+    {// 2
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// 3
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 4
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// 5
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 6
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 7
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// 8
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 9
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// !
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {0, 0, 0},
+     {1, 0, 0}},
+ 
+    {// :
+     {0, 0, 0},
+     {0, 1, 0},
+     {0, 0, 0},
+     {0, 1, 0},
+     {0, 0, 0}},
+ 
+    {// /
+     {0, 0, 1},
+     {0, 0, 0},
+     {0, 1, 0},
+     {0, 0, 0},
+     {1, 0, 0}},
+ 
+};
+
 // -------------------
 // STATE MACHINE
 // -------------------
@@ -153,11 +449,19 @@ void homeXY();
 String buildStatusJson();
 void ouvrirPince();
 void fermerPince();
+int transformationIntermediaire(int x, int y);
+int transformationCoordonnees(int x, in y);
+void allumeLED(int x, int y, uint32_t couleur);
+void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur);
+int trouverIndexAlphabet(char c);
+void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur);
+int longueurMot(const char *mot);
+void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
-TaskHandle_t detectToutouTaskHandle = NULL;
+TaskHandle_t choose_diff = NULL;
 
 volatile bool jsonMoveActive = false;
 
@@ -230,6 +534,10 @@ void setup() {
 	MOT_B.setCurrentPosition(0);
 	MOT_Z.setCurrentPosition(0);
 
+    pixels.begin();
+    pixels.clear();
+    pixels.show();
+
 	//RTOS
 	//----------------
 	inputEventGroup = xEventGroupCreate();
@@ -239,6 +547,7 @@ void setup() {
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 3, NULL);
 	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
+    xTaskCreate(TaskChooseDiff, "ChooseDiff", 512, NULL, 2, &choose_diff);
 }
 
 void loop() {
@@ -306,14 +615,14 @@ void TaskStateControl (void *pvParameters) {
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             ouvrirPince();
             homeXY();
-			currentState = IDLE;
+			currentState = DIFF_CHOOSE;
 			break;
-		case DIFF_CHOOSE:
-		  	xTaskNotifyGive(motorTaskHandle);   // Enable manual control
-			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-			xTaskNotifyGive(motorTaskHandle);   // Send stop signal
-			currentState = IDLE;
-			break;
+        case DIFF_CHOOSE:
+            xTaskNotifyGive(choose_diff);   // start diff task
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            xTaskNotifyGive(choose_diff);   // stop diff task
+            currentState = IDLE;
+            break;
 	    case IDLE:
 			xTaskNotifyGive(motorTaskHandle);   // Enable manual control
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -895,6 +1204,199 @@ void TaskCommJsonReceive(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
+
+//----------------------
+// interface Utilisateur
+//----------------------
+
+void TaskChooseDiff(void *pvParameters) {
+    (void) pvParameters;
+    for (;;) {
+
+        xWaitForNotification(); // wait for taskhandle diff_choose
+        static bool prevLeft = false;
+        static bool prevRight = false;
+        for(;;){
+            bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+            bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+
+            if (left && !prevLeft) {
+                difficulty = max(0, difficulty - 1);
+            }
+            if (right && !prevRight) {
+                difficulty = min(2, difficulty + 1);
+            }
+
+            prevLeft = left;
+            prevRight = right;
+            
+            pixels.clear();
+            defilerTexte("CHOIX DIFFICULTE", 0, BLANC);
+
+            if (difficulty == 0){
+                ecrireMot("FACILE", 0, 8, JAUNE);
+                // Fleche
+                allumeLED(25, 8, BLANC);
+                allumeLED(26, 9, BLANC);
+                allumeLED(27, 10, BLANC);
+                allumeLED(26, 11, BLANC);
+                allumeLED(25, 12, BLANC);
+            }
+            
+            else if (difficulty == 1)
+            {
+                ecrireMot("MOYEN", 0, 8, ORANGE);
+                // Fleche
+                allumeLED(21, 8, BLANC);
+                allumeLED(22, 9, BLANC);
+                allumeLED(23, 10, BLANC);
+                allumeLED(22, 11, BLANC);
+                allumeLED(21, 12, BLANC);
+            }
+            
+            else if (difficulty == 2)
+            {
+                ecrireMot("EXPERT", 0, 8, ROUGE);
+                // Fleche
+                allumeLED(25, 8, BLANC);
+                allumeLED(26, 9, BLANC);
+                allumeLED(27, 10, BLANC);
+                allumeLED(26, 11, BLANC);
+                allumeLED(25, 12, BLANC);
+            }
+            pixels.show();
+            vTaskDelay(pdMS_TO_TICKS(50));
+
+            if (ulTaskNotifyTake(pdTRUE, 0) > 0) {
+                break;
+            }
+        }
+    }
+}
+
+// Fonction qui transforme des coordonnées de la matrice 13x14 en numéro de LED pour la librairie NeoPixel
+int transformationIntermediaire(int x, int y){
+  int indexIntermediaire = (y * largeur) + x;
+ 
+  return indexIntermediaire;
+};
+ 
+// Fonction qui transforme des coordonnées de la matrice LED complète (13x28) en numéro de LED pour la librairie NeoPixel
+int transformationCoordonnees(int x, int y){
+  int index = 0;
+  if (x < largeur)
+  {
+    index = transformationIntermediaire(x, y);
+  }
+ 
+  else
+  {
+    int xLocal = x - largeur;
+    index = transformationIntermediaire(xLocal, y) + (largeur * hauteur);
+  }
+ 
+  return index;
+};
+ 
+// Fonction qui allume d'une certaine couleur la LED correspondant aux coordonnées de la matrice 13x28
+// La variable couleur contient pixels.Color(R,G,B)
+void allumeLED(int x, int y, uint32_t couleur){
+  if (x >= 0 && x < 28 && y >= 0 && y < 13)
+  {
+    int index = transformationCoordonnees(x, y);
+ 
+    pixels.setPixelColor(index, couleur);
+  }
+};
+ 
+void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
+ 
+  for (int rangee = 0; rangee < 5; rangee++)
+  {
+ 
+    for (int colonne = 0; colonne < 3; colonne++)
+    {
+ 
+      if (matriceLettre[rangee][colonne] == 1)
+      {
+        allumeLED(xDepart + colonne, yDepart + rangee, couleur);
+      }
+    }
+  }
+};
+ 
+// Fonction qui trouve la lettre dans la matrice 3D de l'alphabet. Re
+int trouverIndexAlphabet(char c){
+  int index = 0;
+  if (c >= 'A' && c <= 'Z')
+  {
+    index = c - 'A';
+  }
+ 
+  else if (c >= '0' && c <= '9')
+  {
+    index = 26 + c - '0';
+  }
+ 
+  else if (c == '!')
+  {
+    index = 36;
+  }
+ 
+  else if (c == ':')
+  {
+    index = 37;
+  }
+ 
+  else if (c == '/')
+  {
+    index = 38;
+  }
+ 
+  else
+  {
+    index = -1;
+  }
+ 
+  return index;
+};
+ 
+void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur){
+  for (int i = 0; mot[i] != '\0'; i++)
+  {
+    char lettre = mot[i];
+    int index = trouverIndexAlphabet(lettre);
+    if (index != -1)
+    {
+      ecrireLettre(alphabet[index], (xDepart + i * largeurLettre), yDepart, couleur);
+    }
+  }
+}
+ 
+int longueurMot(const char *mot){
+  int longueur = 0;
+  while (mot[longueur] != '\0')
+  {
+    longueur++;
+  }
+  return longueur;
+}
+ 
+void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
+  static int x = 28;
+ 
+  int largeurMot = longueurMot(mot) * 4;
+ 
+  ecrireMot(mot, x, yDepart, couleur);
+ 
+  x--;
+ 
+  if (x < -largeurMot)
+  {
+    x = 28;
+  }
+}
+
 
 
 //TODO
