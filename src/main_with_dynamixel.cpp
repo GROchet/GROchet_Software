@@ -126,6 +126,8 @@ AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1);
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
 AccelStepper MOT_Z = AccelStepper(AccelStepper::DRIVER, STEP_PIN_MZ,DIR_PIN_MZ); //Moteur Z
 
+volatile bool manualControlEnabled = false; // Flag pour indiquer si le contrôle manuel est actif
+
 //--------------------
 // Interface utilisateur
 //--------------------
@@ -451,6 +453,7 @@ void ouvrirPince();
 void fermerPince();
 
 void TaskChooseDiff(void *pvParameters);
+void TaskEcranAccueil(void *pvParameters);
 int transformationIntermediaire(int x, int y);
 int transformationCoordonnees(int x, int y);
 void allumeLED(int x, int y, uint32_t couleur);
@@ -465,6 +468,7 @@ void ecranAccueil(const char *mot);
 EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 TaskHandle_t choose_diff = NULL;
+TaskHandle_t ecran_accueil = NULL;
 
 volatile bool jsonMoveActive = false;
 
@@ -551,6 +555,7 @@ void setup() {
 	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
     xTaskCreate(TaskChooseDiff, "ChooseDiff", 512, NULL, 2, &choose_diff);
+    xTaskCreate(TaskEcranAccueil, "EcranAccueil", 512, NULL, 2, &ecran_accueil);
 }
 
 void loop() {
@@ -615,9 +620,12 @@ void TaskStateControl (void *pvParameters) {
 
 	switch(currentState) {
 		case SETUP:
+            xTaskNotifyGive(ecran_accueil); // start welcome screen
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             ouvrirPince();
             homeXY();
+            //Remonter axe Z à ajouter
+            xTaskNotifyGive(ecran_accueil); // stop welcome screen
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
@@ -627,10 +635,10 @@ void TaskStateControl (void *pvParameters) {
             currentState = IDLE;
             break;
 	    case IDLE:
-			xTaskNotifyGive(motorTaskHandle);   // Enable manual control
-			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-			xTaskNotifyGive(motorTaskHandle);   // Send stop signal
-			currentState = LOWERING;
+            manualControlEnabled = true; // Allow manual control in TaskMotorControl
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            manualControlEnabled = false; // Disable manual control
+            currentState = LOWERING;
 			break;
 	    case LOWERING:
 			//Séquence de mouvement vers le bas
@@ -831,32 +839,34 @@ void TaskMotorControl(void *pvParameters) {
     const long btnIncrement = 100; // increment for buttons, can also use speed[difficulty]
 
     for (;;) {
-        // ── Read buttons ──
-        bool up    = digitalRead(BTN_PIN_UP)    == LOW;
-        bool down  = digitalRead(BTN_PIN_DOWN)  == LOW;
-        bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
-        bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+        if(manualControlEnabled){
+            // ── Read buttons ──
+            bool up    = digitalRead(BTN_PIN_UP)    == LOW;
+            bool down  = digitalRead(BTN_PIN_DOWN)  == LOW;
+            bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+            bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
 
-        btnUp = up; btnDown = down; btnLeft = left; btnRight = right;
-        
-        if(btnUp || btnDown || btnLeft || btnRight) {
-            // ── Compute XY target based on currentPosition ──
-            long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
-            long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+            btnUp = up; btnDown = down; btnLeft = left; btnRight = right;
+            
+            if(btnUp || btnDown || btnLeft || btnRight) {
+                // ── Compute XY target based on currentPosition ──
+                long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+                long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
 
-            long targetX = curX;
-            long targetY = curY;
+                long targetX = curX;
+                long targetY = curY;
 
-            if (up)    targetX += btnIncrement;
-            if (down)  targetX -= btnIncrement;
-            if (left)  targetY += btnIncrement; 
-            if (right) targetY -= btnIncrement; 
+                if (up)    targetX += btnIncrement;
+                if (down)  targetX -= btnIncrement;
+                if (left)  targetY += btnIncrement; 
+                if (right) targetY -= btnIncrement; 
 
-            // ── Set moveTo targets if there is any movement ──
-            posX = targetX; 
-            posY = targetY; 
-            MOT_A.moveTo(targetX + targetY);
-            MOT_B.moveTo(targetX - targetY);
+                // ── Set moveTo targets if there is any movement ──
+                posX = targetX; 
+                posY = targetY; 
+                MOT_A.moveTo(targetX + targetY);
+                MOT_B.moveTo(targetX - targetY);
+            }
         }
         // ── Run motors periodically ──
         MOT_A.run();
@@ -1328,7 +1338,7 @@ void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t c
   }
 };
  
-// Fonction qui trouve la lettre dans la matrice 3D de l'alphabet. Re
+// Fonction qui trouve la lettre dans la matrice 3D de l'alphabet
 int trouverIndexAlphabet(char c){
   int index = 0;
   if (c >= 'A' && c <= 'Z')
@@ -1400,8 +1410,7 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
   }
 }
 
-void taskEcranAccueil(void *pvParameters)
-{
+void TaskEcranAccueil(void *pvParameters){
     for (;;){
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
         for(;;){
