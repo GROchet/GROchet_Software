@@ -454,6 +454,9 @@ void fermerPince();
 
 void TaskChooseDiff(void *pvParameters);
 void TaskEcranAccueil(void *pvParameters);
+void TaskEcranPerdant(void *pvParameters);
+void TaskEcranGagnant(void *pvParameters);
+
 int transformationIntermediaire(int x, int y);
 int transformationCoordonnees(int x, int y);
 void allumeLED(int x, int y, uint32_t couleur);
@@ -469,6 +472,8 @@ EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
 TaskHandle_t choose_diff = NULL;
 TaskHandle_t ecran_accueil = NULL;
+TaskHandle_t ecran_perdant = NULL;
+TaskHandle_t ecran_gagnant = NULL;
 
 volatile bool jsonMoveActive = false;
 
@@ -556,6 +561,8 @@ void setup() {
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
     xTaskCreate(TaskChooseDiff, "ChooseDiff", 512, NULL, 2, &choose_diff);
     xTaskCreate(TaskEcranAccueil, "EcranAccueil", 512, NULL, 2, &ecran_accueil);
+    xTaskCreate(TaskEcranPerdant, "EcranPerdant", 512, NULL, 2, &ecran_perdant);
+    xTaskCreate(TaskEcranGagnant, "EcranGagnant", 512, NULL, 2, &ecran_gagnant);
 }
 
 void loop() {
@@ -1411,6 +1418,7 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
 }
 
 void TaskEcranAccueil(void *pvParameters){
+    (void) pvParameters;
     for (;;){
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
         for(;;){
@@ -1433,6 +1441,98 @@ void TaskEcranAccueil(void *pvParameters){
             if (decalage == 3) decalage = 0;
             
             
+            if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
+        }
+    }
+}
+
+void TaskEcranPerdant(void *pvParameters){
+    (void) pvParameters;
+    for(;;){
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
+        for(;;){
+            int largeurMot = longueurMot("MEILLEURE CHANCE LA PROCHAINE FOIS") * 4;
+            for (int i = 28; i > -(largeurMot); i--){
+                pixels.clear();
+                int decalage = 0;
+                for (int j = 0; j < 28; j++){
+                    // Motif
+                    allumeLED(j * 4 + decalage, 0, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + 2 + decalage, 0, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + 1 + decalage, 1, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + decalage, 2, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + 2 + decalage, 2, pixels.Color(25, 0, 0));
+
+                    allumeLED(j * 4 + decalage, 10, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + 2 + decalage, 10, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + 1 + decalage, 11, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + decalage, 12, pixels.Color(25, 0, 0));
+                    allumeLED(j * 4 + 2 + decalage, 12, pixels.Color(25, 0, 0));
+                    decalage = decalage + 2;
+                }
+                ecrireMot("MEILLEURE CHANCE LA PROCHAINE FOIS", i, 4, pixels.Color(0, 0, 25));
+                pixels.show();
+                vTaskDelay(pdMS_TO_TICKS(50));
+            }
+
+            if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
+        }
+    }
+}
+ 
+void TaskEcranGagnant(void *pvParameters){
+    (void) *pvParameters;
+    for(;;){
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
+        for(;;){
+            static bool afficher = true;
+
+            pixels.clear();
+            int decalage = 0;
+            for (int j = 0; j < 28; j++){
+                // Coeur en haut
+                allumeLED(0 + decalage, 0, pixels.Color(25, 0, 10));
+                allumeLED(1 + decalage, 0, pixels.Color(25, 0, 10));
+                allumeLED(3 + decalage, 0, pixels.Color(25, 0, 10));
+                allumeLED(4 + decalage, 0, pixels.Color(25, 0, 10));
+
+                allumeLED(0 + decalage, 1, pixels.Color(25, 0, 10));
+                allumeLED(1 + decalage, 1, pixels.Color(25, 0, 10));
+                allumeLED(2 + decalage, 1, pixels.Color(25, 0, 10));
+                allumeLED(3 + decalage, 1, pixels.Color(25, 0, 10));
+                allumeLED(4 + decalage, 1, pixels.Color(25, 0, 10));
+
+                allumeLED(1 + decalage, 2, pixels.Color(25, 0, 10));
+                allumeLED(2 + decalage, 2, pixels.Color(25, 0, 10));
+                allumeLED(3 + decalage, 2, pixels.Color(25, 0, 10));
+
+                allumeLED(2 + decalage, 3, pixels.Color(25, 0, 10));
+
+                // Coeur en bas
+                allumeLED(0 + decalage, 9, pixels.Color(25, 0, 10));
+                allumeLED(1 + decalage, 9, pixels.Color(25, 0, 10));
+                allumeLED(3 + decalage, 9, pixels.Color(25, 0, 10));
+                allumeLED(4 + decalage, 9, pixels.Color(25, 0, 10));
+
+                allumeLED(0 + decalage, 10, pixels.Color(25, 0, 10));
+                allumeLED(1 + decalage, 10, pixels.Color(25, 0, 10));
+                allumeLED(2 + decalage, 10, pixels.Color(25, 0, 10));
+                allumeLED(3 + decalage, 10, pixels.Color(25, 0, 10));
+                allumeLED(4 + decalage, 10, pixels.Color(25, 0, 10));
+
+                allumeLED(1 + decalage, 11, pixels.Color(25, 0, 10));
+                allumeLED(2 + decalage, 11, pixels.Color(25, 0, 10));
+                allumeLED(3 + decalage, 11, pixels.Color(25, 0, 10));
+
+                allumeLED(2 + decalage, 12, pixels.Color(25, 0, 10));
+
+                decalage = 23;
+            }
+            if (afficher) ecrireMot("BRAVO!", 3, 4, pixels.Color(0, 20, 5));
+
+            afficher = !afficher;
+            pixels.show();
+            vTaskDelay(pdMS_TO_TICKS(400));
             if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
         }
     }
