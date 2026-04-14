@@ -542,11 +542,11 @@ void setup() {
 
 	MOT_A.setMaxSpeed(8000);
 	MOT_B.setMaxSpeed(8000);
-	MOT_Z.setMaxSpeed(4000);
+	MOT_Z.setMaxSpeed(2000);
 
 	MOT_A.setAcceleration(2000);
 	MOT_B.setAcceleration(2000);
-	MOT_Z.setAcceleration(1000);
+	MOT_Z.setAcceleration(500);
 
 	MOT_A.setCurrentPosition(0);
 	MOT_B.setCurrentPosition(0);
@@ -561,17 +561,20 @@ void setup() {
 	inputEventGroup = xEventGroupCreate();
 	limitEventGroup = xEventGroupCreate();
 
-	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 3, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
+	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 5, &motorTaskHandle);
+	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 5, NULL);
+	xTaskCreate(TaskCommJsonSend,    "CommSend", 512, NULL, 4, NULL);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
-    xTaskCreate(TaskRetroUI, "RetroUI", 2048, NULL, 2, NULL);
+    xTaskCreate(TaskRetroUI, "RetroUI", 256, NULL, 4, NULL); //128 is ok, we chose 256 to be safe
+
+    //Envoyer message complet à Laurence
 }
 
 void loop() {
 }
 
 void homeXY() {
+    
     MOT_A.stop();
     MOT_B.stop();
  
@@ -589,10 +592,7 @@ void homeXY() {
  
         MOT_A.moveTo(posX + posY);
         MOT_B.moveTo(posX - posY);
- 
-        MOT_A.run();
-        MOT_B.run();
-        vTaskDelay(pdMS_TO_TICKS(15));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
  
     MOT_A.setCurrentPosition(0);
@@ -612,10 +612,8 @@ void homeXY() {
  
         MOT_A.moveTo(posX + posY);
         MOT_B.moveTo(posX - posY);
- 
-        MOT_A.run();
-        MOT_B.run();
-        vTaskDelay(pdMS_TO_TICKS(15));
+
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
  
     MOT_A.setCurrentPosition(0);
@@ -632,7 +630,7 @@ void TaskStateControl (void *pvParameters) {
 		case SETUP:
             retroUIState = ECRAN_ACCUEIL;
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            ouvrirPince();
+            //ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
 			currentState = DIFF_CHOOSE;
@@ -643,7 +641,7 @@ void TaskStateControl (void *pvParameters) {
             currentState = IDLE;
             break;
 	    case IDLE:
-            retroUIState = ECRAN_GAGNANT;
+            retroUIState = RIEN;
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             manualControlEnabled = false; // Disable manual control
@@ -663,7 +661,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case CLOSING:{  
-			fermerPince();
+			//fermerPince();
 			currentState = LIFTING;
 			break;
 	    }
@@ -683,12 +681,12 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case DROPPING:{ //DONE;
-			ouvrirPince();
+			//ouvrirPince();
 			currentState = IDLE;
 			break;
 	    }
 	}
-	vTaskDelay(pdMS_TO_TICKS(20));
+	vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
@@ -716,24 +714,27 @@ void TaskCommJsonSend(void *pvParameters) {
     (void) pvParameters;
 
     struct {
-        long posX = -1;
-        long posY = -1;
-        long zPos = -1;
+        long posX = -999999;
+        long posY = -999999;
+        long zPos = -999999;
         int state = -1;
         int ACTUAL_POS = -1;
         int difficulty = -1;
+
         int temps[3] = {-1,-1,-1};
         int force[3] = {-1,-1,-1};
         int speed[3] = {-1,-1,-1};
+
         int OPEN_POS = -1;
         int CLOSED_POS = -1;
+
         long MAX_POS_X = -1;
         long MAX_POS_Y = -1;
         long liftedZPos = -1;
         long maxDownZPos = -1;
-        long maxHeight = -1;
-        long minHeight = -1;
+
         String ledColor = "";
+
         bool btnUp = false;
         bool btnDown = false;
         bool btnLeft = false;
@@ -742,104 +743,160 @@ void TaskCommJsonSend(void *pvParameters) {
     } last;
 
     for (;;) {
-        bool changed = false;
 
-        // --- Positions ---
-        long z = MOT_Z.currentPosition();
-        if (posX != last.posX) { last.posX = posX; changed = true; }
-        if (posY != last.posY) { last.posY = posY; changed = true; }
-        if (z != last.zPos) { last.zPos = z; changed = true; }
+        bool send = false;
 
-        // --- System State ---
-        if ((int)currentState != last.state) { last.state = (int)currentState; changed = true; }
-        if (ACTUAL_POS != last.ACTUAL_POS) { last.ACTUAL_POS = ACTUAL_POS; changed = true; }
-        if (difficulty != last.difficulty) { last.difficulty = difficulty; changed = true; }
+        StaticJsonDocument<1024> doc;
 
-        // --- Temps / Force / Speed ---
-        for (int i = 0; i < 3; i++) {
-            if (temps[i] != last.temps[i]) { last.temps[i] = temps[i]; changed = true; }
-            if (force[i] != last.force[i]) { last.force[i] = force[i]; changed = true; }
-            if (speed[i] != last.speed[i]) { last.speed[i] = speed[i]; changed = true; }
+        // ---------------- POSITION ----------------
+        if (posX != last.posX) {
+            doc["posX"] = posX;
+            last.posX = posX;
+            send = true;
         }
 
-        // --- Pince ---
-        if (OPEN_POS != last.OPEN_POS) { last.OPEN_POS = OPEN_POS; changed = true; }
-        if (CLOSED_POS != last.CLOSED_POS) { last.CLOSED_POS = CLOSED_POS; changed = true; }
+        if (posY != last.posY) {
+            doc["posY"] = posY;
+            last.posY = posY;
+            send = true;
+        }
 
-        // --- Limits ---
-        if (MAX_POS_X != last.MAX_POS_X) { last.MAX_POS_X = MAX_POS_X; changed = true; }
-        if (MAX_POS_Y != last.MAX_POS_Y) { last.MAX_POS_Y = MAX_POS_Y; changed = true; }
-        if (liftedZPos != last.liftedZPos) { last.liftedZPos = liftedZPos; changed = true; }
-        if (maxDownZPos != last.maxDownZPos) { last.maxDownZPos = maxDownZPos; changed = true; }
+        long z = MOT_Z.currentPosition();
+        if (z != last.zPos) {
+            doc["zPos"] = z;
+            last.zPos = z;
+            send = true;
+        }
 
-        // --- LED ---
-        if (ledColor != last.ledColor) { last.ledColor = ledColor; changed = true; }
+        // ---------------- STATE ----------------
+        if ((int)currentState != last.state) {
+            doc["state"] = (int)currentState;
+            last.state = (int)currentState;
+            send = true;
+        }
 
-        // --- Buttons ---
+        if (ACTUAL_POS != last.ACTUAL_POS) {
+            doc["pince_pos_act"] = ACTUAL_POS;
+            last.ACTUAL_POS = ACTUAL_POS;
+            send = true;
+        }
+
+        if (difficulty != last.difficulty) {
+            doc["diff"] = difficulty;
+            last.difficulty = difficulty;
+            send = true;
+        }
+
+        // ---------------- ARRAYS ----------------
+        for (int i = 0; i < 3; i++) {
+            if (temps[i] != last.temps[i]) {
+                doc["temps"][i] = temps[i];
+                last.temps[i] = temps[i];
+                send = true;
+            }
+
+            if (force[i] != last.force[i]) {
+                doc["force"][i] = force[i];
+                last.force[i] = force[i];
+                send = true;
+            }
+
+            if (speed[i] != last.speed[i]) {
+                doc["speed"][i] = speed[i];
+                last.speed[i] = speed[i];
+                send = true;
+            }
+        }
+
+        // ---------------- PINCE ----------------
+        if (OPEN_POS != last.OPEN_POS) {
+            doc["pince_open"] = OPEN_POS;
+            last.OPEN_POS = OPEN_POS;
+            send = true;
+        }
+
+        if (CLOSED_POS != last.CLOSED_POS) {
+            doc["pince_closed"] = CLOSED_POS;
+            last.CLOSED_POS = CLOSED_POS;
+            send = true;
+        }
+
+        // ---------------- LIMITS ----------------
+        if (MAX_POS_X != last.MAX_POS_X) {
+            doc["max_x"] = MAX_POS_X;
+            last.MAX_POS_X = MAX_POS_X;
+            send = true;
+        }
+
+        if (MAX_POS_Y != last.MAX_POS_Y) {
+            doc["max_y"] = MAX_POS_Y;
+            last.MAX_POS_Y = MAX_POS_Y;
+            send = true;
+        }
+
+        if (liftedZPos != last.liftedZPos) {
+            doc["z_high"] = liftedZPos;
+            last.liftedZPos = liftedZPos;
+            send = true;
+        }
+
+        if (maxDownZPos != last.maxDownZPos) {
+            doc["z_low"] = maxDownZPos;
+            last.maxDownZPos = maxDownZPos;
+            send = true;
+        }
+
+        // ---------------- LED ----------------
+        if (ledColor != last.ledColor) {
+            doc["led"] = ledColor;
+            last.ledColor = ledColor;
+            send = true;
+        }
+
+        // ---------------- BUTTONS ----------------
         bool up    = btnUp;
         bool down  = btnDown;
         bool left  = btnLeft;
         bool right = btnRight;
-        bool ok    = (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) != 0;
+        bool ok    = (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK);
 
-        if (up != last.btnUp) { last.btnUp = up; changed = true; }
-        if (down != last.btnDown) { last.btnDown = down; changed = true; }
-        if (left != last.btnLeft) { last.btnLeft = left; changed = true; }
-        if (right != last.btnRight) { last.btnRight = right; changed = true; }
-        if (ok != last.btnOk) { last.btnOk = ok; changed = true; }
-
-        // --- Send JSON ---
-        if (changed) {
-            StaticJsonDocument<2048> doc; // Increase size for more variables
-
-            doc["posX"] = posX;
-            doc["posY"] = posY;
-            doc["zPos"] = z;
-            doc["state"] = (int)currentState;
-            doc["diff"] = difficulty; //Pour dire a Laurence quelle difficulte le joueur joue
-
-            // --- Pince ---
-            JsonObject pince = doc.createNestedObject("pince");
-            pince["pos_o"] = OPEN_POS;
-            pince["pos_f"]  = CLOSED_POS;
-            pince["pos_act"] = ACTUAL_POS;
-
-            // --- Limits ---
-            JsonObject limits = doc.createNestedObject("limits");
-            limits["maxPosX"] = MAX_POS_X;
-            limits["maxPosY"] = MAX_POS_Y;
-            limits["maxH"] = liftedZPos;
-            limits["minH"] = maxDownZPos;
-
-            // --- Difficulty-dependent values ---
-            // --- Difficulty-dependent values ---
-			doc["t_f"] = temps[0];
-			doc["t_m"] = temps[1];
-			doc["t_e"] = temps[2];
-
-			doc["f_f"] = force[0];
-			doc["f_m"] = force[1];
-			doc["f_e"] = force[2];
-
-			doc["s_f"] = speed[0];
-			doc["s_m"] = speed[1];
-			doc["s_e"] = speed[2];
-
-            doc["ledColor"] = ledColor;
-
-            JsonObject buttons = doc.createNestedObject("buttons");
-            buttons["haut"]   = up;
-            buttons["bas"]    = down;
-            buttons["gauche"] = left;
-            buttons["droite"] = right;
-            buttons["ok"]     = ok;
-
-            String output;
-            serializeJson(doc, output);
-            Serial.println(output);
+        if (up != last.btnUp) {
+            doc["btn_up"] = up;
+            last.btnUp = up;
+            send = true;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(200));
+        if (down != last.btnDown) {
+            doc["btn_down"] = down;
+            last.btnDown = down;
+            send = true;
+        }
+
+        if (left != last.btnLeft) {
+            doc["btn_left"] = left;
+            last.btnLeft = left;
+            send = true;
+        }
+
+        if (right != last.btnRight) {
+            doc["btn_right"] = right;
+            last.btnRight = right;
+            send = true;
+        }
+
+        if (ok != last.btnOk) {
+            doc["btn_ok"] = ok;
+            last.btnOk = ok;
+            send = true;
+        }
+
+        // ---------------- SEND ONLY IF CHANGED ----------------
+        if (send) {
+            serializeJson(doc, Serial);
+            Serial.print('\n');
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -879,9 +936,15 @@ void TaskMotorControl(void *pvParameters) {
             }
         }
         // ── Run motors periodically ──
-        MOT_A.run();
-        MOT_B.run();
-        MOT_Z.run(); // Z can be moved by other tasks/JSON commands
+        bool motorsActive = abs(MOT_A.distanceToGo()) > 0 ||
+                    abs(MOT_B.distanceToGo()) > 0 ||
+                    abs(MOT_Z.distanceToGo()) > 0;
+
+        if (motorsActive) {
+            MOT_A.run();
+            MOT_B.run();
+            MOT_Z.run();
+        }
         vTaskDelay(pdMS_TO_TICKS(15));
     }
 }
@@ -1374,6 +1437,8 @@ void TaskRetroUI(void *pvParameters){
             case RIEN:
                 [[fallthrough]];
             default:
+                pixels.clear();
+                pixels.show();
                 break;
         }
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -1472,7 +1537,6 @@ void EcranGagnant(){
 
     afficher = !afficher;
     pixels.show();
-    vTaskDelay(pdMS_TO_TICKS(50));
 }
 
 void EcranDiff(){
@@ -1525,7 +1589,6 @@ void EcranDiff(){
         allumeLED(25, 12, BLANC);
     }
     pixels.show();
-    vTaskDelay(pdMS_TO_TICKS(50));
 }
 
 //TODO
