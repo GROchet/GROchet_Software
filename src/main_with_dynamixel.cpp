@@ -423,6 +423,15 @@ byte alphabet[39][5][3] = {
  
 };
 
+enum RetroUIState{
+    ECRAN_ACCUEIL,
+    SELECTION_DIFFICULTE,
+    ECRAN_PERDANT,
+    ECRAN_GAGNANT,
+    RIEN
+};
+volatile RetroUIState retroUIState = ECRAN_ACCUEIL;
+
 // -------------------
 // STATE MACHINE
 // -------------------
@@ -452,11 +461,6 @@ String buildStatusJson();
 void ouvrirPince();
 void fermerPince();
 
-void TaskChooseDiff(void *pvParameters);
-void TaskEcranAccueil(void *pvParameters);
-void TaskEcranPerdant(void *pvParameters);
-void TaskEcranGagnant(void *pvParameters);
-
 int transformationIntermediaire(int x, int y);
 int transformationCoordonnees(int x, int y);
 void allumeLED(int x, int y, uint32_t couleur);
@@ -467,13 +471,15 @@ int longueurMot(const char *mot);
 void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 void ecranAccueil(const char *mot);
 
+void EcranAccueil();
+void EcranPerdant();
+void EcranGagnant();
+void EcranDiff();
+void TaskRetroUI(void *pvParameters);
+
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
 TaskHandle_t motorTaskHandle = NULL;
-TaskHandle_t choose_diff = NULL;
-TaskHandle_t ecran_accueil = NULL;
-TaskHandle_t ecran_perdant = NULL;
-TaskHandle_t ecran_gagnant = NULL;
 
 volatile bool jsonMoveActive = false;
 
@@ -559,10 +565,7 @@ void setup() {
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 3, NULL);
 	xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
-    xTaskCreate(TaskChooseDiff, "ChooseDiff", 512, NULL, 2, &choose_diff);
-    xTaskCreate(TaskEcranAccueil, "EcranAccueil", 512, NULL, 2, &ecran_accueil);
-    xTaskCreate(TaskEcranPerdant, "EcranPerdant", 512, NULL, 2, &ecran_perdant);
-    xTaskCreate(TaskEcranGagnant, "EcranGagnant", 512, NULL, 2, &ecran_gagnant);
+    xTaskCreate(TaskRetroUI, "RetroUI", 2048, NULL, 2, NULL);
 }
 
 void loop() {
@@ -627,21 +630,20 @@ void TaskStateControl (void *pvParameters) {
 
 	switch(currentState) {
 		case SETUP:
-            xTaskNotifyGive(ecran_accueil); // start welcome screen
+            retroUIState = ECRAN_ACCUEIL;
 			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
-            xTaskNotifyGive(ecran_accueil); // stop welcome screen
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
-            xTaskNotifyGive(choose_diff);   // start diff task
+            retroUIState = SELECTION_DIFFICULTE;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            xTaskNotifyGive(choose_diff);   // stop diff task
             currentState = IDLE;
             break;
 	    case IDLE:
+            retroUIState = ECRAN_GAGNANT;
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             manualControlEnabled = false; // Disable manual control
@@ -655,6 +657,7 @@ void TaskStateControl (void *pvParameters) {
                     MOT_Z.stop();
                     break; // Sortir de la boucle pour arrêter la descente
                 }
+                vTaskDelay(pdMS_TO_TICKS(40));
             }
 			currentState = CLOSING;
 			break;
@@ -667,7 +670,7 @@ void TaskStateControl (void *pvParameters) {
 	    case LIFTING:
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
 			MOT_Z.moveTo(liftedZPos);
-            while(abs(MOT_Z.currentPosition() - liftedZPos) < 50) {
+            while(abs(MOT_Z.currentPosition() - liftedZPos) > 50) {
                 vTaskDelay(pdMS_TO_TICKS(20));
             }
 			currentState = MOVING_TO_DROPZONE;
@@ -1229,71 +1232,6 @@ void TaskCommJsonReceive(void *pvParameters) {
 // interface Utilisateur
 //----------------------
 
-void TaskChooseDiff(void *pvParameters) {
-    (void) pvParameters;
-    for (;;) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
-        static bool prevLeft = false;
-        static bool prevRight = false;
-
-        for(;;){
-            bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
-            bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
-
-            if (left && !prevLeft) {
-                difficulty = max(0, difficulty - 1);
-            }
-            if (right && !prevRight) {
-                difficulty = min(2, difficulty + 1);
-            }
-
-            prevLeft = left;
-            prevRight = right;
-            
-            pixels.clear();
-            defilerTexte("CHOIX DIFFICULTE", 0, BLANC);
-
-            if (difficulty == 0){
-                ecrireMot("FACILE", 0, 8, JAUNE);
-                // Fleche
-                allumeLED(25, 8, BLANC);
-                allumeLED(26, 9, BLANC);
-                allumeLED(27, 10, BLANC);
-                allumeLED(26, 11, BLANC);
-                allumeLED(25, 12, BLANC);
-            }
-            
-            else if (difficulty == 1)
-            {
-                ecrireMot("MOYEN", 0, 8, ORANGE);
-                // Fleche
-                allumeLED(21, 8, BLANC);
-                allumeLED(22, 9, BLANC);
-                allumeLED(23, 10, BLANC);
-                allumeLED(22, 11, BLANC);
-                allumeLED(21, 12, BLANC);
-            }
-            
-            else if (difficulty == 2)
-            {
-                ecrireMot("EXPERT", 0, 8, ROUGE);
-                // Fleche
-                allumeLED(25, 8, BLANC);
-                allumeLED(26, 9, BLANC);
-                allumeLED(27, 10, BLANC);
-                allumeLED(26, 11, BLANC);
-                allumeLED(25, 12, BLANC);
-            }
-            pixels.show();
-            vTaskDelay(pdMS_TO_TICKS(50));
-
-            if (ulTaskNotifyTake(pdTRUE, 0) > 0) {
-                break;
-            }
-        }
-    }
-}
-
 // Fonction qui transforme des coordonnées de la matrice 13x14 en numéro de LED pour la librairie NeoPixel
 int transformationIntermediaire(int x, int y){
   int indexIntermediaire = (y * largeur) + x;
@@ -1417,128 +1355,178 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
   }
 }
 
-void TaskEcranAccueil(void *pvParameters){
-    (void) pvParameters;
-    for (;;){
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
-        for(;;){
-            static int decalage = 0;
-            pixels.clear();
-            for (int i = -3; i < 28; i += 3)
-            {
-            allumeLED(i + decalage, 1, pixels.Color(25, 0, 25));
-            allumeLED(i + 1 + decalage, 1, pixels.Color(25, 10, 0));
-            allumeLED(i + 2 + decalage, 1, pixels.Color(0, 5, 15));
-            allumeLED(i + decalage, 11, pixels.Color(25, 0, 25));
-            allumeLED(i + 1 + decalage, 11, pixels.Color(25, 10, 0));
-            allumeLED(i + 2 + decalage, 11, pixels.Color(0, 5, 15));
-            }
-
-            ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
-            pixels.show();
-            vTaskDelay(pdMS_TO_TICKS(100));
-            decalage++;
-            if (decalage == 3) decalage = 0;
-            
-            
-            if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
-        }
-    }
-}
-
-void TaskEcranPerdant(void *pvParameters){
+void TaskRetroUI(void *pvParameters){
     (void) pvParameters;
     for(;;){
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
-        for(;;){
-            int largeurMot = longueurMot("MEILLEURE CHANCE LA PROCHAINE FOIS") * 4;
-            for (int i = 28; i > -(largeurMot); i--){
-                pixels.clear();
-                int decalage = 0;
-                for (int j = 0; j < 28; j++){
-                    // Motif
-                    allumeLED(j * 4 + decalage, 0, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + 2 + decalage, 0, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + 1 + decalage, 1, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + decalage, 2, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + 2 + decalage, 2, pixels.Color(25, 0, 0));
-
-                    allumeLED(j * 4 + decalage, 10, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + 2 + decalage, 10, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + 1 + decalage, 11, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + decalage, 12, pixels.Color(25, 0, 0));
-                    allumeLED(j * 4 + 2 + decalage, 12, pixels.Color(25, 0, 0));
-                    decalage = decalage + 2;
-                }
-                ecrireMot("MEILLEURE CHANCE LA PROCHAINE FOIS", i, 4, pixels.Color(0, 0, 25));
-                pixels.show();
-                vTaskDelay(pdMS_TO_TICKS(50));
-            }
-
-            if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
+        switch(retroUIState){
+            case ECRAN_ACCUEIL:
+                EcranAccueil();
+                break;
+            case SELECTION_DIFFICULTE:
+                EcranDiff();
+                break;
+            case ECRAN_GAGNANT:
+                EcranGagnant();
+                break;
+            case ECRAN_PERDANT:
+                EcranPerdant();
+                break;
+            case RIEN:
+                [[fallthrough]];
+            default:
+                break;
         }
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
- 
-void TaskEcranGagnant(void *pvParameters){
-    (void) *pvParameters;
-    for(;;){
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // wait start
-        for(;;){
-            static bool afficher = true;
 
-            pixels.clear();
-            int decalage = 0;
-            for (int j = 0; j < 28; j++){
-                // Coeur en haut
-                allumeLED(0 + decalage, 0, pixels.Color(25, 0, 10));
-                allumeLED(1 + decalage, 0, pixels.Color(25, 0, 10));
-                allumeLED(3 + decalage, 0, pixels.Color(25, 0, 10));
-                allumeLED(4 + decalage, 0, pixels.Color(25, 0, 10));
+void EcranAccueil(){
+    static int decalage = 0;
+    pixels.clear();
+    for (int i = -3; i < 28; i += 3){
+        allumeLED(i + decalage, 1, pixels.Color(25, 0, 25));
+        allumeLED(i + 1 + decalage, 1, pixels.Color(25, 10, 0));
+        allumeLED(i + 2 + decalage, 1, pixels.Color(0, 5, 15));
+        allumeLED(i + decalage, 11, pixels.Color(25, 0, 25));
+        allumeLED(i + 1 + decalage, 11, pixels.Color(25, 10, 0));
+        allumeLED(i + 2 + decalage, 11, pixels.Color(0, 5, 15));
+    }
 
-                allumeLED(0 + decalage, 1, pixels.Color(25, 0, 10));
-                allumeLED(1 + decalage, 1, pixels.Color(25, 0, 10));
-                allumeLED(2 + decalage, 1, pixels.Color(25, 0, 10));
-                allumeLED(3 + decalage, 1, pixels.Color(25, 0, 10));
-                allumeLED(4 + decalage, 1, pixels.Color(25, 0, 10));
+    ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
+    pixels.show();
+    vTaskDelay(pdMS_TO_TICKS(50));
+    decalage++;
+    if (decalage == 3) decalage = 0;
+}
 
-                allumeLED(1 + decalage, 2, pixels.Color(25, 0, 10));
-                allumeLED(2 + decalage, 2, pixels.Color(25, 0, 10));
-                allumeLED(3 + decalage, 2, pixels.Color(25, 0, 10));
+void EcranPerdant(){
+    int largeurMot = longueurMot("MEILLEURE CHANCE LA PROCHAINE FOIS") * 4;
+    for (int i = 28; i > -(largeurMot); i--){
+        pixels.clear();
+        int decalage = 0;
+        for (int j = 0; j < 28; j++){
+            // Motif
+            allumeLED(j * 4 + decalage, 0, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 0, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 1 + decalage, 1, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + decalage, 2, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 2, pixels.Color(25, 0, 0));
 
-                allumeLED(2 + decalage, 3, pixels.Color(25, 0, 10));
-
-                // Coeur en bas
-                allumeLED(0 + decalage, 9, pixels.Color(25, 0, 10));
-                allumeLED(1 + decalage, 9, pixels.Color(25, 0, 10));
-                allumeLED(3 + decalage, 9, pixels.Color(25, 0, 10));
-                allumeLED(4 + decalage, 9, pixels.Color(25, 0, 10));
-
-                allumeLED(0 + decalage, 10, pixels.Color(25, 0, 10));
-                allumeLED(1 + decalage, 10, pixels.Color(25, 0, 10));
-                allumeLED(2 + decalage, 10, pixels.Color(25, 0, 10));
-                allumeLED(3 + decalage, 10, pixels.Color(25, 0, 10));
-                allumeLED(4 + decalage, 10, pixels.Color(25, 0, 10));
-
-                allumeLED(1 + decalage, 11, pixels.Color(25, 0, 10));
-                allumeLED(2 + decalage, 11, pixels.Color(25, 0, 10));
-                allumeLED(3 + decalage, 11, pixels.Color(25, 0, 10));
-
-                allumeLED(2 + decalage, 12, pixels.Color(25, 0, 10));
-
-                decalage = 23;
-            }
-            if (afficher) ecrireMot("BRAVO!", 3, 4, pixels.Color(0, 20, 5));
-
-            afficher = !afficher;
-            pixels.show();
-            vTaskDelay(pdMS_TO_TICKS(400));
-            if (ulTaskNotifyTake(pdTRUE, 0) > 0)break;
+            allumeLED(j * 4 + decalage, 10, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 10, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 1 + decalage, 11, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + decalage, 12, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 12, pixels.Color(25, 0, 0));
+            decalage = decalage + 2;
         }
+        ecrireMot("MEILLEURE CHANCE LA PROCHAINE FOIS", i, 4, pixels.Color(0, 0, 25));
+        pixels.show();
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
- 
 
+void EcranGagnant(){
+    static bool afficher = true;
+    pixels.clear();
+    int decalage = 0;
+    for (int j = 0; j < 28; j++){
+        // Coeur en haut
+        allumeLED(0 + decalage, 0, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 0, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 0, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 0, pixels.Color(25, 0, 10));
+
+        allumeLED(0 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 1, pixels.Color(25, 0, 10));
+
+        allumeLED(1 + decalage, 2, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 2, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 2, pixels.Color(25, 0, 10));
+
+        allumeLED(2 + decalage, 3, pixels.Color(25, 0, 10));
+
+        // Coeur en bas
+        allumeLED(0 + decalage, 9, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 9, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 9, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 9, pixels.Color(25, 0, 10));
+
+        allumeLED(0 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 10, pixels.Color(25, 0, 10));
+
+        allumeLED(1 + decalage, 11, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 11, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 11, pixels.Color(25, 0, 10));
+
+        allumeLED(2 + decalage, 12, pixels.Color(25, 0, 10));
+
+        decalage = 23;
+    }
+    if (afficher) ecrireMot("BRAVO!", 3, 4, pixels.Color(0, 20, 5));
+
+    afficher = !afficher;
+    pixels.show();
+    vTaskDelay(pdMS_TO_TICKS(50));
+}
+
+void EcranDiff(){
+    static bool prevLeft = false;
+    static bool prevRight = false;
+
+    bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+    bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+
+    if (left && !prevLeft) {
+        difficulty = max(0, difficulty - 1);
+    }
+    if (right && !prevRight) {
+        difficulty = min(2, difficulty + 1);
+    }
+
+    prevLeft = left;
+    prevRight = right;
+    
+    pixels.clear();
+    defilerTexte("CHOIX DIFFICULTE", 0, BLANC);
+
+    if (difficulty == 0){
+        ecrireMot("FACILE", 0, 8, JAUNE);
+        // Fleche
+        allumeLED(25, 8, BLANC);
+        allumeLED(26, 9, BLANC);
+        allumeLED(27, 10, BLANC);
+        allumeLED(26, 11, BLANC);
+        allumeLED(25, 12, BLANC);
+    }
+    
+    else if (difficulty == 1){
+        ecrireMot("MOYEN", 0, 8, ORANGE);
+        // Fleche
+        allumeLED(21, 8, BLANC);
+        allumeLED(22, 9, BLANC);
+        allumeLED(23, 10, BLANC);
+        allumeLED(22, 11, BLANC);
+        allumeLED(21, 12, BLANC);
+    }
+    
+    else if (difficulty == 2){
+        ecrireMot("EXPERT", 0, 8, ROUGE);
+        // Fleche
+        allumeLED(25, 8, BLANC);
+        allumeLED(26, 9, BLANC);
+        allumeLED(27, 10, BLANC);
+        allumeLED(26, 11, BLANC);
+        allumeLED(25, 12, BLANC);
+    }
+    pixels.show();
+    vTaskDelay(pdMS_TO_TICKS(50));
+}
 
 //TODO
 
