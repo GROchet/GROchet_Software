@@ -445,21 +445,27 @@ enum SystemState {
   LIFTING, //Remonter Axe Z
   MOVING_TO_DROPZONE, //Se déplacer vers la zone de dépôt
   DROPPING, //Pince ouverte
+  ACCUEIL,
 };
 
-volatile SystemState currentState = SETUP;
+volatile SystemState currentState = ACCUEIL;
 
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
 void TaskCommJsonReceive (void *pvParameters);
 void TaskCommJsonSend(void *pvParameters);
+
+TaskHandle_t hMotorTask = NULL;
+TaskHandle_t hRetroUI   = NULL;
+TaskHandle_t hCommSend  = NULL;
+
 void NotifySwitch();
 void NotifyOkButton();
 void homeXY();
-String buildStatusJson();
 void ouvrirPince();
 void fermerPince();
+void sendFullSnapshot();
 
 int transformationIntermediaire(int x, int y);
 int transformationCoordonnees(int x, int y);
@@ -479,13 +485,15 @@ void TaskRetroUI(void *pvParameters);
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
-TaskHandle_t motorTaskHandle = NULL;
 
 volatile bool jsonMoveActive = false;
 
 void setup() {
 	Serial.begin(115200); // OU 115200 selon ce qui est choisi pour le debug
 	delay(2000);
+
+    sendFullSnapshot();
+    delay(2000);
 
 	//DYNAMIXEL
 	// -------------------
@@ -561,13 +569,11 @@ void setup() {
 	inputEventGroup = xEventGroupCreate();
 	limitEventGroup = xEventGroupCreate();
 
-	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 5, &motorTaskHandle);
+	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 5, &hMotorTask);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 5, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend", 512, NULL, 4, NULL);
-	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
-    xTaskCreate(TaskRetroUI, "RetroUI", 256, NULL, 4, NULL); //128 is ok, we chose 256 to be safe
-
-    //Envoyer message complet à Laurence
+	xTaskCreate(TaskCommJsonSend,    "CommSend", 1024, NULL, 4, &hCommSend);
+	//xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
+    xTaskCreate(TaskRetroUI, "RetroUI", 512, NULL, 4, &hRetroUI); //128 is ok, we chose 256 to be safe
 }
 
 void loop() {
@@ -592,7 +598,7 @@ void homeXY() {
  
         MOT_A.moveTo(posX + posY);
         MOT_B.moveTo(posX - posY);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(15));
     }
  
     MOT_A.setCurrentPosition(0);
@@ -627,21 +633,30 @@ void TaskStateControl (void *pvParameters) {
   for(;;) {
 
 	switch(currentState) {
-		case SETUP:
+        case ACCUEIL:
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
-			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            currentState = SETUP;
+        case SETUP:
+            retroUIState = RIEN;
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs après l'écran d'accueil
             //ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant le choix de la difficulté
             retroUIState = SELECTION_DIFFICULTE;
+            vTaskResume(hRetroUI); // S'assurer que la tâche de l'interface utilisateur est active pour afficher le menu de sélection
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            retroUIState = RIEN;
             currentState = IDLE;
             break;
 	    case IDLE:
-            retroUIState = RIEN;
+            vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             manualControlEnabled = false; // Disable manual control
@@ -657,6 +672,7 @@ void TaskStateControl (void *pvParameters) {
                 }
                 vTaskDelay(pdMS_TO_TICKS(40));
             }
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant que la pince est fermée
 			currentState = CLOSING;
 			break;
 
@@ -667,6 +683,7 @@ void TaskStateControl (void *pvParameters) {
 	    }
 	    case LIFTING:
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
+            vTaskResume(hMotorTask); // S'assurer que la tâche de communication est active pour envoyer les mises à jour de position pendant le levage
 			MOT_Z.moveTo(liftedZPos);
             while(abs(MOT_Z.currentPosition() - liftedZPos) > 50) {
                 vTaskDelay(pdMS_TO_TICKS(20));
@@ -689,26 +706,6 @@ void TaskStateControl (void *pvParameters) {
 	vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
-
-struct StatusCache {
-    int posX = -1;
-    int posY = -1;
-    int zPos = -1;
-    int state = -1;
-    int ACTUAL_POS = -1;
-    int difficulty = -1;
-    int temps[3] = {-1,-1,-1};
-    int force[3] = {-1,-1,-1};
-    int speed[3] = {-1,-1,-1};
-    int OPEN_POS = -1;
-    int CLOSED_POS = -1;
-    int MAX_POS_X = -1;
-    int MAX_POS_Y = -1;
-    int liftedZPos = -1;
-    int maxDownZPos = -1;
-    String ledColor = "";
-    EventBits_t buttons = 0;
-};
 
 void TaskCommJsonSend(void *pvParameters) {
     (void) pvParameters;
@@ -776,7 +773,7 @@ void TaskCommJsonSend(void *pvParameters) {
         }
 
         if (ACTUAL_POS != last.ACTUAL_POS) {
-            doc["pince_pos_act"] = ACTUAL_POS;
+            doc["pos_act"] = ACTUAL_POS;
             last.ACTUAL_POS = ACTUAL_POS;
             send = true;
         }
@@ -900,6 +897,57 @@ void TaskCommJsonSend(void *pvParameters) {
     }
 }
 
+void sendFullSnapshot() {
+    StaticJsonDocument<1024> doc;
+
+    doc["type"] = "full";
+
+    doc["posX"] = posX;
+    doc["posY"] = posY;
+    doc["zPos"] = MOT_Z.currentPosition();
+    doc["state"] = (int)currentState;
+    doc["diff"] = difficulty;
+
+    // --- Pince ---
+    JsonObject pince = doc.createNestedObject("pince");
+    pince["pos_o"] = OPEN_POS;
+    pince["pos_f"] = CLOSED_POS;
+    pince["pos_act"] = ACTUAL_POS;
+
+    // --- Limits ---
+    JsonObject limits = doc.createNestedObject("limits");
+    limits["maxPosX"] = MAX_POS_X;
+    limits["maxPosY"] = MAX_POS_Y;
+    limits["maxH"] = liftedZPos;
+    limits["minH"] = maxDownZPos;
+
+    // --- Arrays ---
+    doc["temps"][0] = temps[0];
+    doc["temps"][1] = temps[1];
+    doc["temps"][2] = temps[2];
+
+    doc["force"][0] = force[0];
+    doc["force"][1] = force[1];
+    doc["force"][2] = force[2];
+
+    doc["speed"][0] = speed[0];
+    doc["speed"][1] = speed[1];
+    doc["speed"][2] = speed[2];
+
+    doc["ledColor"] = ledColor;
+
+    // --- Buttons ---
+    JsonObject buttons = doc.createNestedObject("buttons");
+    buttons["haut"]   = btnUp;
+    buttons["bas"]    = btnDown;
+    buttons["gauche"] = btnLeft;
+    buttons["droite"] = btnRight;
+    buttons["ok"]     = false;
+
+    serializeJson(doc, Serial);
+    Serial.print('\n');
+}
+
 void TaskMotorControl(void *pvParameters) {
     (void) pvParameters;
 
@@ -936,9 +984,9 @@ void TaskMotorControl(void *pvParameters) {
             }
         }
         // ── Run motors periodically ──
-        bool motorsActive = abs(MOT_A.distanceToGo()) > 0 ||
-                    abs(MOT_B.distanceToGo()) > 0 ||
-                    abs(MOT_Z.distanceToGo()) > 0;
+        bool motorsActive = abs(MOT_A.distanceToGo()) > 1 ||
+                    abs(MOT_B.distanceToGo()) > 1 ||
+                    abs(MOT_Z.distanceToGo()) > 1;
 
         if (motorsActive) {
             MOT_A.run();
@@ -994,59 +1042,6 @@ void fermerPince() {
     }
 }
 
-String buildStatusJson() {
-    StaticJsonDocument<1024> doc;   // or JsonDocument doc(1024) for Static
-
-    // Temps et niveaux
-    doc["time_facile"] = temps[0];
-    doc["time_medium"] = temps[1];
-    doc["time_expert"] = temps[2];
-
-    doc["force_facile"] = force[0];
-    doc["force_medium"] = force[1];
-    doc["force_expert"] = force[2];
-
-    doc["speed_facile"] = speed[0];
-    doc["speed_medium"] = speed[1];
-    doc["speed_expert"] = speed[2];
-
-    doc["led_color"] = ledColor;
-
-	JsonObject buttons = doc["buttons"].to<JsonObject>();
-	EventBits_t bits = xEventGroupGetBits(inputEventGroup);
-	buttons["haut"] = (bits & EVT_BTN_UP) != 0;
-	buttons["bas"] = (bits & EVT_BTN_DOWN) != 0;
-	buttons["gauche"] = (bits & EVT_BTN_LEFT) != 0;
-	buttons["droite"] = (bits & EVT_BTN_RIGHT) != 0;
-	buttons["ok"] = (bits & EVT_BTN_OK) != 0;
-
-    // System state
-    doc["system_state"] = (int) currentState;
-
-    // Pince
-    JsonObject pince = doc["pince"].to<JsonObject>();
-    pince["pos_ouverte"] = OPEN_POS;
-    pince["pos_fermee"] = CLOSED_POS;
-    pince["pos_actuelle"] = ACTUAL_POS;
-
-    // XY
-    JsonObject xy = doc["xy"].to<JsonObject>();
-    xy["max_x"] = MAX_POS_X;
-    xy["max_y"] = MAX_POS_Y;
-    xy["pos_x"] = posX;
-    xy["pos_y"] = posY;
-
-    // Z axis
-    JsonObject z_axis = doc["z_axis"].to<JsonObject>();
-    z_axis["max_height"] = maxDownZPos;
-    z_axis["min_height"] = liftedZPos;
-    z_axis["current_height"] = MOT_Z.currentPosition();
-
-    String output;
-    serializeJson(doc, output);
-    return output;
-}
-
 void TaskCommJsonReceive(void *pvParameters) {
     (void) pvParameters;
     //Serial.println("{\"boot\":\"TaskCommJsonReceive started\"}");
@@ -1056,7 +1051,7 @@ void TaskCommJsonReceive(void *pvParameters) {
         if (Serial.available()) {
             String incoming = Serial.readStringUntil('\n');
             incoming.trim();
-            /*
+            
             // =========================
             // DEBUG : montrer exactement ce qui a été reçu
             // =========================
@@ -1067,17 +1062,17 @@ void TaskCommJsonReceive(void *pvParameters) {
                 else if (c == '\\') Serial.print("\\\\");
                 else Serial.print(c);
             }
-            Serial.println("\"}");*/
+            Serial.println("\"}");
  
             if (incoming.length() == 0) {
-                //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
+                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
                 vTaskDelay(pdMS_TO_TICKS(20));
                 continue;
             }
  
             StaticJsonDocument<512> doc;
             DeserializationError err = deserializeJson(doc, incoming);
-            /*
+            
             if (err) {
                 Serial.print("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"json invalide\",\"brut\":\"");
                 for (int i = 0; i < incoming.length(); i++) {
@@ -1090,12 +1085,12 @@ void TaskCommJsonReceive(void *pvParameters) {
                 Serial.println("\"}");
                 vTaskDelay(pdMS_TO_TICKS(20));
                 continue;
-            }*/
+            }
  
             const char* type = doc["type"];
  
             if (!type) {
-                //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
+                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
                 vTaskDelay(pdMS_TO_TICKS(20));
                 continue;
             }
@@ -1107,7 +1102,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                 const char* action = doc["action"];
  
                 if (!action) {
-                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
                 }
  
                 else if (strcmp(action, "urgence") == 0) {
@@ -1220,7 +1215,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                 }
  
                 else {
-                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
                 }
             }
  
@@ -1254,7 +1249,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                 int32_t valeur = doc["valeur"] | 0;
  
                 if (!champ) {
-                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
                 }
                 else if (strcmp(champ, "pince_ouverte") == 0) {
                     OPEN_POS = valeur;
@@ -1275,7 +1270,7 @@ void TaskCommJsonReceive(void *pvParameters) {
                     maxDownZPos = valeur;
                 }
                 else {
-                    //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
+                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
                 }
             }
  
@@ -1283,11 +1278,11 @@ void TaskCommJsonReceive(void *pvParameters) {
             // TYPE INCONNU
             // =========================================================
             else {
-                //Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
+                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
             }
         }
  
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(150));
     }
 }
 
@@ -1439,6 +1434,7 @@ void TaskRetroUI(void *pvParameters){
             default:
                 pixels.clear();
                 pixels.show();
+                vTaskSuspend(NULL);
                 break;
         }
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -1459,7 +1455,7 @@ void EcranAccueil(){
 
     ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
     pixels.show();
-    vTaskDelay(pdMS_TO_TICKS(50));
+    vTaskDelay(pdMS_TO_TICKS(200));
     decalage++;
     if (decalage == 3) decalage = 0;
 }
