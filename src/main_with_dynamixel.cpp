@@ -459,6 +459,13 @@ void TaskCommJsonSend(void *pvParameters);
 TaskHandle_t hMotorTask = NULL;
 TaskHandle_t hRetroUI   = NULL;
 TaskHandle_t hCommSend  = NULL;
+TaskHandle_t hCommRecv  = NULL;
+
+#define RX_BUF_SIZE 512
+
+static char rxBuf[RX_BUF_SIZE];
+static volatile uint16_t rxHead = 0;
+static volatile uint16_t rxTail = 0;
 
 void NotifySwitch();
 void NotifyOkButton();
@@ -476,6 +483,7 @@ void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur);
 int longueurMot(const char *mot);
 void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 void ecranAccueil(const char *mot);
+void processJson(char *incoming);
 
 void EcranAccueil();
 void EcranPerdant();
@@ -483,13 +491,16 @@ void EcranGagnant();
 void EcranDiff();
 void TaskRetroUI(void *pvParameters);
 
+static inline void rxBufferPush(char c);
+static inline bool rxBufferPop(char &c);
+
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
 
 volatile bool jsonMoveActive = false;
 
 void setup() {
-	Serial.begin(115200); // OU 115200 selon ce qui est choisi pour le debug
+	Serial.begin(115200);
 	delay(2000);
 
     sendFullSnapshot();
@@ -569,11 +580,11 @@ void setup() {
 	inputEventGroup = xEventGroupCreate();
 	limitEventGroup = xEventGroupCreate();
 
-	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 5, &hMotorTask);
-	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 5, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend", 1024, NULL, 4, &hCommSend);
-	//xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
-    xTaskCreate(TaskRetroUI, "RetroUI", 512, NULL, 4, &hRetroUI); //128 is ok, we chose 256 to be safe
+	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &hMotorTask);
+	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 4, NULL);
+	xTaskCreate(TaskCommJsonSend,    "CommSend", 513, NULL, 3, &hCommSend);
+	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 3, &hCommRecv);
+    //xTaskCreate(TaskRetroUI, "RetroUI", 256, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
 }
 
 void loop() {
@@ -634,28 +645,35 @@ void TaskStateControl (void *pvParameters) {
 
 	switch(currentState) {
         case ACCUEIL:
+            //vTaskSuspend(hCommRecv);
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             currentState = SETUP;
+            break;
         case SETUP:
+            //vTaskResume(hCommRecv); // Reprendre la tâche de communication pour recevoir les données de configuration pendant le setup
+            vTaskResume(hMotorTask);
             retroUIState = RIEN;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs après l'écran d'accueil
-            //ouvrirPince();
+            ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
+            //vTaskSuspend(hCommRecv);
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant le choix de la difficulté
             retroUIState = SELECTION_DIFFICULTE;
             vTaskResume(hRetroUI); // S'assurer que la tâche de l'interface utilisateur est active pour afficher le menu de sélection
+            
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+
             retroUIState = RIEN;
             currentState = IDLE;
             break;
 	    case IDLE:
+            //vTaskResume(hCommRecv); // Reprendre la tâche de communication pour recevoir les commandes de mouvement pendant l'état IDLE
             vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -677,7 +695,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case CLOSING:{  
-			//fermerPince();
+			fermerPince();
 			currentState = LIFTING;
 			break;
 	    }
@@ -698,7 +716,7 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case DROPPING:{ //DONE;
-			//ouvrirPince();
+			ouvrirPince();
 			currentState = IDLE;
 			break;
 	    }
@@ -743,7 +761,7 @@ void TaskCommJsonSend(void *pvParameters) {
 
         bool send = false;
 
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<768> doc;
 
         // ---------------- POSITION ----------------
         if (posX != last.posX) {
@@ -785,25 +803,58 @@ void TaskCommJsonSend(void *pvParameters) {
         }
 
         // ---------------- ARRAYS ----------------
+        bool tempsChanged = false;
+        bool forceChanged = false;
+        bool speedChanged = false;
         for (int i = 0; i < 3; i++) {
             if (temps[i] != last.temps[i]) {
-                doc["temps"][i] = temps[i];
-                last.temps[i] = temps[i];
-                send = true;
+                tempsChanged = true;
             }
-
             if (force[i] != last.force[i]) {
-                doc["force"][i] = force[i];
-                last.force[i] = force[i];
-                send = true;
+                forceChanged = true;
             }
-
             if (speed[i] != last.speed[i]) {
-                doc["speed"][i] = speed[i];
-                last.speed[i] = speed[i];
-                send = true;
+                speedChanged = true;
             }
         }
+        if (tempsChanged) {
+            JsonArray arrTemps = doc.createNestedArray("temps");
+            for (int i = 0; i < 3; i++) {
+                arrTemps.add(temps[i]);
+                last.temps[i] = temps[i];
+            }
+            send = true;
+        }
+        
+        if (forceChanged) {
+            JsonArray arrForce = doc.createNestedArray("force");
+            for (int i = 0; i < 3; i++) {
+                arrForce.add(force[i]);
+
+                last.force[i] = force[i];
+
+            }
+
+            send = true;
+
+        }
+        
+        if (speedChanged) {
+
+            JsonArray arrSpeed = doc.createNestedArray("speed");
+
+            for (int i = 0; i < 3; i++) {
+
+                arrSpeed.add(speed[i]);
+
+                last.speed[i] = speed[i];
+
+            }
+
+            send = true;
+
+        }
+        
 
         // ---------------- PINCE ----------------
         if (OPEN_POS != last.OPEN_POS) {
@@ -838,7 +889,7 @@ void TaskCommJsonSend(void *pvParameters) {
         }
 
         if (maxDownZPos != last.maxDownZPos) {
-            doc["z_low"] = maxDownZPos;
+            doc["z_down"] = maxDownZPos;
             last.maxDownZPos = maxDownZPos;
             send = true;
         }
@@ -1042,249 +1093,222 @@ void fermerPince() {
     }
 }
 
-void TaskCommJsonReceive(void *pvParameters) {
-    (void) pvParameters;
-    //Serial.println("{\"boot\":\"TaskCommJsonReceive started\"}");
-    Serial.setTimeout(200);
+void processJson(char *incoming) {
+    StaticJsonDocument<768> doc;
  
-    for (;;) {
-        if (Serial.available()) {
-            String incoming = Serial.readStringUntil('\n');
-            incoming.trim();
-            
-            // =========================
-            // DEBUG : montrer exactement ce qui a été reçu
-            // =========================
-            for (int i = 0; i < incoming.length(); i++) {
-                char c = incoming[i];
-                
-                if (c == '\"') Serial.print("\\\"");
-                else if (c == '\\') Serial.print("\\\\");
-                else Serial.print(c);
-            }
-            Serial.println("\"}");
+    DeserializationError err = deserializeJson(doc, incoming);
+    
+    if (err) {
+        /*
+        Serial.print("JSON ERROR: ");
+        Serial.println(err.c_str());
+        Serial.print("JSON LEN = ");
+        Serial.println(strlen(incoming));
+        Serial.println((uint8_t)incoming[0], HEX);
+        Serial.println((uint8_t)incoming[1], HEX);*/
+        return;
+    }
  
-            if (incoming.length() == 0) {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
+    const char* type = doc["type"];
+    if (!type) {
+        return;
+    }
+ 
+    if (strcmp(type, "commande") == 0) {
+        const char* action = doc["action"];
+        if (!action) return;
+ 
+        if (strcmp(action, "urgence") == 0) {
+            MOT_A.stop();
+            MOT_B.stop();
+            MOT_Z.stop();
+            while (1) {}
+        }
+        else if (strcmp(action, "reinitialiser") == 0) {
+            currentState = SETUP;
+        }
+        else if (strcmp(action, "init") == 0) {
+            homeXY();
+        }
+        else if (strcmp(action, "ouvrir_pince") == 0) {
+            ouvrirPince();
+        }
+        else if (strcmp(action, "fermer_pince") == 0) {
+            fermerPince();
+        }
+        else if (strcmp(action, "moitie_pince") == 0) {
+            int target = (OPEN_POS + CLOSED_POS) / 2;
+            dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+            dxl.setGoalPosition(id, target, UNIT_RAW);
+ 
+            while (abs(ACTUAL_POS - target) > 50) {
                 vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
+                ACTUAL_POS = dxl.getPresentPosition(id);
             }
+        }
+        else if (
+            strcmp(action, "dep_droite") == 0 ||
+            strcmp(action, "dep_gauche") == 0 ||
+            strcmp(action, "dep_haut") == 0 ||
+            strcmp(action, "dep_bas") == 0
+        ) {
+            long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+            long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
  
-            StaticJsonDocument<512> doc;
-            DeserializationError err = deserializeJson(doc, incoming);
-            
-            if (err) {
-                Serial.print("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"json invalide\",\"brut\":\"");
-                for (int i = 0; i < incoming.length(); i++) {
-                    char c = incoming[i];
+            long dx = 0;
+            long dy = 0;
  
-                    if (c == '\"') Serial.print("\\\"");
-                    else if (c == '\\') Serial.print("\\\\");
-                    else Serial.print(c);
-                }
-                Serial.println("\"}");
+            if (strcmp(action, "dep_droite") == 0) dy = -200;
+            if (strcmp(action, "dep_gauche") == 0) dy = 200;
+            if (strcmp(action, "dep_haut") == 0) dx = 200;
+            if (strcmp(action, "dep_bas") == 0) dx = -200;
+ 
+            posX = curX + dx;
+            posY = curY + dy;
+            MOT_A.moveTo(posX + posY);
+            MOT_B.moveTo(posX - posY);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "dep_z_haut") == 0) {
+            MOT_Z.moveTo(MOT_Z.currentPosition() - 200);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "dep_z_bas") == 0) {
+            MOT_Z.moveTo(MOT_Z.currentPosition() + 200);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "pos_haut_z") == 0) {
+            MOT_Z.moveTo(liftedZPos);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "pos_bas_z") == 0) {
+            MOT_Z.moveTo(maxDownZPos);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "pos_milieu_xy") == 0) {
+            posX = MAX_POS_X / 2;
+            posY = MAX_POS_Y / 2;
+            MOT_A.moveTo(posX + posY);
+            MOT_B.moveTo(posX - posY);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "ouvrir_manuel") == 0) {
+            int32_t target = dxl.getPresentPosition(id) - 200;
+            dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+            dxl.setGoalPosition(id, target, UNIT_RAW);
+ 
+            while (ACTUAL_POS > target + 20) {
                 vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
+                ACTUAL_POS = dxl.getPresentPosition(id);
             }
+        }
+        else if (strcmp(action, "fermer_manuel") == 0) {
+            int32_t target = dxl.getPresentPosition(id) + 200;
+            dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+            dxl.setGoalPosition(id, target, UNIT_RAW);
  
-            const char* type = doc["type"];
- 
-            if (!type) {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
+            while (ACTUAL_POS < target - 20) {
                 vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
-            }
- 
-            // =========================================================
-            // TYPE = COMMANDE
-            // =========================================================
-            if (strcmp(type, "commande") == 0) {
-                const char* action = doc["action"];
- 
-                if (!action) {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
-                }
- 
-                else if (strcmp(action, "urgence") == 0) {
-                    MOT_A.stop();
-                    MOT_B.stop();
-                    MOT_Z.stop();
-                    while(1){
-                    }
-                    jsonMoveActive = false;
-                    currentState = IDLE;
- 
-                }
- 
-                else if (strcmp(action, "reinitialiser") == 0) {
-                    currentState = SETUP;
-                }
- 
-                else if (strcmp(action, "init") == 0) {
-                    homeXY();
-                }
- 
-                else if (strcmp(action, "ouvrir_pince") == 0) {
-                    ouvrirPince();
-                }
- 
-                else if (strcmp(action, "fermer_pince") == 0) {
-                    fermerPince();		
-                }
-
-                else if(strcmp(action, "moitie_pince") == 0) {
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
-                    dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
-                    while (abs(ACTUAL_POS - (OPEN_POS + CLOSED_POS) / 2) > 50) { // Tant que la pince n'est pas presque à la moitié
-                        vTaskDelay(pdMS_TO_TICKS(50));
-                        ACTUAL_POS = dxl.getPresentPosition(id);
-                    }
-                }
- 
-                else if (strcmp(action, "dep_droite") == 0 ||
-                         strcmp(action, "dep_gauche") == 0 ||
-                         strcmp(action, "dep_haut") == 0 ||
-                         strcmp(action, "dep_bas") == 0) {
- 
-                    long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
-                    long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
- 
-                    long deltaXlocal = 0;
-                    long deltaYlocal = 0;
- 
-                    if (strcmp(action, "dep_droite") == 0)  deltaYlocal = -200;
-                    if (strcmp(action, "dep_gauche") == 0) deltaYlocal = 200;
-                    if (strcmp(action, "dep_haut") == 0)  deltaXlocal = 200;
-                    if (strcmp(action, "dep_bas") == 0) deltaXlocal = -200;
- 
-                    posX = curX + deltaXlocal;
-                    posY = curY + deltaYlocal;
- 
-                    MOT_A.moveTo(posX + posY);
-                    MOT_B.moveTo(posX - posY);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "dep_z_haut") == 0) {
-                    long cible = MOT_Z.currentPosition() + 200;
-                    MOT_Z.moveTo(cible);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "dep_z_bas") == 0) {
-                    long cible = MOT_Z.currentPosition() - 200;
-                    MOT_Z.moveTo(cible);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "pos_haut_z") == 0) {
-                    MOT_Z.moveTo(liftedZPos);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "pos_bas_z") == 0) {
-                    MOT_Z.moveTo(maxDownZPos);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "pos_milieu_xy") == 0) {
-                    posX = MAX_POS_X / 2;
-                    posY = MAX_POS_Y / 2;
- 
-                    MOT_A.moveTo(posX + posY);
-                    MOT_B.moveTo(posX - posY);
-                    jsonMoveActive = true;
-                }
-                else if (strcmp(action, "ouvrir_manuel") == 0) {
-                    int32_t target = dxl.getPresentPosition(id) - 200;
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id,target, UNIT_RAW);
-                    while (ACTUAL_POS > target + 20) { // Tant que la pince n'est pas presque ouverte
-                        vTaskDelay(pdMS_TO_TICKS(20));
-                        ACTUAL_POS = dxl.getPresentPosition(id);
-                    }
-                }
-                else if (strcmp(action, "fermer_manuel") == 0) {
-                    int32_t target = dxl.getPresentPosition(id) + 200;
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id,target, UNIT_RAW);
-                    while (ACTUAL_POS < target - 20) { // Tant que la pince n'est pas presque fermee
-                        vTaskDelay(pdMS_TO_TICKS(20));
-                        ACTUAL_POS = dxl.getPresentPosition(id);
-                    }
-                }
- 
-                else {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
-                }
-            }
- 
-            // =========================================================
-            // TYPE = PERSONNALISATION
-            // =========================================================
-            else if (strcmp(type, "pers") == 0) {
- 
-                if (doc["clr"].is<const char*>()) {
-                    ledColor = doc["clr"].as<String>();
-                }
- 
-                if (doc["diff"].is<const char*>()) {
-                    String diff = doc["diff"].as<String>();
- 
-                    if (diff == "fac") difficulty = 0;
-                    else if (diff == "moy") difficulty = 1;
-                    else if (diff == "exp") difficulty = 2;
- 
-                    temps[difficulty] = doc["t"] | temps[difficulty];
-                    force[difficulty] = doc["F"] | force[difficulty];
-                    speed[difficulty] = doc["v"] | speed[difficulty];
-                }
-            }
- 
-            // =========================================================
-            // TYPE = REMPLACEMENT
-            // =========================================================
-            else if (strcmp(type, "rep") == 0) {
-                const char* champ = doc["champ"];
-                int32_t valeur = doc["valeur"] | 0;
- 
-                if (!champ) {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
-                }
-                else if (strcmp(champ, "pince_ouverte") == 0) {
-                    OPEN_POS = valeur;
-                }
-                else if (strcmp(champ, "pince_fermee") == 0) {
-                    CLOSED_POS = valeur;
-                }
-                else if (strcmp(champ, "valeurmax_x") == 0) {
-                    MAX_POS_X = valeur;
-                }
-                else if (strcmp(champ, "valeurmax_y") == 0) {
-                    MAX_POS_Y = valeur;
-                }
-                else if (strcmp(champ, "valeurmax_z") == 0) {
-                    liftedZPos = valeur;
-                }
-                else if (strcmp(champ, "valeurmin_z") == 0) {
-                    maxDownZPos = valeur;
-                }
-                else {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
-                }
-            }
- 
-            // =========================================================
-            // TYPE INCONNU
-            // =========================================================
-            else {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
+                ACTUAL_POS = dxl.getPresentPosition(id);
             }
         }
  
-        vTaskDelay(pdMS_TO_TICKS(150));
+        return;
+    }
+ 
+    if (strcmp(type, "pers") == 0) {
+        if (doc["clr"].is<const char*>()) {
+            ledColor = doc["clr"].as<const char*>();
+        }
+ 
+        if (doc["diff"].is<const char*>()) {
+            const char* diff = doc["diff"];
+ 
+            if (strcmp(diff, "fac") == 0) difficulty = 0;
+            else if (strcmp(diff, "moy") == 0) difficulty = 1;
+            else if (strcmp(diff, "exp") == 0) difficulty = 2;
+ 
+            temps[difficulty] = doc["t"] | temps[difficulty];
+            force[difficulty] = doc["F"] | force[difficulty];
+            speed[difficulty] = doc["v"] | speed[difficulty];
+        }
+ 
+        return;
+    }
+ 
+    if (strcmp(type, "rep") == 0) {
+        const char* champ = doc["champ"];
+        int32_t valeur = doc["valeur"] | 0;
+        if (!champ) return;
+ 
+        if (strcmp(champ, "pince_ouverte") == 0) OPEN_POS = valeur;
+        else if (strcmp(champ, "pince_fermee") == 0) CLOSED_POS = valeur;
+        else if (strcmp(champ, "valeurmax_x") == 0) MAX_POS_X = valeur;
+        else if (strcmp(champ, "valeurmax_y") == 0) MAX_POS_Y = valeur;
+        else if (strcmp(champ, "valeurmax_z") == 0) liftedZPos = valeur;
+        else if (strcmp(champ, "valeurmin_z") == 0) maxDownZPos = valeur;
+ 
+        return;
     }
 }
+
+static inline void rxBufferPush(char c) {
+    uint16_t next = (rxHead + 1) % RX_BUF_SIZE;
+
+    // overflow protection: drop oldest data
+    if (next == rxTail) {
+        rxTail = (rxTail + 1) % RX_BUF_SIZE;
+    }
+
+    rxBuf[rxHead] = c;
+    rxHead = next;
+}
+
+static inline bool rxBufferPop(char &c) {
+    if (rxTail == rxHead) return false;
+
+    c = rxBuf[rxTail];
+    rxTail = (rxTail + 1) % RX_BUF_SIZE;
+    return true;
+}
+
+void TaskCommJsonReceive(void *pvParameters) {
+    (void) pvParameters;
+
+    static char lineBuf[512];
+    static uint16_t lineLen = 0;
+
+    for (;;) {
+
+        // 1. READ SERIAL → RING BUFFER ONLY
+        while (Serial.available()) {
+            char c = Serial.read();
+            rxBufferPush(c);
+        }
+
+        // 2. PARSE LINES FROM BUFFER
+        char c;
+        while (rxBufferPop(c)) {
+
+            if (c == '\r') continue;
+
+            if (c == '\n') {
+                lineBuf[lineLen] = '\0';
+                if (lineLen > 0) processJson(lineBuf);
+                lineLen = 0;
+            } else {
+                if (lineLen < sizeof(lineBuf) - 1) {
+                    lineBuf[lineLen++] = c;
+                } else {
+                    lineLen = 0;
+                }
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+}
+
 
 //----------------------
 // interface Utilisateur
