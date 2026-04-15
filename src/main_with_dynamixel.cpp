@@ -461,7 +461,7 @@ TaskHandle_t hRetroUI   = NULL;
 TaskHandle_t hCommSend  = NULL;
 TaskHandle_t hCommRecv  = NULL;
 
-#define RX_BUF_SIZE 512
+#define RX_BUF_SIZE 128
 
 static char rxBuf[RX_BUF_SIZE];
 static volatile uint16_t rxHead = 0;
@@ -582,9 +582,9 @@ void setup() {
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &hMotorTask);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 4, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend", 513, NULL, 3, &hCommSend);
-	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 3, &hCommRecv);
-    //xTaskCreate(TaskRetroUI, "RetroUI", 256, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
+	xTaskCreate(TaskCommJsonSend,    "CommSend",256, NULL, 2, &hCommSend);
+	xTaskCreate(TaskCommJsonReceive, "CommRecv", 256, NULL, 2, &hCommRecv);
+    xTaskCreate(TaskRetroUI, "RetroUI", 512, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
 }
 
 void loop() {
@@ -645,24 +645,25 @@ void TaskStateControl (void *pvParameters) {
 
 	switch(currentState) {
         case ACCUEIL:
-            //vTaskSuspend(hCommRecv);
+            vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant l'écran d'accueil
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
+            //EcranAccueil();
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
             currentState = SETUP;
             break;
         case SETUP:
-            //vTaskResume(hCommRecv); // Reprendre la tâche de communication pour recevoir les données de configuration pendant le setup
+            vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois que l'écran d'accueil est passé
             vTaskResume(hMotorTask);
             retroUIState = RIEN;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            ouvrirPince();
+            //ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
-            //vTaskSuspend(hCommRecv);
+            vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant le choix de la difficulté pour éviter les interférences
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant le choix de la difficulté
             retroUIState = SELECTION_DIFFICULTE;
             vTaskResume(hRetroUI); // S'assurer que la tâche de l'interface utilisateur est active pour afficher le menu de sélection
@@ -673,7 +674,7 @@ void TaskStateControl (void *pvParameters) {
             currentState = IDLE;
             break;
 	    case IDLE:
-            //vTaskResume(hCommRecv); // Reprendre la tâche de communication pour recevoir les commandes de mouvement pendant l'état IDLE
+            vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
             vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -761,7 +762,8 @@ void TaskCommJsonSend(void *pvParameters) {
 
         bool send = false;
 
-        StaticJsonDocument<768> doc;
+        static StaticJsonDocument<768> doc;
+        doc.clear();
 
         // ---------------- POSITION ----------------
         if (posX != last.posX) {
@@ -949,7 +951,7 @@ void TaskCommJsonSend(void *pvParameters) {
 }
 
 void sendFullSnapshot() {
-    StaticJsonDocument<1024> doc;
+    static StaticJsonDocument<1024> doc;
 
     doc["type"] = "full";
 
@@ -1094,7 +1096,7 @@ void fermerPince() {
 }
 
 void processJson(char *incoming) {
-    StaticJsonDocument<768> doc;
+    static StaticJsonDocument<768> doc;
  
     DeserializationError err = deserializeJson(doc, incoming);
     
@@ -1275,7 +1277,7 @@ static inline bool rxBufferPop(char &c) {
 void TaskCommJsonReceive(void *pvParameters) {
     (void) pvParameters;
 
-    static char lineBuf[512];
+    static char lineBuf[128];
     static uint16_t lineLen = 0;
 
     for (;;) {
@@ -1461,7 +1463,7 @@ void TaskRetroUI(void *pvParameters){
                 vTaskSuspend(NULL);
                 break;
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
@@ -1479,7 +1481,7 @@ void EcranAccueil(){
 
     ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
     pixels.show();
-    vTaskDelay(pdMS_TO_TICKS(200));
+    //vTaskDelay(pdMS_TO_TICKS(200));
     decalage++;
     if (decalage == 3) decalage = 0;
 }
@@ -1506,7 +1508,7 @@ void EcranPerdant(){
         }
         ecrireMot("MEILLEURE CHANCE LA PROCHAINE FOIS", i, 4, pixels.Color(0, 0, 25));
         pixels.show();
-        vTaskDelay(pdMS_TO_TICKS(50));
+        //vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
