@@ -1,3 +1,6 @@
 [submodule "Documentation/Electrique/GROchet_PCB"]
 	path = Documentation/Electrique/GROchet_PCB
 	url = git@github.com:GROchet/GROchet_PCB.git
+[submodule "Documentation/Electrique/LED_Fabric"]
+	path = Documentation/Electrique/LED_Fabric
+	url = git@github.com:RacoonDOEggs/LED_Fabric.git
