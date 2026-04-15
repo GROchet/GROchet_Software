@@ -25,7 +25,17 @@ int16_t force[] = {50,100,150}; //A ajuster selon les tests, en unités brutes d
 int16_t speed[] = {1000,1250,1500}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
 int8_t difficulty = 0; // 0 = easy, 1 = medium, 2 = hard. A ajuster selon les tests
 
-String ledColor = "rose"; //A ajuster selon les tests, couleur de la LED pour chaque difficulté (easy, medium, hard)
+enum LedColor {
+    LED_ROUGE = 0,
+    LED_ROSE, //1
+    LED_ORANGE, //2
+    LED_BLEU, //3
+    LED_VERT, //4
+    LED_JAUNE, //5
+    LED_MAUVE, //6
+    LED_BLANC //7
+};
+LedColor ledColor = LED_ROSE; // Couleur actuelle des LEDs, à ajuster selon les tests
 
 // -------------------
 //BOUTONS
@@ -138,6 +148,8 @@ volatile bool manualControlEnabled = false; // Flag pour indiquer si le contrôl
 #define largeur 14
 #define hauteur 13
 #define largeurLettre 4
+
+SemaphoreHandle_t serialMutex;
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 uint32_t BLANC = pixels.Color(15, 15, 15);
@@ -450,6 +462,39 @@ enum SystemState {
 
 volatile SystemState currentState = ACCUEIL;
 
+static StaticJsonDocument<384> doc_i;
+static StaticJsonDocument<768> doc_o;
+
+struct LastState{
+    long posX = -999999;
+    long posY = -999999;
+    long zPos = -999999;
+    int state = -1;
+    int ACTUAL_POS = -1;
+    int difficulty = -1;
+
+    int temps[3] = {-1,-1,-1};
+    int force[3] = {-1,-1,-1};
+    int speed[3] = {-1,-1,-1};
+
+    int OPEN_POS = -1;
+    int CLOSED_POS = -1;
+
+    long MAX_POS_X = -1;
+    long MAX_POS_Y = -1;
+    long liftedZPos = -1;
+    long maxDownZPos = -1;
+
+    int ledColor = -1;
+
+    bool btnUp = false;
+    bool btnDown = false;
+    bool btnLeft = false;
+    bool btnRight = false;
+    bool btnOk = false;
+};
+static LastState last;
+
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
@@ -580,11 +625,22 @@ void setup() {
 	inputEventGroup = xEventGroupCreate();
 	limitEventGroup = xEventGroupCreate();
 
-	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &hMotorTask);
+    serialMutex = xSemaphoreCreateMutex();
+
+	xTaskCreate(TaskMotorControl, "MotorTask", 128, NULL, 3, &hMotorTask);
 	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 4, NULL);
-	xTaskCreate(TaskCommJsonSend,    "CommSend",256, NULL, 2, &hCommSend);
-	xTaskCreate(TaskCommJsonReceive, "CommRecv", 256, NULL, 2, &hCommRecv);
-    xTaskCreate(TaskRetroUI, "RetroUI", 512, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
+	xTaskCreate(TaskCommJsonSend,    "CommSend",256, NULL, 3, &hCommSend);
+	xTaskCreate(TaskCommJsonReceive, "CommRecv", 384, NULL, 3, &hCommRecv);
+    xTaskCreate(TaskRetroUI, "RetroUI", 128, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
+
+    Serial.print(F("Stack headroom CommSend: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hCommSend));
+    Serial.print(F("Stack headroom MotorTask: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hMotorTask));
+    Serial.print(F("Stack headroom RetroUI: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hRetroUI));
+
+    vTaskStartScheduler();
 }
 
 void loop() {
@@ -650,6 +706,7 @@ void TaskStateControl (void *pvParameters) {
             retroUIState = ECRAN_ACCUEIL;
             //EcranAccueil();
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            
             currentState = SETUP;
             break;
         case SETUP:
@@ -729,77 +786,46 @@ void TaskStateControl (void *pvParameters) {
 void TaskCommJsonSend(void *pvParameters) {
     (void) pvParameters;
 
-    struct {
-        long posX = -999999;
-        long posY = -999999;
-        long zPos = -999999;
-        int state = -1;
-        int ACTUAL_POS = -1;
-        int difficulty = -1;
-
-        int temps[3] = {-1,-1,-1};
-        int force[3] = {-1,-1,-1};
-        int speed[3] = {-1,-1,-1};
-
-        int OPEN_POS = -1;
-        int CLOSED_POS = -1;
-
-        long MAX_POS_X = -1;
-        long MAX_POS_Y = -1;
-        long liftedZPos = -1;
-        long maxDownZPos = -1;
-
-        String ledColor = "";
-
-        bool btnUp = false;
-        bool btnDown = false;
-        bool btnLeft = false;
-        bool btnRight = false;
-        bool btnOk = false;
-    } last;
-
     for (;;) {
 
         bool send = false;
-
-        static StaticJsonDocument<768> doc;
-        doc.clear();
+        doc_o.clear();
 
         // ---------------- POSITION ----------------
         if (posX != last.posX) {
-            doc["posX"] = posX;
+            doc_o["posX"] = posX;
             last.posX = posX;
             send = true;
         }
 
         if (posY != last.posY) {
-            doc["posY"] = posY;
+            doc_o["posY"] = posY;
             last.posY = posY;
             send = true;
         }
 
         long z = MOT_Z.currentPosition();
         if (z != last.zPos) {
-            doc["zPos"] = z;
+            doc_o["zPos"] = z;
             last.zPos = z;
             send = true;
         }
 
         // ---------------- STATE ----------------
         if ((int)currentState != last.state) {
-            doc["state"] = (int)currentState;
+            doc_o["state"] = (int)currentState;
             last.state = (int)currentState;
             send = true;
         }
 
         if (ACTUAL_POS != last.ACTUAL_POS) {
-            doc["pos_act"] = ACTUAL_POS;
+            doc_o["pos_act"] = ACTUAL_POS;
             last.ACTUAL_POS = ACTUAL_POS;
             send = true;
         }
 
         if (difficulty != last.difficulty) {
-            doc["diff"] = difficulty;
+            doc_o["diff"] = difficulty;
             last.difficulty = difficulty;
             send = true;
         }
@@ -820,7 +846,7 @@ void TaskCommJsonSend(void *pvParameters) {
             }
         }
         if (tempsChanged) {
-            JsonArray arrTemps = doc.createNestedArray("temps");
+            JsonArray arrTemps = doc_o.createNestedArray("temps");
             for (int i = 0; i < 3; i++) {
                 arrTemps.add(temps[i]);
                 last.temps[i] = temps[i];
@@ -829,7 +855,7 @@ void TaskCommJsonSend(void *pvParameters) {
         }
         
         if (forceChanged) {
-            JsonArray arrForce = doc.createNestedArray("force");
+            JsonArray arrForce = doc_o.createNestedArray("force");
             for (int i = 0; i < 3; i++) {
                 arrForce.add(force[i]);
 
@@ -840,65 +866,57 @@ void TaskCommJsonSend(void *pvParameters) {
             send = true;
 
         }
-        
+     
         if (speedChanged) {
-
-            JsonArray arrSpeed = doc.createNestedArray("speed");
-
+            JsonArray arrSpeed = doc_o.createNestedArray("speed");
             for (int i = 0; i < 3; i++) {
-
                 arrSpeed.add(speed[i]);
-
                 last.speed[i] = speed[i];
-
             }
-
             send = true;
-
         }
         
-
         // ---------------- PINCE ----------------
         if (OPEN_POS != last.OPEN_POS) {
-            doc["pince_open"] = OPEN_POS;
+            doc_o["pince_open"] = OPEN_POS;
             last.OPEN_POS = OPEN_POS;
             send = true;
         }
 
         if (CLOSED_POS != last.CLOSED_POS) {
-            doc["pince_closed"] = CLOSED_POS;
+            doc_o["pince_closed"] = CLOSED_POS;
             last.CLOSED_POS = CLOSED_POS;
             send = true;
         }
 
         // ---------------- LIMITS ----------------
         if (MAX_POS_X != last.MAX_POS_X) {
-            doc["max_x"] = MAX_POS_X;
+            doc_o["max_x"] = MAX_POS_X;
             last.MAX_POS_X = MAX_POS_X;
             send = true;
         }
 
         if (MAX_POS_Y != last.MAX_POS_Y) {
-            doc["max_y"] = MAX_POS_Y;
+            doc_o["max_y"] = MAX_POS_Y;
             last.MAX_POS_Y = MAX_POS_Y;
             send = true;
         }
 
         if (liftedZPos != last.liftedZPos) {
-            doc["z_high"] = liftedZPos;
+            doc_o["z_high"] = liftedZPos;
             last.liftedZPos = liftedZPos;
             send = true;
         }
 
         if (maxDownZPos != last.maxDownZPos) {
-            doc["z_down"] = maxDownZPos;
+            doc_o["z_down"] = maxDownZPos;
             last.maxDownZPos = maxDownZPos;
             send = true;
         }
 
         // ---------------- LED ----------------
         if (ledColor != last.ledColor) {
-            doc["led"] = ledColor;
+            doc_o["led"] = ledColor;
             last.ledColor = ledColor;
             send = true;
         }
@@ -911,93 +929,97 @@ void TaskCommJsonSend(void *pvParameters) {
         bool ok    = (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK);
 
         if (up != last.btnUp) {
-            doc["btn_up"] = up;
+            doc_o["btn_up"] = up;
             last.btnUp = up;
             send = true;
         }
 
         if (down != last.btnDown) {
-            doc["btn_down"] = down;
+            doc_o["btn_down"] = down;
             last.btnDown = down;
             send = true;
         }
 
         if (left != last.btnLeft) {
-            doc["btn_left"] = left;
+            doc_o["btn_left"] = left;
             last.btnLeft = left;
             send = true;
         }
 
         if (right != last.btnRight) {
-            doc["btn_right"] = right;
+            doc_o["btn_right"] = right;
             last.btnRight = right;
             send = true;
         }
 
         if (ok != last.btnOk) {
-            doc["btn_ok"] = ok;
+            doc_o["btn_ok"] = ok;
             last.btnOk = ok;
             send = true;
         }
 
         // ---------------- SEND ONLY IF CHANGED ----------------
         if (send) {
-            serializeJson(doc, Serial);
-            Serial.print('\n');
+            if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
+                serializeJson(doc_o, Serial);
+                Serial.print('\n');
+                xSemaphoreGive(serialMutex);
+            }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
 void sendFullSnapshot() {
-    static StaticJsonDocument<1024> doc;
+    static StaticJsonDocument<1024> doc1;
 
-    doc["type"] = "full";
+    doc1["type"] = "full";
 
-    doc["posX"] = posX;
-    doc["posY"] = posY;
-    doc["zPos"] = MOT_Z.currentPosition();
-    doc["state"] = (int)currentState;
-    doc["diff"] = difficulty;
+    doc1["posX"] = posX;
+    doc1["posY"] = posY;
+    doc1["zPos"] = MOT_Z.currentPosition();
+    doc1["state"] = (int)currentState;
+    doc1["diff"] = difficulty;
 
     // --- Pince ---
-    JsonObject pince = doc.createNestedObject("pince");
+    JsonObject pince = doc1.createNestedObject("pince");
     pince["pos_o"] = OPEN_POS;
     pince["pos_f"] = CLOSED_POS;
     pince["pos_act"] = ACTUAL_POS;
 
     // --- Limits ---
-    JsonObject limits = doc.createNestedObject("limits");
+    JsonObject limits = doc1.createNestedObject("limits");
     limits["maxPosX"] = MAX_POS_X;
     limits["maxPosY"] = MAX_POS_Y;
     limits["maxH"] = liftedZPos;
     limits["minH"] = maxDownZPos;
 
     // --- Arrays ---
-    doc["temps"][0] = temps[0];
-    doc["temps"][1] = temps[1];
-    doc["temps"][2] = temps[2];
+    doc1["temps"][0] = temps[0];
+    doc1["temps"][1] = temps[1];
+    doc1["temps"][2] = temps[2];
 
-    doc["force"][0] = force[0];
-    doc["force"][1] = force[1];
-    doc["force"][2] = force[2];
+    doc1["force"][0] = force[0];
+    doc1["force"][1] = force[1];
+    doc1["force"][2] = force[2];
 
-    doc["speed"][0] = speed[0];
-    doc["speed"][1] = speed[1];
-    doc["speed"][2] = speed[2];
+    doc1["speed"][0] = speed[0];
+    doc1["speed"][1] = speed[1];
+    doc1["speed"][2] = speed[2];
 
-    doc["ledColor"] = ledColor;
+    //doc1["ledColor"] = ledColor;
+    doc1["led"] = ledColor;
 
     // --- Buttons ---
-    JsonObject buttons = doc.createNestedObject("buttons");
+    JsonObject buttons = doc1.createNestedObject("buttons");
     buttons["haut"]   = btnUp;
     buttons["bas"]    = btnDown;
     buttons["gauche"] = btnLeft;
     buttons["droite"] = btnRight;
     buttons["ok"]     = false;
 
-    serializeJson(doc, Serial);
+    serializeJson(doc1, Serial);
     Serial.print('\n');
 }
 
@@ -1096,9 +1118,8 @@ void fermerPince() {
 }
 
 void processJson(char *incoming) {
-    static StaticJsonDocument<768> doc;
- 
-    DeserializationError err = deserializeJson(doc, incoming);
+    doc_i.clear();
+    DeserializationError err = deserializeJson(doc_i, incoming);
     
     if (err) {
         /*
@@ -1111,13 +1132,13 @@ void processJson(char *incoming) {
         return;
     }
  
-    const char* type = doc["type"];
+    const char* type = doc_i["type"];
     if (!type) {
         return;
     }
  
     if (strcmp(type, "commande") == 0) {
-        const char* action = doc["action"];
+        const char* action = doc_i["action"];
         if (!action) return;
  
         if (strcmp(action, "urgence") == 0) {
@@ -1219,28 +1240,28 @@ void processJson(char *incoming) {
     }
  
     if (strcmp(type, "pers") == 0) {
-        if (doc["clr"].is<const char*>()) {
-            ledColor = doc["clr"].as<const char*>();
+        if (doc_i["clr"].is<int>()) {
+            ledColor = (LedColor)doc_i["clr"].as<int>();
         }
  
-        if (doc["diff"].is<const char*>()) {
-            const char* diff = doc["diff"];
+        if (doc_i["diff"].is<const char*>()) {
+            const char* diff = doc_i["diff"];
  
             if (strcmp(diff, "fac") == 0) difficulty = 0;
             else if (strcmp(diff, "moy") == 0) difficulty = 1;
             else if (strcmp(diff, "exp") == 0) difficulty = 2;
  
-            temps[difficulty] = doc["t"] | temps[difficulty];
-            force[difficulty] = doc["F"] | force[difficulty];
-            speed[difficulty] = doc["v"] | speed[difficulty];
+            temps[difficulty] = doc_i["t"] | temps[difficulty];
+            force[difficulty] = doc_i["F"] | force[difficulty];
+            speed[difficulty] = doc_i["v"] | speed[difficulty];
         }
  
         return;
     }
  
     if (strcmp(type, "rep") == 0) {
-        const char* champ = doc["champ"];
-        int32_t valeur = doc["valeur"] | 0;
+        const char* champ = doc_i["champ"];
+        int32_t valeur = doc_i["valeur"] | 0;
         if (!champ) return;
  
         if (strcmp(champ, "pince_ouverte") == 0) OPEN_POS = valeur;
@@ -1283,9 +1304,17 @@ void TaskCommJsonReceive(void *pvParameters) {
     for (;;) {
 
         // 1. READ SERIAL → RING BUFFER ONLY
-        while (Serial.available()) {
-            char c = Serial.read();
-            rxBufferPush(c);
+        //while (Serial.available()) {
+            //char c = Serial.read();
+            //rxBufferPush(c);
+        //}
+
+        if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+            while (Serial.available()) {
+                char c = Serial.read();
+                rxBufferPush(c);
+            }
+            xSemaphoreGive(serialMutex);
         }
 
         // 2. PARSE LINES FROM BUFFER
@@ -1307,7 +1336,7 @@ void TaskCommJsonReceive(void *pvParameters) {
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(2));
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 
@@ -1470,6 +1499,7 @@ void TaskRetroUI(void *pvParameters){
 void EcranAccueil(){
     static int decalage = 0;
     pixels.clear();
+    
     for (int i = -3; i < 28; i += 3){
         allumeLED(i + decalage, 1, pixels.Color(25, 0, 25));
         allumeLED(i + 1 + decalage, 1, pixels.Color(25, 10, 0));
@@ -1491,6 +1521,7 @@ void EcranPerdant(){
     for (int i = 28; i > -(largeurMot); i--){
         pixels.clear();
         int decalage = 0;
+        
         for (int j = 0; j < 28; j++){
             // Motif
             allumeLED(j * 4 + decalage, 0, pixels.Color(25, 0, 0));
@@ -1516,6 +1547,7 @@ void EcranGagnant(){
     static bool afficher = true;
     pixels.clear();
     int decalage = 0;
+    
     for (int j = 0; j < 28; j++){
         // Coeur en haut
         allumeLED(0 + decalage, 0, pixels.Color(25, 0, 10));
