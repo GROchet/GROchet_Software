@@ -6,6 +6,8 @@
 #include <ArduinoJson.h>
 #include <Dynamixel2Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include <FastLED.h>
+
 
 //À considérer avant de Run la premiere fois :
 
@@ -152,19 +154,10 @@ volatile bool manualControlEnabled = false; // Flag pour indiquer si le contrôl
 SemaphoreHandle_t serialMutex;
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-uint32_t BLANC = pixels.Color(15, 15, 15);
-uint32_t ROUGE = pixels.Color(15, 0, 0);
-uint32_t JAUNE = pixels.Color(15, 15, 0);
-uint32_t ORANGE = pixels.Color(20, 5, 0);
-
-const uint8_t ROUGE_l[] = {75, 0, 0};
-const uint8_t ROSE_l[] = {75, 0, 75};
-const uint8_t ORANGE_l[] = {75, 60, 0};
-const uint8_t BLEU_l[] = {0, 55, 75};
-const uint8_t VERT_l[] = {0, 75, 0};
-const uint8_t JAUNE_l[] = {75, 75, 0};
-const uint8_t MAUVE_l[] = {59, 0, 65};
-const uint8_t BLANC_l[] = {75, 75, 75};
+uint32_t BLANC_ = pixels.Color(15, 15, 15);
+uint32_t ROUGE_ = pixels.Color(15, 0, 0);
+uint32_t JAUNE_ = pixels.Color(15, 15, 0);
+uint32_t ORANGE_ = pixels.Color(20, 5, 0);
 
 // Transformation des lettres et chiffres en matrice 5x3
 // Nombre de caractères, nombre de lignes par lettre et nombre de colonnes par lettre
@@ -454,6 +447,33 @@ enum RetroUIState{
 };
 volatile RetroUIState retroUIState = ECRAN_ACCUEIL;
 
+//--------------------
+//LED SPLIT
+//----------------------
+#define NUMPIXELS_BANDE 20
+#define NUM_LEDS (NUMPIXELS_BANDE * 11)
+
+CRGB leds[NUM_LEDS];
+
+#define PIN_LED 4
+
+#define OFFSET_LED_GAUCHE 0
+#define OFFSET_LED_COMPTEUR 40
+#define OFFSET_LED_DROIT 100
+#define OFFSET_LED_INT 140
+
+static int n_LED_total = NUMPIXELS_BANDE * 11;
+
+CRGB ROUGE  = CRGB(75, 0, 0);
+CRGB ROSE  = CRGB(75, 0, 75);
+CRGB ORANGE = CRGB(75, 60, 0);
+CRGB BLEU   = CRGB(0, 55, 75);
+CRGB VERT   = CRGB(0, 75, 0);
+CRGB JAUNE  = CRGB(75, 75, 0);
+CRGB MAUVE  = CRGB(59, 0, 65);
+CRGB BLANC  = CRGB(75, 75, 75);
+
+
 // -------------------
 // STATE MACHINE
 // -------------------
@@ -540,6 +560,7 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 void ecranAccueil(const char *mot);
 void processJson(char *incoming);
 bool toutouAttrape(uint32_t temps_actif, int distance_attrape);
+void eclairage_int_boite(CRGB color);
 
 void EcranAccueil();
 void EcranPerdant();
@@ -637,6 +658,13 @@ void setup() {
     pixels.clear();
     pixels.show();
 
+    FastLED.addLeds<WS2812B, PIN_LED, GRB>(leds, NUM_LEDS);
+    FastLED.clear();
+    FastLED.show();
+
+
+    eclairage_int_boite(ROUGE);
+
 	//RTOS
 	//----------------
 	inputEventGroup = xEventGroupCreate();
@@ -649,13 +677,6 @@ void setup() {
 	xTaskCreate(TaskCommJsonSend,    "CommSend",256, NULL, 3, &hCommSend);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 384, NULL, 3, &hCommRecv);
     xTaskCreate(TaskRetroUI, "RetroUI", 128, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
-
-    Serial.print(F("Stack headroom CommSend: "));
-    Serial.println(uxTaskGetStackHighWaterMark(hCommSend));
-    Serial.print(F("Stack headroom MotorTask: "));
-    Serial.println(uxTaskGetStackHighWaterMark(hMotorTask));
-    Serial.print(F("Stack headroom RetroUI: "));
-    Serial.println(uxTaskGetStackHighWaterMark(hRetroUI));
 
     vTaskStartScheduler();
 }
@@ -762,9 +783,6 @@ void TaskStateControl (void *pvParameters) {
 
                 int decompte = totalSec - elapsedSec;
                 if (decompte < 0) decompte = 0;
-
-                Serial.print("SKIBIDIIIII");
-                Serial.println(decompte);
 
                 if(decompte != dernierDecompte){
                     pixels.clear();
@@ -1369,18 +1387,19 @@ void TaskCommJsonReceive(void *pvParameters) {
     for (;;) {
 
         // 1. READ SERIAL → RING BUFFER ONLY
+        /*
         while (Serial.available()) {
             char c = Serial.read();
             rxBufferPush(c);
-        }
-        /*
+        }*/
+        
         if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
             while (Serial.available()) {
                 char c = Serial.read();
                 rxBufferPush(c);
             }
             xSemaphoreGive(serialMutex);
-        }*/
+        }
 
         // 2. PARSE LINES FROM BUFFER
         char c;
@@ -1570,6 +1589,7 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
 
 void TaskRetroUI(void *pvParameters){
     (void) pvParameters;
+    int8_t oldColor=-1;
     for(;;){
         switch(retroUIState){
             case ECRAN_ACCUEIL:
@@ -1594,6 +1614,12 @@ void TaskRetroUI(void *pvParameters){
                 vTaskSuspend(NULL);
                 break;
         }
+
+        if(oldColor != ledColor){
+            eclairage_int_boite(ROUGE);
+            oldColor = ledColor;
+        }
+
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
@@ -1713,39 +1739,46 @@ void EcranDiff(){
     prevRight = right;
     
     pixels.clear();
-    defilerTexte("CHOIX DIFFICULTE", 0, BLANC);
+    defilerTexte("CHOIX DIFFICULTE", 0, BLANC_);
 
     if (difficulty == 0){
-        ecrireMot("FACILE", 0, 8, JAUNE);
+        ecrireMot("FACILE", 0, 8, JAUNE_);
         // Fleche
-        allumeLED(25, 8, BLANC);
-        allumeLED(26, 9, BLANC);
-        allumeLED(27, 10, BLANC);
-        allumeLED(26, 11, BLANC);
-        allumeLED(25, 12, BLANC);
+        allumeLED(25, 8, BLANC_);
+        allumeLED(26, 9, BLANC_);
+        allumeLED(27, 10, BLANC_);
+        allumeLED(26, 11, BLANC_);
+        allumeLED(25, 12, BLANC_);
     }
     
     else if (difficulty == 1){
-        ecrireMot("MOYEN", 0, 8, ORANGE);
+        ecrireMot("MOYEN", 0, 8, ORANGE_);
         // Fleche
-        allumeLED(21, 8, BLANC);
-        allumeLED(22, 9, BLANC);
-        allumeLED(23, 10, BLANC);
-        allumeLED(22, 11, BLANC);
-        allumeLED(21, 12, BLANC);
+        allumeLED(21, 8, BLANC_);
+        allumeLED(22, 9, BLANC_);
+        allumeLED(23, 10, BLANC_);
+        allumeLED(22, 11, BLANC_);
+        allumeLED(21, 12, BLANC_);
     }
     
     else if (difficulty == 2){
-        ecrireMot("EXPERT", 0, 8, ROUGE);
+        ecrireMot("EXPERT", 0, 8, ROUGE_);
         // Fleche
-        allumeLED(25, 8, BLANC);
-        allumeLED(26, 9, BLANC);
-        allumeLED(27, 10, BLANC);
-        allumeLED(26, 11, BLANC);
-        allumeLED(25, 12, BLANC);
+        allumeLED(25, 8, BLANC_);
+        allumeLED(26, 9, BLANC_);
+        allumeLED(27, 10, BLANC_);
+        allumeLED(26, 11, BLANC_);
+        allumeLED(25, 12, BLANC_);
     }
     pixels.show();
 }
+
+void eclairage_int_boite(CRGB color)
+{
+  fill_solid(&leds[OFFSET_LED_INT], n_LED_total - OFFSET_LED_INT, color);
+  FastLED.show();
+}
+
 
 //TODO
 
@@ -1759,7 +1792,3 @@ void EcranDiff(){
 
 //Mettre un bool pour autoriser les boutons qui gerent les moteurs. only dans IDLE
 
-//Fonction bouger pince qui prends en argument la position, et attends : Normaliser fcts fermerPince, ouvrirPince. ajouter motie pince
-//Pareil pour axe Z
-
-//Ecran affichage parametre pour UI retro
