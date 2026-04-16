@@ -157,6 +157,15 @@ uint32_t ROUGE = pixels.Color(15, 0, 0);
 uint32_t JAUNE = pixels.Color(15, 15, 0);
 uint32_t ORANGE = pixels.Color(20, 5, 0);
 
+const uint8_t ROUGE_l[] = {75, 0, 0};
+const uint8_t ROSE_l[] = {75, 0, 75};
+const uint8_t ORANGE_l[] = {75, 60, 0};
+const uint8_t BLEU_l[] = {0, 55, 75};
+const uint8_t VERT_l[] = {0, 75, 0};
+const uint8_t JAUNE_l[] = {75, 75, 0};
+const uint8_t MAUVE_l[] = {59, 0, 65};
+const uint8_t BLANC_l[] = {75, 75, 75};
+
 // Transformation des lettres et chiffres en matrice 5x3
 // Nombre de caractères, nombre de lignes par lettre et nombre de colonnes par lettre
 byte alphabet[39][5][3] = {
@@ -669,7 +678,7 @@ void homeXY() {
         posY = curY;
  
         // Down
-        posX -= 100;
+        posX -= 250;
  
         MOT_A.moveTo(posX + posY);
         MOT_B.moveTo(posX - posY);
@@ -689,7 +698,7 @@ void homeXY() {
         posY = curY;
  
         // Left
-        posY += 100;
+        posY += 250;
  
         MOT_A.moveTo(posX + posY);
         MOT_B.moveTo(posX - posY);
@@ -746,32 +755,54 @@ void TaskStateControl (void *pvParameters) {
             int dernierDecompte = -10;
 
             while ((xTaskGetTickCount() - start) < duration) {
-                // check bouton NON BLOQUANT
-                int decompte = duration - ((xTaskGetTickCount() - start) / 1000);
-                if(decompte < 0) decompte = 0;
-                
+
+                TickType_t elapsedTicks = xTaskGetTickCount() - start;
+                int elapsedSec = elapsedTicks / configTICK_RATE_HZ;
+                int totalSec = temps[difficulty];
+
+                int decompte = totalSec - elapsedSec;
+                if (decompte < 0) decompte = 0;
+
+                Serial.print("SKIBIDIIIII");
+                Serial.println(decompte);
+
                 if(decompte != dernierDecompte){
-                    dernierDecompte = decompte;
                     pixels.clear();
                     char nombreTexte[3];
                     sprintf(nombreTexte, "%02d", decompte);
-                    ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 0, 0));
+
+                    if (decompte<10) {
+                        ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 0, 0));
+                    }
+                    else if(decompte%10 == 0){
+                        ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 25, 25));
+                    }
+                    else {
+                        ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 25, 0));
+                    }
                     pixels.show();
                 }
+                dernierDecompte = decompte;
 
                 if (xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20))) {
                     break;
                 }
+
                 vTaskDelay(pdMS_TO_TICKS(40));
             }
+
             manualControlEnabled = false; // Disable manual control
             currentState = LOWERING;
 			break;
         }
 	    case LOWERING:{
 			//Séquence de mouvement vers le bas
+            long current = MOT_Z.currentPosition();
+            long target = maxDownZPos;
+            long dir = (target > current) ? 1 : -1;
+
             while(1){ // Tant que l'axe Z n'est pas presque au plus bas
-                MOT_Z.moveTo(MOT_Z.currentPosition() - speed[difficulty]) ; // Update internal position
+                MOT_Z.moveTo(MOT_Z.currentPosition() + dir*speed[difficulty]) ; // Update internal position
                 if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || abs(MOT_Z.currentPosition()-maxDownZPos) < 50) {
                     MOT_Z.stop();
                     break; // Sortir de la boucle pour arrêter la descente
@@ -1146,8 +1177,6 @@ void fermerPince() {
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, force[difficulty]);
     dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
     while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
-        Serial.print("SKIBIDI");
-        Serial.println(dxl.getPresentCurrent(id));
         vTaskDelay(pdMS_TO_TICKS(50));
         ACTUAL_POS = dxl.getPresentPosition(id);
     }
@@ -1340,18 +1369,18 @@ void TaskCommJsonReceive(void *pvParameters) {
     for (;;) {
 
         // 1. READ SERIAL → RING BUFFER ONLY
-        //while (Serial.available()) {
-            //char c = Serial.read();
-            //rxBufferPush(c);
-        //}
-
+        while (Serial.available()) {
+            char c = Serial.read();
+            rxBufferPush(c);
+        }
+        /*
         if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
             while (Serial.available()) {
                 char c = Serial.read();
                 rxBufferPush(c);
             }
             xSemaphoreGive(serialMutex);
-        }
+        }*/
 
         // 2. PARSE LINES FROM BUFFER
         char c;
@@ -1660,7 +1689,7 @@ void EcranGagnant(){
 
         decalage = 23;
     }
-    if (afficher) ecrireMot("BRAVO!", 3, 4, pixels.Color(0, 20, 5));
+    if (afficher) ecrireMot("SKIBIDI!", 3, 4, pixels.Color(0, 20, 5));
 
     afficher = !afficher;
     pixels.show();
