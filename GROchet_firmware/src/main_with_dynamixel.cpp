@@ -773,7 +773,7 @@ void TaskStateControl(void *pvParameters){
   for(;;) {
 
 	switch(currentState) {
-        case ACCU#EIL:
+        case ACCUEIL:
             vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant l'écran d'accueil
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
