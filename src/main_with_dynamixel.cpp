@@ -5,26 +5,34 @@
 #include <AccelStepper.h>
 #include <ArduinoJson.h>
 #include <Dynamixel2Arduino.h>
+#include <Adafruit_NeoPixel.h>
+#include <avr/pgmspace.h>
 
-//À considérer avant de Run la premiere fois :
+//À considérer/Calibrer avant de Run la premiere fois :
 
-// Force de la pince
 // OPEN_POS et CLOSED_POS du dynamixel (pince)
-
-// vitesse du CoreXY
 // MAX_POS_X and MAX_POS_Y according to the system's dimensions (CORE_XY)
-// MAX speed and acceleration of the stepper motors
-// Serial Begin, for dynamixel and stepper_motors
+// maxDownZPos et liftedZPos (position min et max pour axe Z)
 
 //-------------------
 //Difficulté
 //-------------------
-int16_t temps[] = {50,100,150}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
-int16_t force[] = {50,100,150}; //A ajuster selon les tests, en unités brutes du dynamixel
-int16_t speed[] = {1000,1250,1500}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
+int16_t temps[] = {60,30,20}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
+int16_t force[] = {5,2,1}; //A ajuster selon les tests, en unités brutes du dynamixel
+int16_t speed[] = {100,150,250}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
 int8_t difficulty = 0; // 0 = easy, 1 = medium, 2 = hard. A ajuster selon les tests
 
-String ledColor = "rose"; //A ajuster selon les tests, couleur de la LED pour chaque difficulté (easy, medium, hard)
+enum LedColor {
+    LED_ROUGE = 0,
+    LED_ROSE, //1
+    LED_ORANGE, //2
+    LED_BLEU, //3
+    LED_VERT, //4
+    LED_JAUNE, //5
+    LED_MAUVE, //6
+    LED_BLANC //7
+};
+LedColor ledColor = LED_VERT; // Couleur actuelle des LEDs, à ajuster selon les tests
 
 // -------------------
 //BOUTONS
@@ -44,7 +52,6 @@ volatile TickType_t lastBtnInterrupt = 0;
 #define EVT_BTN_LEFT (1 << 3)
 #define EVT_BTN_RIGHT (1 << 4)
 
-// Global variables (only motor task writes)
 volatile bool btnUp = false;
 volatile bool btnDown = false;
 volatile bool btnLeft = false;
@@ -70,8 +77,8 @@ int16_t OPEN_POS = 3406;
 int16_t CLOSED_POS = 6805;
 int16_t ACTUAL_POS = 0;
 
-#define MOVE_CURRENT    300 // Courant à appliquer pour déplacer la pince (unités brutes)
-#define GRIP_CURRENT    50 // Courant à appliquer pour fermer la pince (unités brutes)
+#define MOVE_CURRENT    100 // Courant à appliquer pour déplacer la pince (unités brutes)
+#define GRIP_CURRENT    5 // Courant à appliquer pour fermer la pince (unités brutes)
 #define STALL_CURRENT   40 // Courant en dessous duquel on considère que le moteur est en stall (unités brutes)
 #define VEL_THRESHOLD   5 // Vitesse en dessous de laquelle on considère que le moteur est à l'arrêt (unités brutes)
 #define STALL_CONFIRM   300 // Temps de suite que le moteur doit être à l'arrêt pour confirmer un stall (ms)
@@ -92,7 +99,7 @@ float targetB = 0;
 int deltaX = 0;
 int deltaY = 0;
  
-long posX = 6550;
+long posX = 0;
 long posY = 0;
 
 long MAX_POS_X = 13100;
@@ -125,6 +132,341 @@ AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M1,DIR_PIN_M1);
 AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, STEP_PIN_M2,DIR_PIN_M2); //Moteur droite
 AccelStepper MOT_Z = AccelStepper(AccelStepper::DRIVER, STEP_PIN_MZ,DIR_PIN_MZ); //Moteur Z
 
+volatile bool manualControlEnabled = false; // Flag pour indiquer si le contrôle manuel est actif
+
+//--------------------
+// Interface utilisateur
+//--------------------
+
+#define PIN 5
+#define NUMPIXELS 182 * 2
+#define DELAY 0
+#define largeur 14
+#define hauteur 13
+#define largeurLettre 4
+
+SemaphoreHandle_t serialMutex;
+
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+uint32_t BLANC = pixels.Color(15, 15, 15);
+uint32_t ROUGE = pixels.Color(15, 0, 0);
+uint32_t JAUNE = pixels.Color(15, 15, 0);
+uint32_t ORANGE = pixels.Color(20, 5, 0);
+
+const uint8_t ROUGE_l[] = {75, 0, 0};
+const uint8_t ROSE_l[] = {75, 0, 75};
+const uint8_t ORANGE_l[] = {75, 50, 0};
+const uint8_t BLEU_l[] = {0, 55, 75};
+const uint8_t VERT_l[] = {0, 75, 0};
+const uint8_t JAUNE_l[] = {75, 75, 0};
+const uint8_t MAUVE_l[] = {59, 0, 75};
+const uint8_t BLANC_l[] = {75, 75, 75};
+
+// Transformation des lettres et chiffres en matrice 5x3
+// Nombre de caractères, nombre de lignes par lettre et nombre de colonnes par lettre
+const uint8_t alphabet[39][5][3] PROGMEM= {
+    {// A
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// B
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// C
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// D
+     {1, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 0}},
+ 
+    {// E
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// F
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 0, 0}},
+ 
+    {// G
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// H
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// I
+     {1, 1, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {1, 1, 1}},
+ 
+    {// J
+     {1, 1, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {1, 1, 0}},
+ 
+    {// K
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// L
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// M
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// N
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// O
+     {0, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0}},
+ 
+    {// P
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 0, 0}},
+ 
+    {// Q
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// R
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 1, 0},
+     {1, 0, 1}},
+ 
+    {// S
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1}},
+ 
+    {// T
+     {1, 1, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0}},
+ 
+    {// U
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// V
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0}},
+ 
+    {// W
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1}},
+ 
+    {// X
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0},
+     {1, 0, 1},
+     {1, 0, 1}},
+ 
+    {// Y
+     {1, 0, 1},
+     {1, 0, 1},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0}},
+ 
+    {// Z
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 1, 0},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// 0
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 1
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0},
+     {0, 1, 0}},
+ 
+    {// 2
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1}},
+ 
+    {// 3
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 4
+     {1, 0, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// 5
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {0, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 6
+     {1, 1, 1},
+     {1, 0, 0},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 7
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// 8
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1}},
+ 
+    {// 9
+     {1, 1, 1},
+     {1, 0, 1},
+     {1, 1, 1},
+     {0, 0, 1},
+     {0, 0, 1}},
+ 
+    {// !
+     {1, 0, 0},
+     {1, 0, 0},
+     {1, 0, 0},
+     {0, 0, 0},
+     {1, 0, 0}},
+ 
+    {// :
+     {0, 0, 0},
+     {0, 1, 0},
+     {0, 0, 0},
+     {0, 1, 0},
+     {0, 0, 0}},
+ 
+    {// /
+     {0, 0, 1},
+     {0, 0, 0},
+     {0, 1, 0},
+     {0, 0, 0},
+     {1, 0, 0}},
+ 
+};
+
+enum RetroUIState{
+    ECRAN_ACCUEIL,
+    SELECTION_DIFFICULTE,
+    ECRAN_PERDANT,
+    ECRAN_GAGNANT,
+    RIEN,
+    TIMER,
+};
+volatile RetroUIState retroUIState = ECRAN_ACCUEIL;
+
+//----------------------
+// LED STRIP
+//----------------------
+#define PIN_LED 4
+
+#define NUMPIXELS_BANDE 20
+#define OFFSET_LED_GAUCHE 0
+#define OFFSET_LED_COMPTEUR 40
+#define OFFSET_LED_DROIT 100
+#define OFFSET_LED_INT 140
+
+static int n_LED_compteur = NUMPIXELS_BANDE*3;
+static int n_LED_total = NUMPIXELS_BANDE*11;
+
+Adafruit_NeoPixel pixels_LED(n_LED_total, PIN_LED, NEO_GRB + NEO_KHZ800);
+
+
 // -------------------
 // STATE MACHINE
 // -------------------
@@ -138,32 +480,121 @@ enum SystemState {
   LIFTING, //Remonter Axe Z
   MOVING_TO_DROPZONE, //Se déplacer vers la zone de dépôt
   DROPPING, //Pince ouverte
+  ACCUEIL,
 };
 
-volatile SystemState currentState = SETUP;
+volatile SystemState currentState = ACCUEIL;
+
+static StaticJsonDocument<256> doc_i;
+static StaticJsonDocument<512> doc_o;
+
+struct LastState{
+    long posX = -999999;
+    long posY = -999999;
+    long zPos = -999999;
+    int state = -1;
+    int ACTUAL_POS = -1;
+    int difficulty = -1;
+
+    int temps[3] = {-1,-1,-1};
+    int force[3] = {-1,-1,-1};
+    int speed[3] = {-1,-1,-1};
+
+    int OPEN_POS = -1;
+    int CLOSED_POS = -1;
+
+    long MAX_POS_X = -1;
+    long MAX_POS_Y = -1;
+    long liftedZPos = -1;
+    long maxDownZPos = -1;
+
+    int ledColor = -1;
+
+    bool btnUp = false;
+    bool btnDown = false;
+    bool btnLeft = false;
+    bool btnRight = false;
+    bool btnOk = false;
+};
+static LastState last;
 
 //Taches et fonctions
 void TaskMotorControl (void *pvParameters);
 void TaskStateControl (void *pvParameters);
 void TaskCommJsonReceive (void *pvParameters);
 void TaskCommJsonSend(void *pvParameters);
+
+TaskHandle_t hMotorTask = NULL;
+TaskHandle_t hRetroUI   = NULL;
+TaskHandle_t hCommSend  = NULL;
+TaskHandle_t hCommRecv  = NULL;
+
+#define RX_BUF_SIZE 128 //128 tanto FOURCHETTE
+
+static char rxBuf[RX_BUF_SIZE];
+static volatile uint16_t rxHead = 0;
+static volatile uint16_t rxTail = 0;
+
 void NotifySwitch();
 void NotifyOkButton();
 void homeXY();
-String buildStatusJson();
 void ouvrirPince();
 void fermerPince();
+void sendFullSnapshot();
+
+int transformationIntermediaire(int x, int y);
+int transformationCoordonnees(int x, int y);
+void allumeLED(int x, int y, uint32_t couleur);
+void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur);
+int trouverIndexAlphabet(char c);
+void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur);
+int longueurMot(const char *mot);
+void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
+void ecranAccueil(const char *mot);
+void processJson(char *incoming);
+bool toutouAttrape(uint32_t temps_actif, int distance_attrape);
+
+void eteindreCompteur();
+
+void eclairage_int_boite(const uint8_t *RGB);
+void reinit_LED(int debut, int fin);
+
+void EcranAccueil();
+void EcranPerdant();
+void EcranGagnant();
+void EcranDiff();
+void TaskRetroUI(void *pvParameters);
+
+static inline void rxBufferPush(char c);
+static inline bool rxBufferPop(char &c);
+
+uint32_t gradient_couleur(float ratio);
+
+
+void eclairage_LED_ext();
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
-TaskHandle_t motorTaskHandle = NULL;
-TaskHandle_t detectToutouTaskHandle = NULL;
 
 volatile bool jsonMoveActive = false;
 
-void setup() {
-	Serial.begin(115200); // OU 115200 selon ce qui est choisi pour le debug
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : setup
+ * @param Aucun paramètre
+ * @return void
+ */
+void setup(){
+	Serial.begin(115200);
 	delay(2000);
+
+    sendFullSnapshot();
+    delay(2000);
+
+    //SONAR
+    pinMode(43, OUTPUT);
+    pinMode(45, INPUT);
 
 	//DYNAMIXEL
 	// -------------------
@@ -179,7 +610,8 @@ void setup() {
     dxl.setOperatingMode(id, OP_EXTENDED_POSITION);
     dxl.torqueOn(id);
     ACTUAL_POS = dxl.getPresentPosition(id); // Lire la position actuelle à l'initialisation
-    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, 1);
+    dxl.writeControlTableItem(ControlTableItem::CURRENT_LIMIT, id, 1);
 
 	//BOUTONS
 	//----------------
@@ -220,343 +652,593 @@ void setup() {
 
 	MOT_A.setMaxSpeed(8000);
 	MOT_B.setMaxSpeed(8000);
-	MOT_Z.setMaxSpeed(4000);
+	MOT_Z.setMaxSpeed(2000);
 
 	MOT_A.setAcceleration(2000);
 	MOT_B.setAcceleration(2000);
-	MOT_Z.setAcceleration(1000);
+	MOT_Z.setAcceleration(500);
 
 	MOT_A.setCurrentPosition(0);
 	MOT_B.setCurrentPosition(0);
 	MOT_Z.setCurrentPosition(0);
+
+    pixels.begin();
+    pixels.clear();
+    pixels.show();
+
+    pixels_LED.begin();
+    pixels_LED.clear();
+    pixels_LED.show();
 
 	//RTOS
 	//----------------
 	inputEventGroup = xEventGroupCreate();
 	limitEventGroup = xEventGroupCreate();
 
-	xTaskCreate(TaskMotorControl, "MotorTask", 256, NULL, 3, &motorTaskHandle);
-	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 3, NULL);
-	//xTaskCreate(TaskCommJsonSend,    "CommSend", 2048, NULL, 4, NULL);
-	xTaskCreate(TaskCommJsonReceive, "CommRecv", 512, NULL, 4, NULL);
+    serialMutex = xSemaphoreCreateMutex();
+
+	xTaskCreate(TaskMotorControl, "MotorTask", 128, NULL, 3, &hMotorTask);
+	xTaskCreate(TaskStateControl, "StateTask", 384, NULL, 4, NULL);
+	xTaskCreate(TaskCommJsonSend,    "CommSend",256, NULL, 3, &hCommSend);
+	xTaskCreate(TaskCommJsonReceive, "CommRecv", 384, NULL, 3, &hCommRecv);
+    xTaskCreate(TaskRetroUI, "RetroUI", 128, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
+
+    Serial.print(F("Stack headroom CommSend: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hCommSend));
+    Serial.print(F("Stack headroom MotorTask: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hMotorTask));
+    Serial.print(F("Stack headroom RetroUI: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hRetroUI));
+
+    eclairage_int_boite(ROSE_l);
+
+    vTaskStartScheduler();
 }
 
-void loop() {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : loop
+ * @param Aucun paramètre
+ * @return void
+ */
+void loop(){
 }
 
-void homeXY() {
+/** 
+ * @brief Effectue le référencement (homing) des axes X et Y en utilisant les fins de course afin de repositionner le système à l'origine (0,0).
+ *
+ * @details Nom de la fonction : homeXY
+ * @param Aucun paramètre
+ * @return void
+ */
+void homeXY(){
+    
+    MOT_A.stop();
+    MOT_B.stop();
+ 
+    // ── Compute XY target based on currentPosition ──
+    // --- Home X axis ---
+    while (digitalRead(LMTSW_X) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+ 
+        posX = curX;
+        posY = curY;
+ 
+        // Down
+        posX -= 250;
+ 
+        MOT_A.moveTo(posX + posY);
+        MOT_B.moveTo(posX - posY);
+        vTaskDelay(pdMS_TO_TICKS(15));
+    }
+ 
+    MOT_A.setCurrentPosition(0);
+    MOT_B.setCurrentPosition(0);
+    posX = 0;
+ 
+    // --- Home Y axis ---
+    while (digitalRead(LMTSW_Y) != LOW) {
+        long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+        long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+ 
+        posX = curX;
+        posY = curY;
+ 
+        // Left
+        posY += 250;
+ 
+        MOT_A.moveTo(posX + posY);
+        MOT_B.moveTo(posX - posY);
 
-	// Clear any stale limit bits first
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X | EVT_LIMIT_Y);
-
-	MOT_A.stop(); 
-	MOT_A.setCurrentPosition(MOT_A.currentPosition());
-	MOT_B.stop(); 
-	MOT_B.setCurrentPosition(MOT_B.currentPosition());
-
-	// --- Home X axis ---
-	MOT_A.setSpeed(-1000);
-	MOT_B.setSpeed(-1000);
-
-	while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_X)) {
-		MOT_A.runSpeed();
-		MOT_B.runSpeed();
-		vTaskDelay(pdMS_TO_TICKS(5));
-	}
-
-	MOT_A.setCurrentPosition(0);
-	MOT_B.setCurrentPosition(0);
-	posX = 0;
-
-	// Clear bit so it doesn't interfere with Y
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_X);
-
-	// --- Home Y axis ---
-	MOT_A.setSpeed(-1000);
-	MOT_B.setSpeed(1000);
-
-	while (!(xEventGroupGetBits(limitEventGroup) & EVT_LIMIT_Y)) {
-		MOT_A.runSpeed();
-		MOT_B.runSpeed();
-		vTaskDelay(pdMS_TO_TICKS(5));
-	}
-
-	MOT_A.setCurrentPosition(0);
-	MOT_B.setCurrentPosition(0);
-	posY = 0;
-
-	xEventGroupClearBits(limitEventGroup, EVT_LIMIT_Y);
-
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+ 
+    MOT_A.setCurrentPosition(0);
+    MOT_B.setCurrentPosition(0);
+    posY = 0;
 }
 
-void TaskStateControl (void *pvParameters) {
+/** 
+ * @brief Tâche RTOS principale qui implémente la machine à états du système et gère les transitions entre les différentes phases du jeu.
+ *
+ * @details Nom de la fonction : TaskStateControl
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskStateControl(void *pvParameters){
   (void) pvParameters;
 
   for(;;) {
 
 	switch(currentState) {
-		case SETUP:
-			//calibrerPinceEtAxeZ();
-			currentState = IDLE;
+        case ACCU#EIL:
+            vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant l'écran d'accueil
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
+            retroUIState = ECRAN_ACCUEIL;
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            currentState = SETUP;
+            
+            break;
+        case SETUP:
+            vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois que l'écran d'accueil est passé
+            vTaskResume(hMotorTask);
+            retroUIState = RIEN;
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            //ouvrirPince();
+            homeXY();
+            //Remonter axe Z à ajouter
+			currentState = DIFF_CHOOSE;
 			break;
-		case DIFF_CHOOSE:
-		  	xTaskNotifyGive(motorTaskHandle);   // Enable manual control
-			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-			xTaskNotifyGive(motorTaskHandle);   // Send stop signal
-			currentState = IDLE;
-			break;
-	    case IDLE:
-			xTaskNotifyGive(motorTaskHandle);   // Enable manual control
-			xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-			xTaskNotifyGive(motorTaskHandle);   // Send stop signal
-			currentState = LOWERING;
-			break;
-	    case LOWERING:
-			//Séquence de mouvement vers le bas
-			MOT_Z.setSpeed(-speed[difficulty]);
-			while(1) {
-				if (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) break;
-				else if (MOT_Z.currentPosition() > maxDownZPos+50) break; // On s'assure de pas descendre plus que la position min, au cas où le limit switch ne marche pas
-				MOT_Z.runSpeed(); // actually step the motor
-				vTaskDelay(pdMS_TO_TICKS(2));
-			}
-			xEventGroupClearBits(inputEventGroup, EVT_BTN_OK); // clear the bit
-			MOT_Z.stop();
+        case DIFF_CHOOSE:
+            //vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant le choix de la difficulté pour éviter les interférences
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant le choix de la difficulté
+            retroUIState = SELECTION_DIFFICULTE;
+            //vTaskResume(hRetroUI); // S'assurer que la tâche de l'interface utilisateur est active pour afficher le menu de sélection
+            
+            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
 
+            currentState = IDLE;
+            break;
+	    case IDLE:{
+            retroUIState = TIMER;
+            //vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
+            vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
+            manualControlEnabled = true; // permettre le controle manuel de l'axe XY avec les boutons
+            TickType_t start = xTaskGetTickCount();
+            TickType_t duration = pdMS_TO_TICKS(temps[difficulty] * 1000);
+            int dernierDecompte = -10;
+            static int lastOff = 0; //Pour led strip décompte
+
+            while ((xTaskGetTickCount() - start) < duration) {
+
+                TickType_t elapsedTicks = xTaskGetTickCount() - start;
+                int elapsedSec = elapsedTicks / configTICK_RATE_HZ;
+                int totalSec = temps[difficulty];
+
+                int decompte = totalSec - elapsedSec;
+                if (decompte < 0) decompte = 0;
+
+                if(decompte != dernierDecompte){
+                    pixels.clear();
+                    char nombreTexte[3];
+                    sprintf(nombreTexte, "%02d", decompte);
+
+                    if (decompte<10) {
+                        ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 0, 0));
+                    }
+                    else if(decompte%10 == 0){
+                        ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 25, 25));
+                    }
+                    else {
+                        ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 25, 0));
+                    }
+                    pixels.show();
+                    dernierDecompte = decompte;
+                }
+                const int shouldOff = n_LED_compteur - (int)round(n_LED_compteur*decompte/temps[difficulty]); //nb de lumières qui devraient être éteintes
+                if(shouldOff != lastOff){
+                    const int shouldOff = n_LED_compteur - (int)round(n_LED_compteur*decompte/temps[difficulty]); //nb de lumières qui devraient être éteintes
+                    // Éteindre la différence depuis la dernière fois
+                    for (int i = lastOff; i < shouldOff; i++) {
+                        int index = n_LED_compteur - 1 - i; // Éteindre de droite à gauche
+                        pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + index, 0);
+                    }
+                    lastOff = shouldOff;
+
+                    // LEDs restantes
+                    const int LED_restant = n_LED_compteur - shouldOff;
+                    // Gradient de couleur pour les LEDs restantes
+                    float ratio = (float)LED_restant / (float)n_LED_compteur;
+                    uint32_t couleur = gradient_couleur(ratio);
+                    for (int i = 0; i < LED_restant; i++) {
+                        pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, couleur);
+                    }
+                    pixels_LED.show();
+                }
+
+                if (xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20))) {
+                    break;
+                }
+
+                vTaskDelay(pdMS_TO_TICKS(80));
+            }
+
+            manualControlEnabled = false; // Disable manual control
+            currentState = LOWERING;
+			break;
+        }
+	    case LOWERING:{
+			//Séquence de mouvement vers le bas
+            long current = MOT_Z.currentPosition();
+            long target = maxDownZPos;
+            long dir = (target > current) ? 1 : -1;
+
+            while(1){ // Tant que l'axe Z n'est pas presque au plus bas
+                MOT_Z.moveTo(MOT_Z.currentPosition() + dir*speed[difficulty]) ; // Update internal position
+                if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || abs(MOT_Z.currentPosition()-maxDownZPos) < 50) {
+                    MOT_Z.stop();
+                    break; // Sortir de la boucle pour arrêter la descente
+                }
+                vTaskDelay(pdMS_TO_TICKS(40));
+            }
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant qu'on ramasse un toutou'
 			currentState = CLOSING;
 			break;
-
+        }
 	    case CLOSING:{  
 			fermerPince();
-			while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
-				vTaskDelay(pdMS_TO_TICKS(50));
-				ACTUAL_POS = dxl.getPresentPosition(id);
-			}		
 			currentState = LIFTING;
 			break;
 	    }
-	    case LIFTING:
-			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
-			MOT_Z.setSpeed(speed[difficulty]);
-			while(MOT_Z.currentPosition() < liftedZPos-50){
-				MOT_Z.runSpeed(); // actually step the motor
-				vTaskDelay(pdMS_TO_TICKS(5));
-			}
-			MOT_Z.stop();
+	    case LIFTING:{
+			//Attendre qu'on soit rendus à liftedZPos, apres retour au home
+            vTaskResume(hMotorTask);
+			MOT_Z.moveTo(liftedZPos);
+            while(abs(MOT_Z.currentPosition() - liftedZPos) > 50) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+            }
 			currentState = MOVING_TO_DROPZONE;
 			break;
+        }
 
-	    case MOVING_TO_DROPZONE: //DONE
-			//Séquence de mouvement vers la dropzone
-			//homeXY();
+	    case MOVING_TO_DROPZONE: 
+			//Séquence de mouvement vers la zone de dépot
+			homeXY();
 			currentState = DROPPING;
 			break;
 
-	    case DROPPING:{ //DONE;
-			ouvrirPince();
-			while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
-				vTaskDelay(pdMS_TO_TICKS(50));
-				ACTUAL_POS = dxl.getPresentPosition(id);
-			}
-			currentState = IDLE;
+	    case DROPPING:{ 
+			dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+            dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW); // Ouvrir la pince sans attendre qu'on aie fini d'ouvrir.
+            bool win = toutouAttrape(4000,17);
+            if(win)retroUIState = ECRAN_GAGNANT;
+            else retroUIState = ECRAN_PERDANT;
+            vTaskDelay(pdMS_TO_TICKS(5000));
+			currentState = DIFF_CHOOSE;
 			break;
 	    }
 	}
-	vTaskDelay(pdMS_TO_TICKS(20));
+	vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
 
-struct StatusCache {
-    int posX = -1;
-    int posY = -1;
-    int zPos = -1;
-    int state = -1;
-    int ACTUAL_POS = -1;
-    int difficulty = -1;
-    int temps[3] = {-1,-1,-1};
-    int force[3] = {-1,-1,-1};
-    int speed[3] = {-1,-1,-1};
-    int OPEN_POS = -1;
-    int CLOSED_POS = -1;
-    int MAX_POS_X = -1;
-    int MAX_POS_Y = -1;
-    int liftedZPos = -1;
-    int maxDownZPos = -1;
-    String ledColor = "";
-    EventBits_t buttons = 0;
-};
-
-void TaskCommJsonSend(void *pvParameters) {
+/** 
+ * @brief Tâche RTOS qui envoie périodiquement l'état du système au format JSON via la liaison série lorsque des changements sont détectés.
+ *
+ * @details Nom de la fonction : TaskCommJsonSend
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskCommJsonSend(void *pvParameters){
     (void) pvParameters;
 
-    struct {
-        long posX = -1;
-        long posY = -1;
-        long zPos = -1;
-        int state = -1;
-        int ACTUAL_POS = -1;
-        int difficulty = -1;
-        int temps[3] = {-1,-1,-1};
-        int force[3] = {-1,-1,-1};
-        int speed[3] = {-1,-1,-1};
-        int OPEN_POS = -1;
-        int CLOSED_POS = -1;
-        long MAX_POS_X = -1;
-        long MAX_POS_Y = -1;
-        long liftedZPos = -1;
-        long maxDownZPos = -1;
-        long maxHeight = -1;
-        long minHeight = -1;
-        String ledColor = "";
-        bool btnUp = false;
-        bool btnDown = false;
-        bool btnLeft = false;
-        bool btnRight = false;
-        bool btnOk = false;
-    } last;
-
     for (;;) {
-        bool changed = false;
 
-        // --- Positions ---
-        long z = MOT_Z.currentPosition();
-        if (posX != last.posX) { last.posX = posX; changed = true; }
-        if (posY != last.posY) { last.posY = posY; changed = true; }
-        if (z != last.zPos) { last.zPos = z; changed = true; }
+        bool send = false;
+        doc_o.clear();
 
-        // --- System State ---
-        if ((int)currentState != last.state) { last.state = (int)currentState; changed = true; }
-        if (ACTUAL_POS != last.ACTUAL_POS) { last.ACTUAL_POS = ACTUAL_POS; changed = true; }
-        if (difficulty != last.difficulty) { last.difficulty = difficulty; changed = true; }
-
-        // --- Temps / Force / Speed ---
-        for (int i = 0; i < 3; i++) {
-            if (temps[i] != last.temps[i]) { last.temps[i] = temps[i]; changed = true; }
-            if (force[i] != last.force[i]) { last.force[i] = force[i]; changed = true; }
-            if (speed[i] != last.speed[i]) { last.speed[i] = speed[i]; changed = true; }
+        // ---------------- POSITION ----------------
+        if (posX != last.posX) {
+            doc_o["posX"] = posX;
+            last.posX = posX;
+            send = true;
         }
 
-        // --- Pince ---
-        if (OPEN_POS != last.OPEN_POS) { last.OPEN_POS = OPEN_POS; changed = true; }
-        if (CLOSED_POS != last.CLOSED_POS) { last.CLOSED_POS = CLOSED_POS; changed = true; }
+        if (posY != last.posY) {
+            doc_o["posY"] = posY;
+            last.posY = posY;
+            send = true;
+        }
 
-        // --- Limits ---
-        if (MAX_POS_X != last.MAX_POS_X) { last.MAX_POS_X = MAX_POS_X; changed = true; }
-        if (MAX_POS_Y != last.MAX_POS_Y) { last.MAX_POS_Y = MAX_POS_Y; changed = true; }
-        if (liftedZPos != last.liftedZPos) { last.liftedZPos = liftedZPos; changed = true; }
-        if (maxDownZPos != last.maxDownZPos) { last.maxDownZPos = maxDownZPos; changed = true; }
+        long z = MOT_Z.currentPosition();
+        if (z != last.zPos) {
+            doc_o["zPos"] = z;
+            last.zPos = z;
+            send = true;
+        }
 
-        // --- LED ---
-        if (ledColor != last.ledColor) { last.ledColor = ledColor; changed = true; }
+        // ---------------- STATE ----------------
+        if ((int)currentState != last.state) {
+            doc_o["state"] = (int)currentState;
+            last.state = (int)currentState;
+            send = true;
+        }
 
-        // --- Buttons ---
+        if (ACTUAL_POS != last.ACTUAL_POS) {
+            doc_o["pos_act"] = ACTUAL_POS;
+            last.ACTUAL_POS = ACTUAL_POS;
+            send = true;
+        }
+
+        if (difficulty != last.difficulty) {
+            doc_o["diff"] = difficulty;
+            last.difficulty = difficulty;
+            send = true;
+        }
+
+        // ---------------- ARRAYS ----------------
+        bool tempsChanged = false;
+        bool forceChanged = false;
+        bool speedChanged = false;
+        for (int i = 0; i < 3; i++) {
+            if (temps[i] != last.temps[i]) {
+                tempsChanged = true;
+            }
+            if (force[i] != last.force[i]) {
+                forceChanged = true;
+            }
+            if (speed[i] != last.speed[i]) {
+                speedChanged = true;
+            }
+        }
+        if (tempsChanged) {
+            JsonArray arrTemps = doc_o.createNestedArray("temps");
+            for (int i = 0; i < 3; i++) {
+                arrTemps.add(temps[i]);
+                last.temps[i] = temps[i];
+            }
+            send = true;
+        }
+        
+        if (forceChanged) {
+            JsonArray arrForce = doc_o.createNestedArray("force");
+            for (int i = 0; i < 3; i++) {
+                arrForce.add(force[i]);
+
+                last.force[i] = force[i];
+
+            }
+
+            send = true;
+
+        }
+     
+        if (speedChanged) {
+            JsonArray arrSpeed = doc_o.createNestedArray("speed");
+            for (int i = 0; i < 3; i++) {
+                arrSpeed.add(speed[i]);
+                last.speed[i] = speed[i];
+            }
+            send = true;
+        }
+        
+        // ---------------- PINCE ----------------
+        if (OPEN_POS != last.OPEN_POS) {
+            doc_o["pince_open"] = OPEN_POS;
+            last.OPEN_POS = OPEN_POS;
+            send = true;
+        }
+
+        if (CLOSED_POS != last.CLOSED_POS) {
+            doc_o["pince_closed"] = CLOSED_POS;
+            last.CLOSED_POS = CLOSED_POS;
+            send = true;
+        }
+
+        // ---------------- LIMITS ----------------
+        if (MAX_POS_X != last.MAX_POS_X) {
+            doc_o["max_x"] = MAX_POS_X;
+            last.MAX_POS_X = MAX_POS_X;
+            send = true;
+        }
+
+        if (MAX_POS_Y != last.MAX_POS_Y) {
+            doc_o["max_y"] = MAX_POS_Y;
+            last.MAX_POS_Y = MAX_POS_Y;
+            send = true;
+        }
+
+        if (liftedZPos != last.liftedZPos) {
+            doc_o["z_high"] = liftedZPos;
+            last.liftedZPos = liftedZPos;
+            send = true;
+        }
+
+        if (maxDownZPos != last.maxDownZPos) {
+            doc_o["z_down"] = maxDownZPos;
+            last.maxDownZPos = maxDownZPos;
+            send = true;
+        }
+
+        // ---------------- LED ----------------
+        if (ledColor != last.ledColor) {
+            doc_o["led"] = ledColor;
+            last.ledColor = ledColor;
+            send = true;
+        }
+
+        // ---------------- BUTTONS ----------------
         bool up    = btnUp;
         bool down  = btnDown;
         bool left  = btnLeft;
         bool right = btnRight;
-        bool ok    = (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK) != 0;
+        bool ok    = (xEventGroupGetBits(inputEventGroup) & EVT_BTN_OK);
 
-        if (up != last.btnUp) { last.btnUp = up; changed = true; }
-        if (down != last.btnDown) { last.btnDown = down; changed = true; }
-        if (left != last.btnLeft) { last.btnLeft = left; changed = true; }
-        if (right != last.btnRight) { last.btnRight = right; changed = true; }
-        if (ok != last.btnOk) { last.btnOk = ok; changed = true; }
-
-        // --- Send JSON ---
-        if (changed) {
-            StaticJsonDocument<2048> doc; // Increase size for more variables
-
-            doc["posX"] = posX;
-            doc["posY"] = posY;
-            doc["zPos"] = z;
-            doc["state"] = (int)currentState;
-            doc["difficulty"] = difficulty;
-
-            // --- Pince ---
-            JsonObject pince = doc.createNestedObject("pince");
-            pince["pos_ouverte"] = OPEN_POS;
-            pince["pos_fermee"]  = CLOSED_POS;
-            pince["pos_actuelle"] = ACTUAL_POS;
-
-            // --- Limits ---
-            JsonObject limits = doc.createNestedObject("limits");
-            limits["maxPosX"] = MAX_POS_X;
-            limits["maxPosY"] = MAX_POS_Y;
-            limits["maxHeight"] = liftedZPos;
-            limits["minHeight"] = maxDownZPos;
-
-            // --- Difficulty-dependent values ---
-            // --- Difficulty-dependent values ---
-			doc["time_facile"] = temps[0];
-			doc["time_medium"] = temps[1];
-			doc["time_expert"] = temps[2];
-
-			doc["force_facile"] = force[0];
-			doc["force_medium"] = force[1];
-			doc["force_expert"] = force[2];
-
-			doc["speed_facile"] = speed[0];
-			doc["speed_medium"] = speed[1];
-			doc["speed_expert"] = speed[2];
-
-            doc["ledColor"] = ledColor;
-
-            JsonObject buttons = doc.createNestedObject("buttons");
-            buttons["haut"]   = up;
-            buttons["bas"]    = down;
-            buttons["gauche"] = left;
-            buttons["droite"] = right;
-            buttons["ok"]     = ok;
-
-            String output;
-            serializeJson(doc, output);
-            Serial.println(output);
+        if (up != last.btnUp) {
+            doc_o["btn_up"] = up;
+            last.btnUp = up;
+            send = true;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(200));
+        if (down != last.btnDown) {
+            doc_o["btn_down"] = down;
+            last.btnDown = down;
+            send = true;
+        }
+
+        if (left != last.btnLeft) {
+            doc_o["btn_left"] = left;
+            last.btnLeft = left;
+            send = true;
+        }
+
+        if (right != last.btnRight) {
+            doc_o["btn_right"] = right;
+            last.btnRight = right;
+            send = true;
+        }
+
+        if (ok != last.btnOk) {
+            doc_o["btn_ok"] = ok;
+            last.btnOk = ok;
+            send = true;
+        }
+
+        // ---------------- SEND ONLY IF CHANGED ----------------
+        if (send) {
+            if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(20)) == pdTRUE) {
+                serializeJson(doc_o, Serial);
+                Serial.print('\n');
+                xSemaphoreGive(serialMutex);
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
-void TaskMotorControl(void *pvParameters) {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : sendFullSnapshot
+ * @param Aucun paramètre
+ * @return void
+ */
+void sendFullSnapshot(){
+    static StaticJsonDocument<768> doc1;
+
+    doc1["type"] = "full";
+
+    doc1["posX"] = posX;
+    doc1["posY"] = posY;
+    doc1["zPos"] = MOT_Z.currentPosition();
+    doc1["state"] = (int)currentState;
+    doc1["diff"] = difficulty;
+
+    // --- Pince ---
+    JsonObject pince = doc1.createNestedObject("pince");
+    pince["pos_o"] = OPEN_POS;
+    pince["pos_f"] = CLOSED_POS;
+    pince["pos_act"] = ACTUAL_POS;
+
+    // --- Limits ---
+    JsonObject limits = doc1.createNestedObject("limits");
+    limits["maxPosX"] = MAX_POS_X;
+    limits["maxPosY"] = MAX_POS_Y;
+    limits["maxH"] = liftedZPos;
+    limits["minH"] = maxDownZPos;
+
+    // --- Arrays ---
+    doc1["temps"][0] = temps[0];
+    doc1["temps"][1] = temps[1];
+    doc1["temps"][2] = temps[2];
+
+    doc1["force"][0] = force[0];
+    doc1["force"][1] = force[1];
+    doc1["force"][2] = force[2];
+
+    doc1["speed"][0] = speed[0];
+    doc1["speed"][1] = speed[1];
+    doc1["speed"][2] = speed[2];
+
+    //doc1["ledColor"] = ledColor;
+    doc1["led"] = ledColor;
+
+    // --- Buttons ---
+    JsonObject buttons = doc1.createNestedObject("buttons");
+    buttons["haut"]   = btnUp;
+    buttons["bas"]    = btnDown;
+    buttons["gauche"] = btnLeft;
+    buttons["droite"] = btnRight;
+    buttons["ok"]     = false;
+
+    serializeJson(doc1, Serial);
+    Serial.print('\n');
+}
+
+/** 
+ * @brief Tâche RTOS responsable du pilotage des moteurs (XY et Z), incluant le contrôle manuel via les boutons.
+ *
+ * @details Nom de la fonction : TaskMotorControl
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskMotorControl(void *pvParameters){
     (void) pvParameters;
 
-    const long btnIncrement = 100; // increment for buttons, can also use speed[difficulty]
-
     for (;;) {
-        // ── Read buttons ──
-        bool up    = digitalRead(BTN_PIN_UP)    == LOW;
-        bool down  = digitalRead(BTN_PIN_DOWN)  == LOW;
-        bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
-        bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+        if(manualControlEnabled){
+            // ── Read buttons ──
+            bool up    = digitalRead(BTN_PIN_UP)    == LOW;
+            bool down  = digitalRead(BTN_PIN_DOWN)  == LOW;
+            bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+            bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
 
-        btnUp = up; btnDown = down; btnLeft = left; btnRight = right;
-        
-        if(btnUp || btnDown || btnLeft || btnRight) {
-            // ── Compute XY target based on currentPosition ──
-            long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
-            long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+            btnUp = up; btnDown = down; btnLeft = left; btnRight = right;
+            
+            if(btnUp || btnDown || btnLeft || btnRight) {
+                // ── Compute XY target based on currentPosition ──
+                long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+                long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
 
-            long targetX = curX;
-            long targetY = curY;
+                long targetX = curX;
+                long targetY = curY;
 
-            if (up)    targetX += btnIncrement;
-            if (down)  targetX -= btnIncrement;
-            if (left)  targetY += btnIncrement; 
-            if (right) targetY -= btnIncrement; 
+                if (up)    targetX += speed[difficulty];
+                if (down)  targetX -= speed[difficulty];
+                if (left)  targetY += speed[difficulty]; 
+                if (right) targetY -= speed[difficulty]; 
 
-            // ── Set moveTo targets if there is any movement ──
-            MOT_A.moveTo(targetX + targetY);
-            MOT_B.moveTo(targetX - targetY);
+                // ── Set moveTo targets if there is any movement ──
+                posX = targetX; 
+                posY = targetY; 
+                MOT_A.moveTo(targetX + targetY);
+                MOT_B.moveTo(targetX - targetY);
+            }
         }
         // ── Run motors periodically ──
-        MOT_A.run();
-        MOT_B.run();
-        MOT_Z.run(); // Z can be moved by other tasks/JSON commands
+        bool motorsActive = abs(MOT_A.distanceToGo()) > 1 ||
+                    abs(MOT_B.distanceToGo()) > 1 ||
+                    abs(MOT_Z.distanceToGo()) > 1;
 
+        if (motorsActive) {
+            MOT_A.run();
+            MOT_B.run();
+            MOT_Z.run();
+        }
         vTaskDelay(pdMS_TO_TICKS(15));
     }
 }
 
+/** 
+ * @brief Routine d'interruption déclenchée par les fins de course pour signaler un événement.
+ *
+ * @details Nom de la fonction : NotifySwitch
+ * @param Aucun paramètre
+ * @return void
+ */
 void NotifySwitch(){
 	//PENDANT SETUP, ON VEUT QUE LES 2 LIMITSWITCHES SERVENT A TROUVER LE ZERO
 	//En Situation normale, on veut que les limit switch servent à detecter les obstacles et à arrêter le moteur pour pas que ça arrache tout
@@ -573,7 +1255,14 @@ void NotifySwitch(){
 	}
 }
 
-void NotifyOkButton() {
+/** 
+ * @brief Routine d'interruption associée au bouton OK avec gestion de l'anti-rebond.
+ *
+ * @details Nom de la fonction : NotifyOkButton
+ * @param Aucun paramètre
+ * @return void
+ */
+void NotifyOkButton(){
     TickType_t now = xTaskGetTickCountFromISR();
     if ((now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) || digitalRead(BTN_PIN_OK) == HIGH) return;
     lastBtnInterrupt = now;
@@ -584,322 +1273,862 @@ void NotifyOkButton() {
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
-void ouvrirPince() {
+/** 
+ * @brief Ouvre la pince Dynamixel en positionnant le moteur jusqu'à la position ouverte définie.
+ *
+ * @details Nom de la fonction : ouvrirPince
+ * @param Aucun paramètre
+ * @return void
+ */
+void ouvrirPince(){
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
     dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
-}
-
-void fermerPince() {
-    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
-    dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
-}
-
-String buildStatusJson() {
-    StaticJsonDocument<1024> doc;   // or JsonDocument doc(1024) for Static
-
-    // Temps et niveaux
-    doc["time_facile"] = temps[0];
-    doc["time_medium"] = temps[1];
-    doc["time_expert"] = temps[2];
-
-    doc["force_facile"] = force[0];
-    doc["force_medium"] = force[1];
-    doc["force_expert"] = force[2];
-
-    doc["speed_facile"] = speed[0];
-    doc["speed_medium"] = speed[1];
-    doc["speed_expert"] = speed[2];
-
-    doc["led_color"] = ledColor;
-
-	JsonObject buttons = doc["buttons"].to<JsonObject>();
-	EventBits_t bits = xEventGroupGetBits(inputEventGroup);
-	buttons["haut"] = (bits & EVT_BTN_UP) != 0;
-	buttons["bas"] = (bits & EVT_BTN_DOWN) != 0;
-	buttons["gauche"] = (bits & EVT_BTN_LEFT) != 0;
-	buttons["droite"] = (bits & EVT_BTN_RIGHT) != 0;
-	buttons["ok"] = (bits & EVT_BTN_OK) != 0;
-
-    // System state
-    doc["system_state"] = (int) currentState;
-
-    // Pince
-    JsonObject pince = doc["pince"].to<JsonObject>();
-    pince["pos_ouverte"] = OPEN_POS;
-    pince["pos_fermee"] = CLOSED_POS;
-    pince["pos_actuelle"] = ACTUAL_POS;
-
-    // XY
-    JsonObject xy = doc["xy"].to<JsonObject>();
-    xy["max_x"] = MAX_POS_X;
-    xy["max_y"] = MAX_POS_Y;
-    xy["pos_x"] = posX;
-    xy["pos_y"] = posY;
-
-    // Z axis
-    JsonObject z_axis = doc["z_axis"].to<JsonObject>();
-    z_axis["max_height"] = maxDownZPos;
-    z_axis["min_height"] = liftedZPos;
-    z_axis["current_height"] = MOT_Z.currentPosition();
-
-    String output;
-    serializeJson(doc, output);
-    return output;
-}
-
-void TaskCommJsonReceive(void *pvParameters) {
-    (void) pvParameters;
-    Serial.println("{\"boot\":\"TaskCommJsonReceive started\"}");
-    Serial.setTimeout(200);
- 
-    for (;;) {
-        if (Serial.available()) {
-            String incoming = Serial.readStringUntil('\n');
-            incoming.trim();
- 
-            // =========================
-            // DEBUG : montrer exactement ce qui a été reçu
-            // =========================
-            Serial.print("{\"debug_rx\":\"");
-            for (int i = 0; i < incoming.length(); i++) {
-                char c = incoming[i];
- 
-                if (c == '\"') Serial.print("\\\"");
-                else if (c == '\\') Serial.print("\\\\");
-                else Serial.print(c);
-            }
-            Serial.println("\"}");
- 
-            if (incoming.length() == 0) {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"ligne vide\"}");
-                vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
-            }
- 
-            StaticJsonDocument<512> doc;
-            DeserializationError err = deserializeJson(doc, incoming);
- 
-            if (err) {
-                Serial.print("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"json invalide\",\"brut\":\"");
-                for (int i = 0; i < incoming.length(); i++) {
-                    char c = incoming[i];
- 
-                    if (c == '\"') Serial.print("\\\"");
-                    else if (c == '\\') Serial.print("\\\\");
-                    else Serial.print(c);
-                }
-                Serial.println("\"}");
-                vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
-            }
- 
-            const char* type = doc["type"];
- 
-            if (!type) {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type manquant\"}");
-                vTaskDelay(pdMS_TO_TICKS(20));
-                continue;
-            }
- 
-            // =========================================================
-            // TYPE = COMMANDE
-            // =========================================================
-            if (strcmp(type, "commande") == 0) {
-                const char* action = doc["action"];
- 
-                if (!action) {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action manquante\"}");
-                }
- 
-                else if (strcmp(action, "urgence") == 0) {
-                    MOT_A.stop();
-                    MOT_B.stop();
-                    MOT_Z.stop();
-                    jsonMoveActive = false;
-                    currentState = IDLE;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"urgence\",\"state\":");
-                    Serial.print((int)currentState);
-                    Serial.println("}");
-                }
- 
-                else if (strcmp(action, "reinitialiser") == 0) {
-                    currentState = SETUP;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"reinitialiser\",\"state\":");
-                    Serial.print((int)currentState);
-                    Serial.println("}");
-                }
- 
-                else if (strcmp(action, "init") == 0) {
-                    homeXY();
- 
-                    Serial.println("{\"type\":\"ack\",\"ok\":true,\"action\":\"init\"}");
-                }
- 
-                else if (strcmp(action, "ouvrir_pince") == 0) {
-                    ouvrirPince();
- 
-                }
- 
-                else if (strcmp(action, "fermer_pince") == 0) {
-                    fermerPince();
- 
-                }
-
-                else if(strcmp(action, "moitie_pince") == 0) {
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
-                    dxl.setGoalPosition(id, (OPEN_POS + CLOSED_POS) / 2, UNIT_RAW);
-                }
- 
-                else if (strcmp(action, "dep_droite") == 0 ||
-                         strcmp(action, "dep_gauche") == 0 ||
-                         strcmp(action, "dep_haut") == 0 ||
-                         strcmp(action, "dep_bas") == 0) {
- 
-                    long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
-                    long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
- 
-                    long deltaXlocal = 0;
-                    long deltaYlocal = 0;
- 
-                    if (strcmp(action, "dep_droite") == 0)  deltaYlocal = -200;
-                    if (strcmp(action, "dep_gauche") == 0) deltaYlocal = 200;
-                    if (strcmp(action, "dep_haut") == 0)  deltaXlocal = 200;
-                    if (strcmp(action, "dep_bas") == 0) deltaXlocal = -200;
- 
-                    long targetX = curX + deltaXlocal;
-                    long targetY = curY + deltaYlocal;
- 
-                    MOT_A.moveTo(targetX + targetY);
-                    MOT_B.moveTo(targetX - targetY);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "dep_z_haut") == 0) {
-                    long cible = MOT_Z.currentPosition() + 300;
-                    MOT_Z.moveTo(cible);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "dep_z_bas") == 0) {
-                    long cible = MOT_Z.currentPosition() - 300;
-                    MOT_Z.moveTo(cible);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "pos_haut_z") == 0) {
-                    MOT_Z.moveTo(liftedZPos);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "pos_bas_z") == 0) {
-                    MOT_Z.moveTo(maxDownZPos);
-                    jsonMoveActive = true;
-                }
- 
-                else if (strcmp(action, "pos_milieu_xy") == 0) {
-                    long targetX = MAX_POS_X / 2;
-                    long targetY = MAX_POS_Y / 2;
- 
-                    MOT_A.moveTo(targetX + targetY);
-                    MOT_B.moveTo(targetX - targetY);
-                    jsonMoveActive = true;
- 
-                    Serial.print("{\"type\":\"ack\",\"ok\":true,\"action\":\"pos_milieu_xy\",\"targetX\":");
-                    Serial.print(targetX);
-                    Serial.print(",\"targetY\":");
-                    Serial.print(targetY);
-                    Serial.println("}");
-                }
-                else if (strcmp(action, "ouvrir_manuel") == 0) {
-                        dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                        dxl.setGoalPosition(id,dxl.getPresentPosition(id) - 200 , UNIT_RAW);
-                }
-                else if (strcmp(action, "fermer_manuel") == 0) {
-                    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-                    dxl.setGoalPosition(id,dxl.getPresentPosition(id) + 200 , UNIT_RAW);
-                }
- 
-                else {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"action inconnue\"}");
-                }
-            }
- 
-            // =========================================================
-            // TYPE = PERSONNALISATION
-            // =========================================================
-            else if (strcmp(type, "pers") == 0) {
- 
-                if (doc["clr"].is<const char*>()) {
-                    ledColor = doc["clr"].as<String>();
-                }
- 
-                if (doc["diff"].is<const char*>()) {
-                    String diff = doc["diff"].as<String>();
- 
-                    if (diff == "fac") difficulty = 0;
-                    else if (diff == "moy") difficulty = 1;
-                    else if (diff == "exp") difficulty = 2;
- 
-                    temps[difficulty] = doc["t"] | temps[difficulty];
-                    force[difficulty] = doc["F"] | force[difficulty];
-                    speed[difficulty] = doc["v"] | speed[difficulty];
-                }
-            }
- 
-            // =========================================================
-            // TYPE = REMPLACEMENT
-            // =========================================================
-            else if (strcmp(type, "rep") == 0) {
-                const char* champ = doc["champ"];
-                int32_t valeur = doc["valeur"] | 0;
- 
-                if (!champ) {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ manquant\"}");
-                }
-                else if (strcmp(champ, "pince_ouverte") == 0) {
-                    OPEN_POS = valeur;
-                }
-                else if (strcmp(champ, "pince_fermee") == 0) {
-                    CLOSED_POS = valeur;
-                }
-                else if (strcmp(champ, "valeurmax_x") == 0) {
-                    MAX_POS_X = valeur;
-                }
-                else if (strcmp(champ, "valeurmax_y") == 0) {
-                    MAX_POS_Y = valeur;
-                }
-                else if (strcmp(champ, "valeurmax_z") == 0) {
-                    maxDownZPos = valeur;
-                }
-                else if (strcmp(champ, "valeurmin_z") == 0) {
-                    liftedZPos = valeur;
-                }
-                else {
-                    Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"champ inconnu\"}");
-                }
-            }
- 
-            // =========================================================
-            // TYPE INCONNU
-            // =========================================================
-            else {
-                Serial.println("{\"type\":\"ack\",\"ok\":false,\"erreur\":\"type inconnu\"}");
-            }
-        }
- 
-        vTaskDelay(pdMS_TO_TICKS(20));
+    while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
+        vTaskDelay(pdMS_TO_TICKS(50));
+        ACTUAL_POS = dxl.getPresentPosition(id);
     }
 }
 
+/** 
+ * @brief Ferme la pince Dynamixel avec une force dépendant du niveau de difficulté.
+ *
+ * @details Nom de la fonction : fermerPince
+ * @param Aucun paramètre
+ * @return void
+ */
+void fermerPince(){
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, force[difficulty]);
+    dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
+    while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
+        vTaskDelay(pdMS_TO_TICKS(50));
+        ACTUAL_POS = dxl.getPresentPosition(id);
+    }
+}
+
+/** 
+ * @brief Analyse les messages JSON reçus et exécute les commandes correspondantes (mouvements, pince, configuration, etc.).
+ *
+ * @details Nom de la fonction : processJson
+ * @param char *incoming
+ * @return void
+ */
+void processJson(char *incoming){
+    doc_i.clear();
+    DeserializationError err = deserializeJson(doc_i, incoming);
+    
+    if (err) {
+        /*
+        Serial.print("JSON ERROR: ");
+        Serial.println(err.c_str());
+        Serial.print("JSON LEN = ");
+        Serial.println(strlen(incoming));
+        Serial.println((uint8_t)incoming[0], HEX);
+        Serial.println((uint8_t)incoming[1], HEX);*/
+        return;
+    }
+ 
+    const char* type = doc_i["type"];
+    if (!type) {
+        return;
+    }
+ 
+    if (strcmp(type, "commande") == 0) {
+        const char* action = doc_i["action"];
+        if (!action) return;
+ 
+        if (strcmp(action, "urgence") == 0) {
+            MOT_A.stop();
+            MOT_B.stop();
+            MOT_Z.stop();
+            while (1) {}
+        }
+        else if (strcmp(action, "reinitialiser") == 0) {
+            currentState = SETUP;
+        }
+        else if (strcmp(action, "init") == 0) {
+            homeXY();
+        }
+        else if (strcmp(action, "ouvrir_pince") == 0) {
+            ouvrirPince();
+        }
+        else if (strcmp(action, "fermer_pince") == 0) {
+            fermerPince();
+        }
+        else if (strcmp(action, "moitie_pince") == 0) {
+            int target = (OPEN_POS + CLOSED_POS) / 2;
+            dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+            dxl.setGoalPosition(id, target, UNIT_RAW);
+ 
+            while (abs(ACTUAL_POS - target) > 50) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+                ACTUAL_POS = dxl.getPresentPosition(id);
+            }
+        }
+        else if (
+            strcmp(action, "dep_droite") == 0 ||
+            strcmp(action, "dep_gauche") == 0 ||
+            strcmp(action, "dep_haut") == 0 ||
+            strcmp(action, "dep_bas") == 0
+        ) {
+            long curX = (MOT_A.currentPosition() + MOT_B.currentPosition()) / 2;
+            long curY = (MOT_A.currentPosition() - MOT_B.currentPosition()) / 2;
+ 
+            long dx = 0;
+            long dy = 0;
+ 
+            if (strcmp(action, "dep_droite") == 0) dy = -200;
+            if (strcmp(action, "dep_gauche") == 0) dy = 200;
+            if (strcmp(action, "dep_haut") == 0) dx = 200;
+            if (strcmp(action, "dep_bas") == 0) dx = -200;
+ 
+            posX = curX + dx;
+            posY = curY + dy;
+            MOT_A.moveTo(posX + posY);
+            MOT_B.moveTo(posX - posY);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "dep_z_haut") == 0) {
+            MOT_Z.moveTo(MOT_Z.currentPosition() - 200);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "dep_z_bas") == 0) {
+            MOT_Z.moveTo(MOT_Z.currentPosition() + 200);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "pos_haut_z") == 0) {
+            MOT_Z.moveTo(liftedZPos);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "pos_bas_z") == 0) {
+            MOT_Z.moveTo(maxDownZPos);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "pos_milieu_xy") == 0) {
+            posX = MAX_POS_X / 2;
+            posY = MAX_POS_Y / 2;
+            MOT_A.moveTo(posX + posY);
+            MOT_B.moveTo(posX - posY);
+            jsonMoveActive = true;
+        }
+        else if (strcmp(action, "ouvrir_manuel") == 0) {
+            int32_t target = dxl.getPresentPosition(id) - 200;
+            dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+            dxl.setGoalPosition(id, target, UNIT_RAW);
+ 
+            while (ACTUAL_POS > target + 20) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+                ACTUAL_POS = dxl.getPresentPosition(id);
+            }
+        }
+        else if (strcmp(action, "fermer_manuel") == 0) {
+            int32_t target = dxl.getPresentPosition(id) + 200;
+            dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+            dxl.setGoalPosition(id, target, UNIT_RAW);
+ 
+            while (ACTUAL_POS < target - 20) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+                ACTUAL_POS = dxl.getPresentPosition(id);
+            }
+        }
+ 
+        return;
+    }
+ 
+    if (strcmp(type, "pers") == 0) {
+        if (doc_i["clr"].is<int>()) {
+            ledColor = (LedColor)doc_i["clr"].as<int>();
+        }
+ 
+        if (doc_i["diff"].is<const char*>()) {
+            const char* diff = doc_i["diff"];
+ 
+            if (strcmp(diff, "fac") == 0) difficulty = 0;
+            else if (strcmp(diff, "moy") == 0) difficulty = 1;
+            else if (strcmp(diff, "exp") == 0) difficulty = 2;
+ 
+            temps[difficulty] = doc_i["t"] | temps[difficulty];
+            force[difficulty] = doc_i["F"] | force[difficulty];
+            speed[difficulty] = doc_i["v"] | speed[difficulty];
+        }
+ 
+        return;
+    }
+ 
+    if (strcmp(type, "rep") == 0) {
+        const char* champ = doc_i["champ"];
+        int32_t valeur = doc_i["valeur"] | 0;
+        if (!champ) return;
+ 
+        if (strcmp(champ, "pince_ouverte") == 0) OPEN_POS = valeur;
+        else if (strcmp(champ, "pince_fermee") == 0) CLOSED_POS = valeur;
+        else if (strcmp(champ, "valeurmax_x") == 0) MAX_POS_X = valeur;
+        else if (strcmp(champ, "valeurmax_y") == 0) MAX_POS_Y = valeur;
+        else if (strcmp(champ, "valeurmax_z") == 0) liftedZPos = valeur;
+        else if (strcmp(champ, "valeurmin_z") == 0) maxDownZPos = valeur;
+ 
+        return;
+    }
+}
+
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : rxBufferPush
+ * @param char c
+ * @return static inline void
+ */
+static inline void rxBufferPush(char c){
+    uint16_t next = (rxHead + 1) % RX_BUF_SIZE;
+
+    if (next == rxTail) {
+        rxTail = (rxTail + 1) % RX_BUF_SIZE;
+    }
+    rxBuf[rxHead] = c;
+    rxHead = next;
+}
+
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : rxBufferPop
+ * @param char &c
+ * @return static inline bool
+ */
+static inline bool rxBufferPop(char &c){
+    if (rxTail == rxHead) return false;
+
+    c = rxBuf[rxTail];
+    rxTail = (rxTail + 1) % RX_BUF_SIZE;
+    return true;
+}
+
+/** 
+ * @brief Tâche RTOS qui lit les données série, reconstruit les messages JSON et appelle leur traitement.
+ *
+ * @details Nom de la fonction : TaskCommJsonReceive
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskCommJsonReceive(void *pvParameters){
+    (void) pvParameters;
+
+    static char lineBuf[128]; //128 tto FOURCHETTE
+    static uint16_t lineLen = 0;
+
+    for (;;) {
+
+        while (Serial.available()) {
+            char c = Serial.read();
+            rxBufferPush(c);
+        }
+        char c;
+        while (rxBufferPop(c)) {
+
+            if (c == '\r') continue;
+
+            if (c == '\n') {
+                lineBuf[lineLen] = '\0';
+                if (lineLen > 0) processJson(lineBuf);
+                lineLen = 0;
+            } else {
+                if (lineLen < sizeof(lineBuf) - 1) {
+                    lineBuf[lineLen++] = c;
+                } else {
+                    lineLen = 0;
+                }
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(250));
+    }
+}
+
+//---------------------
+// SONAR
+//----------------------
+
+/** 
+ * @brief Détecte la capture d'un objet à l'aide du capteur ultrason en analysant les variations de distance.
+ *
+ * @details Nom de la fonction : toutouAttrape
+ * @param uint32_t temps_actif, int distance_attrape
+ * @return bool
+ */
+bool toutouAttrape(uint32_t temps_actif, int distance_attrape){
+    float temps_retour_signal;
+    float distance_parcourue;
+    int reussi = 0;
+
+    uint32_t start = millis();
+
+    while ((millis() - start) < temps_actif) {
+
+        digitalWrite(43, HIGH);
+        delayMicroseconds(10); // OK
+        digitalWrite(43, LOW);
+
+        temps_retour_signal = pulseIn(45, HIGH, 30000); // réduire timeout
+
+        distance_parcourue = (temps_retour_signal * 0.0343) / 2;
+        //Serial.println(distance_parcourue);
+
+        if (distance_parcourue > 0.1) {
+            if (abs(distance_parcourue-distance_attrape) > 2 && reussi == 0) {
+                reussi = 1;
+            }
+            else if (abs(distance_parcourue-distance_attrape) < 2 && reussi == 1) {
+                reussi = 0;
+            }
+            else if (abs(distance_parcourue-distance_attrape) > 2 && reussi == 1) {
+                return true;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    return false;
+}
+
+//----------------------
+// UI RETRO
+//----------------------
+
+// Fonction qui transforme des coordonnées de la matrice 13x14 en numéro de LED pour la librairie NeoPixel
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : transformationIntermediaire
+ * @param int x, int y
+ * @return int
+ */
+int transformationIntermediaire(int x, int y){
+    int indexIntermediaire = (y * largeur) + x;
+    return indexIntermediaire;
+};
+ 
+// Fonction qui transforme des coordonnées de la matrice LED complète (13x28) en numéro de LED pour la librairie NeoPixel
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : transformationCoordonnees
+ * @param int x, int y
+ * @return int
+ */
+int transformationCoordonnees(int x, int y){
+    int index = 0;
+    if (x < largeur){
+        index = transformationIntermediaire(x, y);
+    }
+    else{
+        int xLocal = x - largeur;
+        index = transformationIntermediaire(xLocal, y) + (largeur * hauteur);
+    }
+    
+    return index;
+};
+ 
+// Fonction qui allume d'une certaine couleur UNE LED correspondant aux coordonnées de la matrice 13x28
+// La variable couleur contient pixels.Color(R,G,B)
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : allumeLED
+ * @param int x, int y, uint32_t couleur
+ * @return void
+ */
+void allumeLED(int x, int y, uint32_t couleur){
+    if (x >= 0 && x < 28 && y >= 0 && y < 13){
+        int index = transformationCoordonnees(x, y);
+        pixels.setPixelColor(index, couleur);
+    }
+};
+ 
+// Recoit une lettre en argument, et l'affiche aux coordonnées données en argument, selon couleur
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : ecrireLettre
+ * @param const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur
+ * @return void
+ */
+void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
+    for (int rangee = 0; rangee < 5; rangee++){
+        for (int colonne = 0; colonne < 3; colonne++){
+            if (pgm_read_byte(&matriceLettre[rangee][colonne]) == 1){
+                allumeLED(xDepart + colonne, yDepart + rangee, couleur);
+            }
+        }
+    }
+};
+ 
+// Fonction qui trouve la lettre dans la matrice 3D de l'alphabet
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : trouverIndexAlphabet
+ * @param char c
+ * @return int
+ */
+int trouverIndexAlphabet(char c){
+    int index = 0;
+    if (c >= 'A' && c <= 'Z'){
+        index = c - 'A';
+    }
+    else if (c >= '0' && c <= '9'){
+        index = 26 + c - '0';
+    }
+    else if (c == '!'){
+        index = 36;
+    }
+    else if (c == ':'){
+        index = 37;
+    }
+    else if (c == '/'){
+        index = 38;
+    }
+    else{
+        index = -1;
+    }
+    return index;
+};
+ 
+//Fonction qui appelle ecrireLettre jsuqu'à ce que le mot soit écrit complètement
+/** 
+ * @brief Affiche un mot complet sur la matrice LED en utilisant la table de caractères définie.
+ *
+ * @details Nom de la fonction : ecrireMot
+ * @param const char *mot, int xDepart, int yDepart, uint32_t couleur
+ * @return void
+ */
+void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur){
+    for (int i = 0; mot[i] != '\0'; i++){
+        char lettre = mot[i];
+        int index = trouverIndexAlphabet(lettre);
+        if (index != -1){
+            ecrireLettre(alphabet[index], (xDepart + i * largeurLettre), yDepart, couleur);
+        }
+    }
+}
+ 
+//Retourne la longueur du mot
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : longueurMot
+ * @param const char *mot
+ * @return int
+ */
+int longueurMot(const char *mot){
+    int longueur = 0;
+    while (mot[longueur] != '\0'){
+        longueur++;
+    }
+    return longueur;
+}
+
+//Fait défiler un mot horizontalement sur l'affichage
+/** 
+ * @brief Fait défiler horizontalement un texte sur la matrice LED.
+ *
+ * @details Nom de la fonction : defilerTexte
+ * @param const char *mot, int yDepart, uint32_t couleur
+ * @return void
+ */
+void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
+    static int x = 28;
+    int largeurMot = longueurMot(mot) * 4;
+    ecrireMot(mot, x, yDepart, couleur);
+    x--;
+    if (x < -largeurMot){
+        x = 28;
+    }
+}
+
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : TaskRetroUI
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskRetroUI(void *pvParameters){
+    (void) pvParameters;
+    LedColor oldColor = -1;
+    for(;;){
+        switch(retroUIState){
+            case ECRAN_ACCUEIL:
+                EcranAccueil();
+                break;
+            case SELECTION_DIFFICULTE:
+                EcranDiff();
+                break;
+            case ECRAN_GAGNANT:
+                EcranGagnant();
+                break;
+            case ECRAN_PERDANT:
+                EcranPerdant();
+                break;
+            case TIMER:
+                break;
+            case RIEN:
+                [[fallthrough]];
+            default:
+                pixels.clear();
+                pixels.show();
+                break;
+        };
+        if(oldColor != ledColor){
+            switch(ledColor){
+                case(LED_ROUGE):
+                    eclairage_int_boite(ROUGE_l);
+                    break;
+                case(LED_ORANGE):
+                    eclairage_int_boite(ORANGE_l);
+                    break;
+                case(LED_JAUNE):
+                    eclairage_int_boite(JAUNE_l);
+                    break;
+                case(LED_VERT):
+                    eclairage_int_boite(VERT_l);
+                    break;
+                case(LED_BLEU):
+                    eclairage_int_boite(BLEU_l);
+                    break;
+                case(LED_MAUVE):
+                    eclairage_int_boite(MAUVE_l);
+                    break;
+                case(LED_ROSE):
+                    eclairage_int_boite(ROSE_l);
+                    break;
+                case(LED_BLANC):
+                    eclairage_int_boite(BLANC_l);
+                    break;
+            }
+            oldColor = ledColor;
+        }
+        eclairage_LED_ext();
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+//Affichage de l'écran d'accueil, "GROCHET" + bandes de couleurs. Les bandes de couleur défilent de 1 entre chaque appel de fonction
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranAccueil
+ * @param Aucun paramètre
+ * @return void
+ */
+void EcranAccueil(){
+    static int decalage = 0;
+    pixels.clear();
+    
+    for (int i = -3; i < 28; i += 3){
+        allumeLED(i + decalage, 1, pixels.Color(25, 0, 25));
+        allumeLED(i + 1 + decalage, 1, pixels.Color(25, 10, 0));
+        allumeLED(i + 2 + decalage, 1, pixels.Color(0, 5, 15));
+        allumeLED(i + decalage, 11, pixels.Color(25, 0, 25));
+        allumeLED(i + 1 + decalage, 11, pixels.Color(25, 10, 0));
+        allumeLED(i + 2 + decalage, 11, pixels.Color(0, 5, 15));
+    }
+
+    ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
+    pixels.show();
+    decalage++;
+    if (decalage == 3) decalage = 0;
+}
+
+//Affichage de l'écran perdant: "Meilleure chance la prochaine fois" + petits "x" rouges
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranPerdant
+ * @param Aucun paramètre
+ * @return void
+ */
+void EcranPerdant(){
+    int largeurMot = longueurMot("MEILLEURE CHANCE LA PROCHAINE FOIS") * 4;
+    for (int i = 28; i > -(largeurMot); i--){
+        pixels.clear();
+        int decalage = 0;
+        
+        for (int j = 0; j < 28; j++){
+            // Motif
+            allumeLED(j * 4 + decalage, 0, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 0, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 1 + decalage, 1, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + decalage, 2, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 2, pixels.Color(25, 0, 0));
+
+            allumeLED(j * 4 + decalage, 10, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 10, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 1 + decalage, 11, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + decalage, 12, pixels.Color(25, 0, 0));
+            allumeLED(j * 4 + 2 + decalage, 12, pixels.Color(25, 0, 0));
+            decalage = decalage + 2;
+        }
+        ecrireMot("MEILLEURE CHANCE LA PROCHAINE FOIS", i, 4, pixels.Color(0, 0, 25));
+        pixels.show();
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+//Affichage de l'écran gagnant: "Bravo!" + petits coeurs rose.
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranGagnant
+ * @param Aucun paramètre
+ * @return void
+ */
+void EcranGagnant(){
+    static bool afficher = true;
+    pixels.clear();
+    int decalage = 0;
+    
+    for (int j = 0; j < 28; j++){
+        // Coeur en haut
+        allumeLED(0 + decalage, 0, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 0, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 0, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 0, pixels.Color(25, 0, 10));
+
+        allumeLED(0 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 1, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 1, pixels.Color(25, 0, 10));
+
+        allumeLED(1 + decalage, 2, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 2, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 2, pixels.Color(25, 0, 10));
+
+        allumeLED(2 + decalage, 3, pixels.Color(25, 0, 10));
+
+        // Coeur en bas
+        allumeLED(0 + decalage, 9, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 9, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 9, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 9, pixels.Color(25, 0, 10));
+
+        allumeLED(0 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(1 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 10, pixels.Color(25, 0, 10));
+        allumeLED(4 + decalage, 10, pixels.Color(25, 0, 10));
+
+        allumeLED(1 + decalage, 11, pixels.Color(25, 0, 10));
+        allumeLED(2 + decalage, 11, pixels.Color(25, 0, 10));
+        allumeLED(3 + decalage, 11, pixels.Color(25, 0, 10));
+
+        allumeLED(2 + decalage, 12, pixels.Color(25, 0, 10));
+
+        decalage = 23;
+    }
+    if (afficher) ecrireMot("Bravo!", 3, 4, pixels.Color(0, 20, 5));
+
+    afficher = !afficher;
+    pixels.show();
+}
+
+//Affichage de l'écran de difficulté, "Choix difficulté" qui défile et la difficulté actuelle affichée, réponse aux boutons droite/gauche aussi
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranDiff
+ * @param Aucun paramètre
+ * @return void
+ */
+void EcranDiff(){
+    static bool prevLeft = false;
+    static bool prevRight = false;
+
+    bool left  = digitalRead(BTN_PIN_LEFT)  == LOW;
+    bool right = digitalRead(BTN_PIN_RIGHT) == LOW;
+
+    if (left && !prevLeft) {
+        difficulty = max(0, difficulty - 1);
+    }
+    if (right && !prevRight) {
+        difficulty = min(2, difficulty + 1);
+    }
+
+    prevLeft = left;
+    prevRight = right;
+    
+    pixels.clear();
+    defilerTexte("CHOIX DIFFICULTE", 0, BLANC);
+
+    if (difficulty == 0){
+        ecrireMot("FACILE", 0, 8, JAUNE);
+        // Fleche
+        allumeLED(25, 8, BLANC);
+        allumeLED(26, 9, BLANC);
+        allumeLED(27, 10, BLANC);
+        allumeLED(26, 11, BLANC);
+        allumeLED(25, 12, BLANC);
+    }
+    
+    else if (difficulty == 1){
+        ecrireMot("MOYEN", 0, 8, ORANGE);
+        // Fleche
+        allumeLED(21, 8, BLANC);
+        allumeLED(22, 9, BLANC);
+        allumeLED(23, 10, BLANC);
+        allumeLED(22, 11, BLANC);
+        allumeLED(21, 12, BLANC);
+    }
+    
+    else if (difficulty == 2){
+        ecrireMot("EXPERT", 0, 8, ROUGE);
+        // Fleche
+        allumeLED(25, 8, BLANC);
+        allumeLED(26, 9, BLANC);
+        allumeLED(27, 10, BLANC);
+        allumeLED(26, 11, BLANC);
+        allumeLED(25, 12, BLANC);
+    }
+    pixels.show();
+}
+
+//----------------------------
+// LED Strips
+//----------------------------
+
+//Réinitialise les LED des coordonnées envoyées
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : reinit_LED
+ * @param int debut, int fin
+ * @return void
+ */
+void reinit_LED(int debut, int fin){
+    for(int i = debut; i<fin; i++){
+        pixels_LED.setPixelColor(i, pixels_LED.Color(0,0,0));
+    }
+}
+
+// Allume les leds de l'intérieur de la machine selon la couleur
+/** 
+ * @brief Allume les LEDs internes de la machine avec une couleur spécifiée.
+ *
+ * @details Nom de la fonction : eclairage_int_boite
+ * @param const uint8_t *RGB
+ * @return void
+ */
+void eclairage_int_boite(const uint8_t *RGB){ 
+    reinit_LED(OFFSET_LED_INT, n_LED_total);
+    for(int i = OFFSET_LED_INT; i < n_LED_total; i++){
+        pixels_LED.setPixelColor(i, pixels_LED.Color(RGB[0], RGB[1], RGB[2]));
+    }
+    
+    pixels_LED.show();
+};
+
+//Allume les leds verticales du devant de la machine  (motif qui se décale à chaque appel)
+/** 
+ * @brief Anime les LEDs externes avec un motif dynamique défilant.
+ *
+ * @details Nom de la fonction : eclairage_LED_ext
+ * @param Aucun paramètre
+ * @return void
+ */
+void eclairage_LED_ext(){
+
+    static int decalage = 0;
+    int longueur = NUMPIXELS_BANDE * 2;
+
+    //Réinitialisation des LEDs extérieures
+    reinit_LED(OFFSET_LED_GAUCHE, OFFSET_LED_COMPTEUR -1);
+    reinit_LED(OFFSET_LED_DROIT, OFFSET_LED_INT -1);
+
+    for (int i = 0; i < longueur; i++)
+    {
+        int couleur = (i + decalage) % 3;
+        uint32_t color;
+
+        if(couleur == 0){
+            color = pixels_LED.Color(ROSE_l[0], ROSE_l[1], ROSE_l[2]);
+        }
+        else if(couleur == 1){
+            color = pixels_LED.Color(ORANGE_l[0], ORANGE_l[1], ORANGE_l[2]);
+        }
+        else{
+            color = pixels_LED.Color(BLEU_l[0], BLEU_l[1], BLEU_l[2]);
+        }
+        pixels_LED.setPixelColor(OFFSET_LED_GAUCHE + i, color);  
+        pixels_LED.setPixelColor(OFFSET_LED_DROIT + i, color);
+    }
+    pixels_LED.show();
+    decalage = (decalage + 1) % 3;
+};
+
+/** 
+ * @brief Fonction utilitaire du système embarqué. Eteindre les leds
+ *
+ * @details Nom de la fonction : eteindreCompteur
+ * @param Aucun paramètre
+ * @return void
+ */
+void eteindreCompteur(){
+    for (int i = 0; i < n_LED_compteur; i++) {
+
+      pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, 0);
+    }
+    pixels_LED.show();
+}
+
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : allumerCompteur
+ * @param Aucun paramètre
+ * @return void
+ */
+void allumerCompteur(){
+    for (int i = 0; i < n_LED_compteur; i++) {
+      pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, pixels_LED.Color(VERT_l[0], VERT_l[1], VERT_l[2]));
+    }
+    pixels_LED.show();
+}
+
+/** 
+ * @brief Calcule une couleur RGB en fonction d'un ratio (transition du vert vers le rouge en passant par le jaune).
+ *
+ * @details Nom de la fonction : gradient_couleur
+ * @param float ratio
+ * @return uint32_t
+ */
+uint32_t gradient_couleur(float ratio){
+
+  ratio = constrain(ratio, 0.0f, 1.0f);
+  float r, g;
+
+  //Transforme le vert en jaune
+  if(ratio > 0.5f){
+    float ratio_jaune = (1.0f - ratio) / 0.5f;
+    r = VERT_l[0] + ratio_jaune * (JAUNE_l[0] - VERT_l[0]);
+    g = VERT_l[1] + ratio_jaune * (JAUNE_l[1] - VERT_l[1]);
+
+  }
+  //Transforme le jaune en rouge
+  else{
+    float ratio_rouge = (0.5f - ratio) / 0.5f;
+    r = JAUNE_l[0] + ratio_rouge * (ROUGE_l[0] - JAUNE_l[0]);
+    g = JAUNE_l[1] + ratio_rouge * (ROUGE_l[1] - JAUNE_l[1]);
+
+  }
+  return pixels_LED.Color(int(r), int(g), 0);
+
+}
 
 //TODO
+//test limites XY et switch
 
-//Recevoir les messages par Json
-	//Verifier etat Reinitialiser vs Init
-	//Gerer bouton urgence
+//Test force pince
 
-//Fonction Homing not done
-//Limit switches in CoreXY
-//Ajouter interface retro
+//Test latence
+
+//enlever les suspend task
