@@ -22,7 +22,7 @@
 //-------------------
 int16_t temps[] = {50,100,150}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
 int16_t force[] = {50,100,150}; //A ajuster selon les tests, en unités brutes du dynamixel
-int16_t speed[] = {1000,1250,1500}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
+int16_t speed[] = {100,150,250}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
 int8_t difficulty = 0; // 0 = easy, 1 = medium, 2 = hard. A ajuster selon les tests
 
 enum LedColor {
@@ -529,6 +529,7 @@ int longueurMot(const char *mot);
 void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 void ecranAccueil(const char *mot);
 void processJson(char *incoming);
+bool toutouAttrape(int temps_actif, int distance_attrape);
 
 void EcranAccueil();
 void EcranPerdant();
@@ -550,6 +551,10 @@ void setup() {
 
     sendFullSnapshot();
     delay(2000);
+
+    //SONAR
+    pinMode(43, OUTPUT);
+    pinMode(45, INPUT);
 
 	//DYNAMIXEL
 	// -------------------
@@ -704,17 +709,16 @@ void TaskStateControl (void *pvParameters) {
             vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant l'écran d'accueil
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
-            //EcranAccueil();
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            
             currentState = SETUP;
+            
             break;
         case SETUP:
             vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois que l'écran d'accueil est passé
             vTaskResume(hMotorTask);
             retroUIState = RIEN;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            //ouvrirPince();
+            ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
 			currentState = DIFF_CHOOSE;
@@ -727,10 +731,10 @@ void TaskStateControl (void *pvParameters) {
             
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
 
-            retroUIState = RIEN;
             currentState = IDLE;
             break;
 	    case IDLE:
+            retroUIState = ECRAN_ACCUEIL;
             vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
             vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
@@ -741,7 +745,7 @@ void TaskStateControl (void *pvParameters) {
 	    case LOWERING:
 			//Séquence de mouvement vers le bas
             while(1){ // Tant que l'axe Z n'est pas presque au plus bas
-                MOT_Z.moveTo(MOT_Z.currentPosition() - 100) ; // Update internal position
+                MOT_Z.moveTo(MOT_Z.currentPosition() - speed[difficulty]) ; // Update internal position
                 if(xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || abs(MOT_Z.currentPosition()-maxDownZPos) < 50) {
                     MOT_Z.stop();
                     break; // Sortir de la boucle pour arrêter la descente
@@ -774,7 +778,12 @@ void TaskStateControl (void *pvParameters) {
 			break;
 
 	    case DROPPING:{ //DONE;
-			ouvrirPince();
+			dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+            dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW); // Ouvrir la pince sans attendre qu'on aie fini d'ouvrir.
+            bool win = toutouAttrape(4000,17);
+            if(win)retroUIState = ECRAN_GAGNANT;
+            else retroUIState = ECRAN_PERDANT;
+            vTaskDelay(pdMS_TO_TICKS(5000));
 			currentState = IDLE;
 			break;
 	    }
@@ -1046,10 +1055,10 @@ void TaskMotorControl(void *pvParameters) {
                 long targetX = curX;
                 long targetY = curY;
 
-                if (up)    targetX += btnIncrement;
-                if (down)  targetX -= btnIncrement;
-                if (left)  targetY += btnIncrement; 
-                if (right) targetY -= btnIncrement; 
+                if (up)    targetX += speed[difficulty];
+                if (down)  targetX -= speed[difficulty];
+                if (left)  targetY += speed[difficulty]; 
+                if (right) targetY -= speed[difficulty]; 
 
                 // ── Set moveTo targets if there is any movement ──
                 posX = targetX; 
@@ -1340,6 +1349,41 @@ void TaskCommJsonReceive(void *pvParameters) {
     }
 }
 
+bool toutouAttrape(int temps_actif, int distance_attrape) {
+    float temps_retour_signal;
+    float distance_parcourue;
+    int reussi = 0;
+
+    uint32_t start = millis();
+
+    while ((millis() - start) < temps_actif) {
+
+        digitalWrite(43, HIGH);
+        delayMicroseconds(10); // OK
+        digitalWrite(43, LOW);
+
+        temps_retour_signal = pulseIn(45, HIGH, 30000); // réduire timeout
+
+        distance_parcourue = (temps_retour_signal * 0.0343) / 2;
+        //Serial.println(distance_parcourue);
+
+        if (distance_parcourue > 0.1) {
+            if (abs(distance_parcourue-distance_attrape) > 2 && reussi == 0) {
+                reussi = 1;
+            }
+            else if (abs(distance_parcourue-distance_attrape) < 2 && reussi == 1) {
+                reussi = 0;
+            }
+            else if (abs(distance_parcourue-distance_attrape) > 2 && reussi == 1) {
+                return true;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50)); // important
+    }
+
+    return false;
+}
 
 //----------------------
 // interface Utilisateur
