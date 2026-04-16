@@ -1,5 +1,7 @@
 Bienvenue sur le GitHub du GROchet!
+
 <img width="207" height="207" alt="Logo_sansFond_gros" src="https://github.com/user-attachments/assets/233687bd-18b8-4c8e-969b-8e983c312363" />
+
 Le GROchet est une machine à pince à démarche ouverte au publique (open source) de laquelle il est possible de changer les niveaux de difficulté. Il a été conçu dans le cadre du projet de quatrième session en génie robotique à l'Université de Sherbrooke.
 
 <img width="414" height="552" alt="673243722_931227729696474_8485299145041720249_n" src="https://github.com/user-attachments/assets/53a651e6-47cf-40d1-ba85-473bd198a376" />
