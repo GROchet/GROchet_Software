@@ -5,6 +5,13 @@ Le GROchet est une machine à pince open source de laquelle il est possible de c
 **DÉMO**
 
 
-**PRÉSENTATION DE L'ÉQUIPE**
+**Équipe:**
+- Marc-Olivier Beaulieu
+- Laurence Cormier
+- Mélianne Darveau
+- Marc-Olivier Flamand
+- Amélie Forget
+- Cloé Mercier
+
 
 Toute la documentation relative au projet est disponible sur le wiki: (wiki)[https://github.com/GROchet/GROchet_Software/wiki]
