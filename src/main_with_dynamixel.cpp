@@ -8,15 +8,11 @@
 #include <Adafruit_NeoPixel.h>
 #include <avr/pgmspace.h>
 
-//À considérer avant de Run la premiere fois :
+//À considérer/Calibrer avant de Run la premiere fois :
 
-// Force de la pince
 // OPEN_POS et CLOSED_POS du dynamixel (pince)
-
-// vitesse du CoreXY
 // MAX_POS_X and MAX_POS_Y according to the system's dimensions (CORE_XY)
-// MAX speed and acceleration of the stepper motors
-// Serial Begin, for dynamixel and stepper_motors
+// maxDownZPos et liftedZPos (position min et max pour axe Z)
 
 //-------------------
 //Difficulté
@@ -583,7 +579,14 @@ EventGroupHandle_t inputEventGroup;
 
 volatile bool jsonMoveActive = false;
 
-void setup() {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : setup
+ * @param Aucun paramètre
+ * @return void
+ */
+void setup(){
 	Serial.begin(115200);
 	delay(2000);
 
@@ -608,8 +611,7 @@ void setup() {
     dxl.setOperatingMode(id, OP_EXTENDED_POSITION);
     dxl.torqueOn(id);
     ACTUAL_POS = dxl.getPresentPosition(id); // Lire la position actuelle à l'initialisation
-    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
-
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, 1);
     dxl.writeControlTableItem(ControlTableItem::CURRENT_LIMIT, id, 1);
 
 	//BOUTONS
@@ -694,10 +696,24 @@ void setup() {
     vTaskStartScheduler();
 }
 
-void loop() {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : loop
+ * @param Aucun paramètre
+ * @return void
+ */
+void loop(){
 }
 
-void homeXY() {
+/** 
+ * @brief Effectue le référencement (homing) des axes X et Y en utilisant les fins de course afin de repositionner le système à l'origine (0,0).
+ *
+ * @details Nom de la fonction : homeXY
+ * @param Aucun paramètre
+ * @return void
+ */
+void homeXY(){
     
     MOT_A.stop();
     MOT_B.stop();
@@ -745,7 +761,14 @@ void homeXY() {
     posY = 0;
 }
 
-void TaskStateControl (void *pvParameters) {
+/** 
+ * @brief Tâche RTOS principale qui implémente la machine à états du système et gère les transitions entre les différentes phases du jeu.
+ *
+ * @details Nom de la fonction : TaskStateControl
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskStateControl(void *pvParameters){
   (void) pvParameters;
 
   for(;;) {
@@ -840,7 +863,7 @@ void TaskStateControl (void *pvParameters) {
                     break;
                 }
 
-                vTaskDelay(pdMS_TO_TICKS(40));
+                vTaskDelay(pdMS_TO_TICKS(80));
             }
 
             manualControlEnabled = false; // Disable manual control
@@ -902,7 +925,14 @@ void TaskStateControl (void *pvParameters) {
   }
 }
 
-void TaskCommJsonSend(void *pvParameters) {
+/** 
+ * @brief Tâche RTOS qui envoie périodiquement l'état du système au format JSON via la liaison série lorsque des changements sont détectés.
+ *
+ * @details Nom de la fonction : TaskCommJsonSend
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskCommJsonSend(void *pvParameters){
     (void) pvParameters;
 
     for (;;) {
@@ -1090,7 +1120,14 @@ void TaskCommJsonSend(void *pvParameters) {
     }
 }
 
-void sendFullSnapshot() {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : sendFullSnapshot
+ * @param Aucun paramètre
+ * @return void
+ */
+void sendFullSnapshot(){
     static StaticJsonDocument<768> doc1;
 
     doc1["type"] = "full";
@@ -1142,7 +1179,14 @@ void sendFullSnapshot() {
     Serial.print('\n');
 }
 
-void TaskMotorControl(void *pvParameters) {
+/** 
+ * @brief Tâche RTOS responsable du pilotage des moteurs (XY et Z), incluant le contrôle manuel via les boutons.
+ *
+ * @details Nom de la fonction : TaskMotorControl
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskMotorControl(void *pvParameters){
     (void) pvParameters;
 
     for (;;) {
@@ -1189,6 +1233,13 @@ void TaskMotorControl(void *pvParameters) {
     }
 }
 
+/** 
+ * @brief Routine d'interruption déclenchée par les fins de course pour signaler un événement.
+ *
+ * @details Nom de la fonction : NotifySwitch
+ * @param Aucun paramètre
+ * @return void
+ */
 void NotifySwitch(){
 	//PENDANT SETUP, ON VEUT QUE LES 2 LIMITSWITCHES SERVENT A TROUVER LE ZERO
 	//En Situation normale, on veut que les limit switch servent à detecter les obstacles et à arrêter le moteur pour pas que ça arrache tout
@@ -1205,7 +1256,14 @@ void NotifySwitch(){
 	}
 }
 
-void NotifyOkButton() {
+/** 
+ * @brief Routine d'interruption associée au bouton OK avec gestion de l'anti-rebond.
+ *
+ * @details Nom de la fonction : NotifyOkButton
+ * @param Aucun paramètre
+ * @return void
+ */
+void NotifyOkButton(){
     TickType_t now = xTaskGetTickCountFromISR();
     if ((now - lastBtnInterrupt < pdMS_TO_TICKS(DEBOUNCE_MS)) || digitalRead(BTN_PIN_OK) == HIGH) return;
     lastBtnInterrupt = now;
@@ -1216,7 +1274,14 @@ void NotifyOkButton() {
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
-void ouvrirPince() {
+/** 
+ * @brief Ouvre la pince Dynamixel en positionnant le moteur jusqu'à la position ouverte définie.
+ *
+ * @details Nom de la fonction : ouvrirPince
+ * @param Aucun paramètre
+ * @return void
+ */
+void ouvrirPince(){
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
     dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW);
     while (ACTUAL_POS > OPEN_POS + 50) { // Tant que la pince n'est pas presque ouverte
@@ -1225,7 +1290,14 @@ void ouvrirPince() {
     }
 }
 
-void fermerPince() {
+/** 
+ * @brief Ferme la pince Dynamixel avec une force dépendant du niveau de difficulté.
+ *
+ * @details Nom de la fonction : fermerPince
+ * @param Aucun paramètre
+ * @return void
+ */
+void fermerPince(){
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, force[difficulty]);
     dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
     while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
@@ -1234,7 +1306,14 @@ void fermerPince() {
     }
 }
 
-void processJson(char *incoming) {
+/** 
+ * @brief Analyse les messages JSON reçus et exécute les commandes correspondantes (mouvements, pince, configuration, etc.).
+ *
+ * @details Nom de la fonction : processJson
+ * @param char *incoming
+ * @return void
+ */
+void processJson(char *incoming){
     doc_i.clear();
     DeserializationError err = deserializeJson(doc_i, incoming);
     
@@ -1392,7 +1471,14 @@ void processJson(char *incoming) {
     }
 }
 
-static inline void rxBufferPush(char c) {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : rxBufferPush
+ * @param char c
+ * @return static inline void
+ */
+static inline void rxBufferPush(char c){
     uint16_t next = (rxHead + 1) % RX_BUF_SIZE;
 
     // overflow protection: drop oldest data
@@ -1404,7 +1490,14 @@ static inline void rxBufferPush(char c) {
     rxHead = next;
 }
 
-static inline bool rxBufferPop(char &c) {
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : rxBufferPop
+ * @param char &c
+ * @return static inline bool
+ */
+static inline bool rxBufferPop(char &c){
     if (rxTail == rxHead) return false;
 
     c = rxBuf[rxTail];
@@ -1412,7 +1505,14 @@ static inline bool rxBufferPop(char &c) {
     return true;
 }
 
-void TaskCommJsonReceive(void *pvParameters) {
+/** 
+ * @brief Tâche RTOS qui lit les données série, reconstruit les messages JSON et appelle leur traitement.
+ *
+ * @details Nom de la fonction : TaskCommJsonReceive
+ * @param void *pvParameters
+ * @return void
+ */
+void TaskCommJsonReceive(void *pvParameters){
     (void) pvParameters;
 
     static char lineBuf[128]; //128 tto FOURCHETTE
@@ -1457,7 +1557,18 @@ void TaskCommJsonReceive(void *pvParameters) {
     }
 }
 
-bool toutouAttrape(uint32_t temps_actif, int distance_attrape) {
+//---------------------
+// SONAR
+//----------------------
+
+/** 
+ * @brief Détecte la capture d'un objet à l'aide du capteur ultrason en analysant les variations de distance.
+ *
+ * @details Nom de la fonction : toutouAttrape
+ * @param uint32_t temps_actif, int distance_attrape
+ * @return bool
+ */
+bool toutouAttrape(uint32_t temps_actif, int distance_attrape){
     float temps_retour_signal;
     float distance_parcourue;
     int reussi = 0;
@@ -1494,132 +1605,167 @@ bool toutouAttrape(uint32_t temps_actif, int distance_attrape) {
 }
 
 //----------------------
-// interface Utilisateur
+// UI RETRO
 //----------------------
 
 // Fonction qui transforme des coordonnées de la matrice 13x14 en numéro de LED pour la librairie NeoPixel
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : transformationIntermediaire
+ * @param int x, int y
+ * @return int
+ */
 int transformationIntermediaire(int x, int y){
-  int indexIntermediaire = (y * largeur) + x;
- 
-  return indexIntermediaire;
+    int indexIntermediaire = (y * largeur) + x;
+    return indexIntermediaire;
 };
  
 // Fonction qui transforme des coordonnées de la matrice LED complète (13x28) en numéro de LED pour la librairie NeoPixel
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : transformationCoordonnees
+ * @param int x, int y
+ * @return int
+ */
 int transformationCoordonnees(int x, int y){
-  int index = 0;
-  if (x < largeur)
-  {
-    index = transformationIntermediaire(x, y);
-  }
- 
-  else
-  {
-    int xLocal = x - largeur;
-    index = transformationIntermediaire(xLocal, y) + (largeur * hauteur);
-  }
- 
-  return index;
-};
- 
-// Fonction qui allume d'une certaine couleur la LED correspondant aux coordonnées de la matrice 13x28
-// La variable couleur contient pixels.Color(R,G,B)
-void allumeLED(int x, int y, uint32_t couleur){
-  if (x >= 0 && x < 28 && y >= 0 && y < 13)
-  {
-    int index = transformationCoordonnees(x, y);
- 
-    pixels.setPixelColor(index, couleur);
-  }
-};
- 
-void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
- 
-  for (int rangee = 0; rangee < 5; rangee++)
-  {
- 
-    for (int colonne = 0; colonne < 3; colonne++)
-    {
- 
-      if (pgm_read_byte(&matriceLettre[rangee][colonne]) == 1)
-      {
-        allumeLED(xDepart + colonne, yDepart + rangee, couleur);
-      }
+    int index = 0;
+    if (x < largeur){
+        index = transformationIntermediaire(x, y);
     }
-  }
+    else{
+        int xLocal = x - largeur;
+        index = transformationIntermediaire(xLocal, y) + (largeur * hauteur);
+    }
+    
+    return index;
+};
+ 
+// Fonction qui allume d'une certaine couleur UNE LED correspondant aux coordonnées de la matrice 13x28
+// La variable couleur contient pixels.Color(R,G,B)
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : allumeLED
+ * @param int x, int y, uint32_t couleur
+ * @return void
+ */
+void allumeLED(int x, int y, uint32_t couleur){
+    if (x >= 0 && x < 28 && y >= 0 && y < 13){
+        int index = transformationCoordonnees(x, y);
+        pixels.setPixelColor(index, couleur);
+    }
+};
+ 
+// Recoit une lettre en argument, et l'affiche aux coordonnées données en argument, selon couleur
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : ecrireLettre
+ * @param const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur
+ * @return void
+ */
+void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
+    for (int rangee = 0; rangee < 5; rangee++){
+        for (int colonne = 0; colonne < 3; colonne++){
+            if (pgm_read_byte(&matriceLettre[rangee][colonne]) == 1){
+                allumeLED(xDepart + colonne, yDepart + rangee, couleur);
+            }
+        }
+    }
 };
  
 // Fonction qui trouve la lettre dans la matrice 3D de l'alphabet
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : trouverIndexAlphabet
+ * @param char c
+ * @return int
+ */
 int trouverIndexAlphabet(char c){
-  int index = 0;
-  if (c >= 'A' && c <= 'Z')
-  {
-    index = c - 'A';
-  }
- 
-  else if (c >= '0' && c <= '9')
-  {
-    index = 26 + c - '0';
-  }
- 
-  else if (c == '!')
-  {
-    index = 36;
-  }
- 
-  else if (c == ':')
-  {
-    index = 37;
-  }
- 
-  else if (c == '/')
-  {
-    index = 38;
-  }
- 
-  else
-  {
-    index = -1;
-  }
- 
-  return index;
+    int index = 0;
+    if (c >= 'A' && c <= 'Z'){
+        index = c - 'A';
+    }
+    else if (c >= '0' && c <= '9'){
+        index = 26 + c - '0';
+    }
+    else if (c == '!'){
+        index = 36;
+    }
+    else if (c == ':'){
+        index = 37;
+    }
+    else if (c == '/'){
+        index = 38;
+    }
+    else{
+        index = -1;
+    }
+    return index;
 };
  
+//Fonction qui appelle ecrireLettre jsuqu'à ce que le mot soit écrit complètement
+/** 
+ * @brief Affiche un mot complet sur la matrice LED en utilisant la table de caractères définie.
+ *
+ * @details Nom de la fonction : ecrireMot
+ * @param const char *mot, int xDepart, int yDepart, uint32_t couleur
+ * @return void
+ */
 void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur){
-  for (int i = 0; mot[i] != '\0'; i++)
-  {
-    char lettre = mot[i];
-    int index = trouverIndexAlphabet(lettre);
-    if (index != -1)
-    {
-      ecrireLettre(alphabet[index], (xDepart + i * largeurLettre), yDepart, couleur);
+    for (int i = 0; mot[i] != '\0'; i++){
+        char lettre = mot[i];
+        int index = trouverIndexAlphabet(lettre);
+        if (index != -1){
+            ecrireLettre(alphabet[index], (xDepart + i * largeurLettre), yDepart, couleur);
+        }
     }
-  }
 }
  
+//Retourne la longueur du mot
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : longueurMot
+ * @param const char *mot
+ * @return int
+ */
 int longueurMot(const char *mot){
-  int longueur = 0;
-  while (mot[longueur] != '\0')
-  {
-    longueur++;
-  }
-  return longueur;
-}
- 
-void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
-  static int x = 28;
- 
-  int largeurMot = longueurMot(mot) * 4;
- 
-  ecrireMot(mot, x, yDepart, couleur);
- 
-  x--;
- 
-  if (x < -largeurMot)
-  {
-    x = 28;
-  }
+    int longueur = 0;
+    while (mot[longueur] != '\0'){
+        longueur++;
+    }
+    return longueur;
 }
 
+//Fait défiler un mot horizontalement sur l'affichage
+/** 
+ * @brief Fait défiler horizontalement un texte sur la matrice LED.
+ *
+ * @details Nom de la fonction : defilerTexte
+ * @param const char *mot, int yDepart, uint32_t couleur
+ * @return void
+ */
+void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
+    static int x = 28;
+    int largeurMot = longueurMot(mot) * 4;
+    ecrireMot(mot, x, yDepart, couleur);
+    x--;
+    if (x < -largeurMot){
+        x = 28;
+    }
+}
+
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : TaskRetroUI
+ * @param void *pvParameters
+ * @return void
+ */
 void TaskRetroUI(void *pvParameters){
     (void) pvParameters;
     LedColor oldColor = -1;
@@ -1680,6 +1826,14 @@ void TaskRetroUI(void *pvParameters){
     }
 }
 
+//Affichage de l'écran d'accueil, "GROCHET" + bandes de couleurs. Les bandes de couleur défilent de 1 entre chaque appel de fonction
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranAccueil
+ * @param Aucun paramètre
+ * @return void
+ */
 void EcranAccueil(){
     static int decalage = 0;
     pixels.clear();
@@ -1695,11 +1849,18 @@ void EcranAccueil(){
 
     ecrireMot("GROCHET", 0, 4, pixels.Color(10, 40, 8));
     pixels.show();
-    //vTaskDelay(pdMS_TO_TICKS(200));
     decalage++;
     if (decalage == 3) decalage = 0;
 }
 
+//Affichage de l'écran perdant: "Meilleure chance la prochaine fois" + petits "x" rouges
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranPerdant
+ * @param Aucun paramètre
+ * @return void
+ */
 void EcranPerdant(){
     int largeurMot = longueurMot("MEILLEURE CHANCE LA PROCHAINE FOIS") * 4;
     for (int i = 28; i > -(largeurMot); i--){
@@ -1727,6 +1888,14 @@ void EcranPerdant(){
     }
 }
 
+//Affichage de l'écran gagnant: "Bravo!" + petits coeurs rose.
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranGagnant
+ * @param Aucun paramètre
+ * @return void
+ */
 void EcranGagnant(){
     static bool afficher = true;
     pixels.clear();
@@ -1777,6 +1946,14 @@ void EcranGagnant(){
     pixels.show();
 }
 
+//Affichage de l'écran de difficulté, "Choix difficulté" qui défile et la difficulté actuelle affichée, réponse aux boutons droite/gauche aussi
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : EcranDiff
+ * @param Aucun paramètre
+ * @return void
+ */
 void EcranDiff(){
     static bool prevLeft = false;
     static bool prevRight = false;
@@ -1829,71 +2006,87 @@ void EcranDiff(){
     pixels.show();
 }
 
+//----------------------------
+// LED Strips
+//----------------------------
+
+//Réinitialise les LED des coordonnées envoyées
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : reinit_LED
+ * @param int debut, int fin
+ * @return void
+ */
 void reinit_LED(int debut, int fin){
-
-  for(int i = debut; i<fin; i++){
-    pixels_LED.setPixelColor(i, pixels_LED.Color(0,0,0));
-  }
-
+    for(int i = debut; i<fin; i++){
+        pixels_LED.setPixelColor(i, pixels_LED.Color(0,0,0));
+    }
 }
 
-//La couleur vient de l'utilisateur
-void eclairage_int_boite(const uint8_t *RGB){
-  
-  reinit_LED(OFFSET_LED_INT, n_LED_total);
-
-  for(int i = OFFSET_LED_INT; i < n_LED_total; i++){
-
-    pixels_LED.setPixelColor(i, pixels_LED.Color(RGB[0], RGB[1], RGB[2]));
-  
-  }
-  
-  pixels_LED.show();
-
+// Allume les leds de l'intérieur de la machine selon la couleur
+/** 
+ * @brief Allume les LEDs internes de la machine avec une couleur spécifiée.
+ *
+ * @details Nom de la fonction : eclairage_int_boite
+ * @param const uint8_t *RGB
+ * @return void
+ */
+void eclairage_int_boite(const uint8_t *RGB){ 
+    reinit_LED(OFFSET_LED_INT, n_LED_total);
+    for(int i = OFFSET_LED_INT; i < n_LED_total; i++){
+        pixels_LED.setPixelColor(i, pixels_LED.Color(RGB[0], RGB[1], RGB[2]));
+    }
+    
+    pixels_LED.show();
 };
 
+//Allume les leds verticales du devant de la machine  (motif qui se décale à chaque appel)
+/** 
+ * @brief Anime les LEDs externes avec un motif dynamique défilant.
+ *
+ * @details Nom de la fonction : eclairage_LED_ext
+ * @param Aucun paramètre
+ * @return void
+ */
 void eclairage_LED_ext(){
 
-  static int decalage = 0;
-  int longueur = NUMPIXELS_BANDE * 2;
+    static int decalage = 0;
+    int longueur = NUMPIXELS_BANDE * 2;
 
-  //Réinitialisation des LEDs extérieures
-  reinit_LED(OFFSET_LED_GAUCHE, OFFSET_LED_COMPTEUR -1);
-  reinit_LED(OFFSET_LED_DROIT, OFFSET_LED_INT -1);
+    //Réinitialisation des LEDs extérieures
+    reinit_LED(OFFSET_LED_GAUCHE, OFFSET_LED_COMPTEUR -1);
+    reinit_LED(OFFSET_LED_DROIT, OFFSET_LED_INT -1);
 
-  for (int i = 0; i < longueur; i++)
-  {
-    int couleur = (i + decalage) % 3;
+    for (int i = 0; i < longueur; i++)
+    {
+        int couleur = (i + decalage) % 3;
+        uint32_t color;
 
-    uint32_t color;
-
-    if(couleur == 0){
-
-      color = pixels_LED.Color(ROSE_l[0], ROSE_l[1], ROSE_l[2]);
-
+        if(couleur == 0){
+            color = pixels_LED.Color(ROSE_l[0], ROSE_l[1], ROSE_l[2]);
+        }
+        else if(couleur == 1){
+            color = pixels_LED.Color(ORANGE_l[0], ORANGE_l[1], ORANGE_l[2]);
+        }
+        else{
+            color = pixels_LED.Color(BLEU_l[0], BLEU_l[1], BLEU_l[2]);
+        }
+        pixels_LED.setPixelColor(OFFSET_LED_GAUCHE + i, color);  
+        pixels_LED.setPixelColor(OFFSET_LED_DROIT + i, color);
     }
-    else if(couleur == 1){
-
-      color = pixels_LED.Color(ORANGE_l[0], ORANGE_l[1], ORANGE_l[2]);
-
-    }
-    else{
-
-      color = pixels_LED.Color(BLEU_l[0], BLEU_l[1], BLEU_l[2]);
-
-    }
-
-    pixels_LED.setPixelColor(OFFSET_LED_GAUCHE + i, color);
-    
-    pixels_LED.setPixelColor(OFFSET_LED_DROIT + i, color);
-  }
-
-  pixels_LED.show();
-  delay(100);
-
-  decalage = (decalage + 1) % 3;
+    pixels_LED.show();
+    decalage = (decalage + 1) % 3;
 };
 
+//Eteindre les leds
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : eteindreCompteur
+ * @param Aucun paramètre
+ * @return void
+ */
 void eteindreCompteur(){
     for (int i = 0; i < n_LED_compteur; i++) {
 
@@ -1902,6 +2095,13 @@ void eteindreCompteur(){
     pixels_LED.show();
 }
 
+/** 
+ * @brief Fonction utilitaire du système embarqué.
+ *
+ * @details Nom de la fonction : allumerCompteur
+ * @param Aucun paramètre
+ * @return void
+ */
 void allumerCompteur(){
     for (int i = 0; i < n_LED_compteur; i++) {
       pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, pixels_LED.Color(VERT_l[0], VERT_l[1], VERT_l[2]));
@@ -1909,6 +2109,13 @@ void allumerCompteur(){
     pixels_LED.show();
 }
 
+/** 
+ * @brief Calcule une couleur RGB en fonction d'un ratio (transition du vert vers le rouge en passant par le jaune).
+ *
+ * @details Nom de la fonction : gradient_couleur
+ * @param float ratio
+ * @return uint32_t
+ */
 uint32_t gradient_couleur(float ratio){
 
   ratio = constrain(ratio, 0.0f, 1.0f);
@@ -1928,13 +2135,15 @@ uint32_t gradient_couleur(float ratio){
     g = JAUNE_l[1] + ratio_rouge * (ROUGE_l[1] - JAUNE_l[1]);
 
   }
-
   return pixels_LED.Color(int(r), int(g), 0);
 
 }
 
 //TODO
+//test limites XY et switch
 
-//Limit switches in CoreXY
+//Test force pince
 
-//Ecran affichage parametre pour UI retro
+//Test latence
+
+//enlever les suspend task
