@@ -1,0 +1,587 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino: Référence du fichier src/test_ISR.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Fonctions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
+  <div class="headertitle"><div class="title">Référence du fichier test_ISR.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;Arduino.h&gt;</code><br />
+<code>#include &lt;Arduino_FreeRTOS.h&gt;</code><br />
+<code>#include &quot;event_groups.h&quot;</code><br />
+</div>
+<p><a href="test___i_s_r_8cpp_source.html">Aller au code source de ce fichier.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a81dad6c86576443fc7f5516423269ee3" id="r_a81dad6c86576443fc7f5516423269ee3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>&#160;&#160;&#160;22</td></tr>
+<tr class="separator:a81dad6c86576443fc7f5516423269ee3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a411392eb907bf9f697c1e5301402d8fd" id="r_a411392eb907bf9f697c1e5301402d8fd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>&#160;&#160;&#160;25</td></tr>
+<tr class="separator:a411392eb907bf9f697c1e5301402d8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7510b9984d34b3931c41b69c66606976" id="r_a7510b9984d34b3931c41b69c66606976"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>&#160;&#160;&#160;24</td></tr>
+<tr class="separator:a7510b9984d34b3931c41b69c66606976"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add3ef655c4e3d5bbf7cd9d5bf289125e" id="r_add3ef655c4e3d5bbf7cd9d5bf289125e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>&#160;&#160;&#160;23</td></tr>
+<tr class="separator:add3ef655c4e3d5bbf7cd9d5bf289125e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad887f97e685e75fe91752dd398a4ca18" id="r_ad887f97e685e75fe91752dd398a4ca18"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>&#160;&#160;&#160;26</td></tr>
+<tr class="separator:ad887f97e685e75fe91752dd398a4ca18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ad37f4d1c3053dbf4e4c33a33000d30" id="r_a8ad37f4d1c3053dbf4e4c33a33000d30"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ad37f4d1c3053dbf4e4c33a33000d30">PIN_BTN_INTERRUPT</a>&#160;&#160;&#160;3</td></tr>
+<tr class="separator:a8ad37f4d1c3053dbf4e4c33a33000d30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6f52aab127c39a3aae81f40a1b9937f5" id="r_a6f52aab127c39a3aae81f40a1b9937f5"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6f52aab127c39a3aae81f40a1b9937f5">EVT_BTN_OK</a>&#160;&#160;&#160;(1 &lt;&lt; 0)</td></tr>
+<tr class="separator:a6f52aab127c39a3aae81f40a1b9937f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad39023891d962365b19024b1cccf75a1" id="r_ad39023891d962365b19024b1cccf75a1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a>&#160;&#160;&#160;(1 &lt;&lt; 1)</td></tr>
+<tr class="separator:ad39023891d962365b19024b1cccf75a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4f2ba49454effd81756918349ee479b6" id="r_a4f2ba49454effd81756918349ee479b6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a>&#160;&#160;&#160;(1 &lt;&lt; 2)</td></tr>
+<tr class="separator:a4f2ba49454effd81756918349ee479b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7a961bd77ae2f7465269a7314fc00884" id="r_a7a961bd77ae2f7465269a7314fc00884"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a>&#160;&#160;&#160;(1 &lt;&lt; 3)</td></tr>
+<tr class="separator:a7a961bd77ae2f7465269a7314fc00884"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac265ca16bbcd7126dd561866de23ec87" id="r_ac265ca16bbcd7126dd561866de23ec87"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a>&#160;&#160;&#160;(1 &lt;&lt; 4)</td></tr>
+<tr class="separator:ac265ca16bbcd7126dd561866de23ec87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add56dedbc09f82766e39588e01978e7d" id="r_add56dedbc09f82766e39588e01978e7d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add56dedbc09f82766e39588e01978e7d">DEBOUNCE_MS</a>&#160;&#160;&#160;20</td></tr>
+<tr class="separator:add56dedbc09f82766e39588e01978e7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonctions</h2></td></tr>
+<tr class="memitem:a8a40f5078072c41d04ffe9dd0874ab71" id="r_a8a40f5078072c41d04ffe9dd0874ab71"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8a40f5078072c41d04ffe9dd0874ab71">NotifyBtn</a> ()</td></tr>
+<tr class="separator:a8a40f5078072c41d04ffe9dd0874ab71"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed801e03a5c22f316eab836202f884ea" id="r_aed801e03a5c22f316eab836202f884ea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aed801e03a5c22f316eab836202f884ea">TaskMonitor</a> (void *pvParameters)</td></tr>
+<tr class="separator:aed801e03a5c22f316eab836202f884ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fc01d736fe50cf5b977f755b675f11d" id="r_a4fc01d736fe50cf5b977f755b675f11d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fc01d736fe50cf5b977f755b675f11d">setup</a> ()</td></tr>
+<tr class="separator:a4fc01d736fe50cf5b977f755b675f11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe461d27b9c48d5921c00d521181f12f" id="r_afe461d27b9c48d5921c00d521181f12f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe461d27b9c48d5921c00d521181f12f">loop</a> ()</td></tr>
+<tr class="separator:afe461d27b9c48d5921c00d521181f12f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a50c2f90c0464122f638390cb3b47202b" id="r_a50c2f90c0464122f638390cb3b47202b"><td class="memItemLeft" align="right" valign="top">volatile TickType_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50c2f90c0464122f638390cb3b47202b">lastBtnInterrupt</a> = 0</td></tr>
+<tr class="separator:a50c2f90c0464122f638390cb3b47202b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac09b3d9f8dc28971a99a3a8eee7f5c99" id="r_ac09b3d9f8dc28971a99a3a8eee7f5c99"><td class="memItemLeft" align="right" valign="top">EventGroupHandle_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a></td></tr>
+<tr class="separator:ac09b3d9f8dc28971a99a3a8eee7f5c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Documentation des macros</h2>
+<a id="a411392eb907bf9f697c1e5301402d8fd" name="a411392eb907bf9f697c1e5301402d8fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a411392eb907bf9f697c1e5301402d8fd">&#9670;&#160;</a></span>BTN_PIN_DOWN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_DOWN&#160;&#160;&#160;25</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00007">7</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a7510b9984d34b3931c41b69c66606976" name="a7510b9984d34b3931c41b69c66606976"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7510b9984d34b3931c41b69c66606976">&#9670;&#160;</a></span>BTN_PIN_LEFT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_LEFT&#160;&#160;&#160;24</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00008">8</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<a id="ad887f97e685e75fe91752dd398a4ca18" name="ad887f97e685e75fe91752dd398a4ca18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad887f97e685e75fe91752dd398a4ca18">&#9670;&#160;</a></span>BTN_PIN_OK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_OK&#160;&#160;&#160;26</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00010">10</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<a id="add3ef655c4e3d5bbf7cd9d5bf289125e" name="add3ef655c4e3d5bbf7cd9d5bf289125e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add3ef655c4e3d5bbf7cd9d5bf289125e">&#9670;&#160;</a></span>BTN_PIN_RIGHT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_RIGHT&#160;&#160;&#160;23</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00009">9</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a81dad6c86576443fc7f5516423269ee3" name="a81dad6c86576443fc7f5516423269ee3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a81dad6c86576443fc7f5516423269ee3">&#9670;&#160;</a></span>BTN_PIN_UP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_UP&#160;&#160;&#160;22</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00006">6</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<a id="add56dedbc09f82766e39588e01978e7d" name="add56dedbc09f82766e39588e01978e7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add56dedbc09f82766e39588e01978e7d">&#9670;&#160;</a></span>DEBOUNCE_MS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DEBOUNCE_MS&#160;&#160;&#160;20</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00022">22</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4f2ba49454effd81756918349ee479b6" name="a4f2ba49454effd81756918349ee479b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4f2ba49454effd81756918349ee479b6">&#9670;&#160;</a></span>EVT_BTN_DOWN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_BTN_DOWN&#160;&#160;&#160;(1 &lt;&lt; 2)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00017">17</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="a7a961bd77ae2f7465269a7314fc00884" name="a7a961bd77ae2f7465269a7314fc00884"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7a961bd77ae2f7465269a7314fc00884">&#9670;&#160;</a></span>EVT_BTN_LEFT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_BTN_LEFT&#160;&#160;&#160;(1 &lt;&lt; 3)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00018">18</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="a6f52aab127c39a3aae81f40a1b9937f5" name="a6f52aab127c39a3aae81f40a1b9937f5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6f52aab127c39a3aae81f40a1b9937f5">&#9670;&#160;</a></span>EVT_BTN_OK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_BTN_OK&#160;&#160;&#160;(1 &lt;&lt; 0)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00015">15</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="ac265ca16bbcd7126dd561866de23ec87" name="ac265ca16bbcd7126dd561866de23ec87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac265ca16bbcd7126dd561866de23ec87">&#9670;&#160;</a></span>EVT_BTN_RIGHT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_BTN_RIGHT&#160;&#160;&#160;(1 &lt;&lt; 4)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00019">19</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="ad39023891d962365b19024b1cccf75a1" name="ad39023891d962365b19024b1cccf75a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad39023891d962365b19024b1cccf75a1">&#9670;&#160;</a></span>EVT_BTN_UP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_BTN_UP&#160;&#160;&#160;(1 &lt;&lt; 1)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00016">16</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="a8ad37f4d1c3053dbf4e4c33a33000d30" name="a8ad37f4d1c3053dbf4e4c33a33000d30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ad37f4d1c3053dbf4e4c33a33000d30">&#9670;&#160;</a></span>PIN_BTN_INTERRUPT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PIN_BTN_INTERRUPT&#160;&#160;&#160;3</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00012">12</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des fonctions</h2>
+<a id="afe461d27b9c48d5921c00d521181f12f" name="afe461d27b9c48d5921c00d521181f12f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe461d27b9c48d5921c00d521181f12f">&#9670;&#160;</a></span>loop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void loop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00109">109</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  109</span>            {</div>
+<div class="line"><span class="lineno">  110</span>  <span class="comment">// RTOS handles everything</span></div>
+<div class="line"><span class="lineno">  111</span>}</div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a8a40f5078072c41d04ffe9dd0874ab71" name="a8a40f5078072c41d04ffe9dd0874ab71"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a40f5078072c41d04ffe9dd0874ab71">&#9670;&#160;</a></span>NotifyBtn()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void NotifyBtn </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00029">29</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   29</span>                 {</div>
+<div class="line"><span class="lineno">   30</span>    BaseType_t xHigherPriorityTaskWoken = pdFALSE;</div>
+<div class="line"><span class="lineno">   31</span> </div>
+<div class="line"><span class="lineno">   32</span>    <span class="keywordtype">bool</span> up_state    = digitalRead(<a class="code hl_define" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>) == LOW;</div>
+<div class="line"><span class="lineno">   33</span>    <span class="keywordtype">bool</span> down_state  = digitalRead(<a class="code hl_define" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>) == LOW;</div>
+<div class="line"><span class="lineno">   34</span>    <span class="keywordtype">bool</span> left_state  = digitalRead(<a class="code hl_define" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>) == LOW;</div>
+<div class="line"><span class="lineno">   35</span>    <span class="keywordtype">bool</span> right_state = digitalRead(<a class="code hl_define" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>) == LOW;</div>
+<div class="line"><span class="lineno">   36</span>    <span class="keywordtype">bool</span> ok_state    = digitalRead(<a class="code hl_define" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>) == LOW;</div>
+<div class="line"><span class="lineno">   37</span> </div>
+<div class="line"><span class="lineno">   38</span>    <span class="comment">// OK overrides everything</span></div>
+<div class="line"><span class="lineno">   39</span>    <span class="keywordflow">if</span> (ok_state) {</div>
+<div class="line"><span class="lineno">   40</span>        xEventGroupSetBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#a6f52aab127c39a3aae81f40a1b9937f5">EVT_BTN_OK</a>, &amp;xHigherPriorityTaskWoken);</div>
+<div class="line"><span class="lineno">   41</span>        xEventGroupClearBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a>   | <a class="code hl_define" href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a> | <a class="code hl_define" href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a> | <a class="code hl_define" href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a>);</div>
+<div class="line"><span class="lineno">   42</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">   43</span>        xEventGroupClearBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#a6f52aab127c39a3aae81f40a1b9937f5">EVT_BTN_OK</a>);</div>
+<div class="line"><span class="lineno">   44</span> </div>
+<div class="line"><span class="lineno">   45</span>        <span class="keywordflow">if</span> (up_state)    xEventGroupSetBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a>, &amp;xHigherPriorityTaskWoken);</div>
+<div class="line"><span class="lineno">   46</span>        <span class="keywordflow">else</span>             xEventGroupClearBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a>);</div>
+<div class="line"><span class="lineno">   47</span> </div>
+<div class="line"><span class="lineno">   48</span>        <span class="keywordflow">if</span> (down_state)  xEventGroupSetBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a>, &amp;xHigherPriorityTaskWoken);</div>
+<div class="line"><span class="lineno">   49</span>        <span class="keywordflow">else</span>             xEventGroupClearBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a>);</div>
+<div class="line"><span class="lineno">   50</span> </div>
+<div class="line"><span class="lineno">   51</span>        <span class="keywordflow">if</span> (left_state)  xEventGroupSetBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a>, &amp;xHigherPriorityTaskWoken);</div>
+<div class="line"><span class="lineno">   52</span>        <span class="keywordflow">else</span>             xEventGroupClearBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a>);</div>
+<div class="line"><span class="lineno">   53</span> </div>
+<div class="line"><span class="lineno">   54</span>        <span class="keywordflow">if</span> (right_state) xEventGroupSetBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a>, &amp;xHigherPriorityTaskWoken);</div>
+<div class="line"><span class="lineno">   55</span>        <span class="keywordflow">else</span>             xEventGroupClearBitsFromISR(<a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>, <a class="code hl_define" href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a>);</div>
+<div class="line"><span class="lineno">   56</span>    }</div>
+<div class="line"><span class="lineno">   57</span> </div>
+<div class="line"><span class="lineno">   58</span>    <span class="keywordflow">if</span> (xHigherPriorityTaskWoken) {</div>
+<div class="line"><span class="lineno">   59</span>        portYIELD_FROM_ISR();</div>
+<div class="line"><span class="lineno">   60</span>    }</div>
+<div class="line"><span class="lineno">   61</span>}</div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a411392eb907bf9f697c1e5301402d8fd"><div class="ttname"><a href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a></div><div class="ttdeci">#define BTN_PIN_DOWN</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00007">test_ISR.cpp:7</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a4f2ba49454effd81756918349ee479b6"><div class="ttname"><a href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a></div><div class="ttdeci">#define EVT_BTN_DOWN</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00017">test_ISR.cpp:17</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a6f52aab127c39a3aae81f40a1b9937f5"><div class="ttname"><a href="#a6f52aab127c39a3aae81f40a1b9937f5">EVT_BTN_OK</a></div><div class="ttdeci">#define EVT_BTN_OK</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00015">test_ISR.cpp:15</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a7510b9984d34b3931c41b69c66606976"><div class="ttname"><a href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a></div><div class="ttdeci">#define BTN_PIN_LEFT</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00008">test_ISR.cpp:8</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a7a961bd77ae2f7465269a7314fc00884"><div class="ttname"><a href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a></div><div class="ttdeci">#define EVT_BTN_LEFT</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00018">test_ISR.cpp:18</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a81dad6c86576443fc7f5516423269ee3"><div class="ttname"><a href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a></div><div class="ttdeci">#define BTN_PIN_UP</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00006">test_ISR.cpp:6</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_ac09b3d9f8dc28971a99a3a8eee7f5c99"><div class="ttname"><a href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a></div><div class="ttdeci">EventGroupHandle_t inputEventGroup</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00026">test_ISR.cpp:26</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_ac265ca16bbcd7126dd561866de23ec87"><div class="ttname"><a href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a></div><div class="ttdeci">#define EVT_BTN_RIGHT</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00019">test_ISR.cpp:19</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_ad39023891d962365b19024b1cccf75a1"><div class="ttname"><a href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a></div><div class="ttdeci">#define EVT_BTN_UP</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00016">test_ISR.cpp:16</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_ad887f97e685e75fe91752dd398a4ca18"><div class="ttname"><a href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a></div><div class="ttdeci">#define BTN_PIN_OK</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00010">test_ISR.cpp:10</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_add3ef655c4e3d5bbf7cd9d5bf289125e"><div class="ttname"><a href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a></div><div class="ttdeci">#define BTN_PIN_RIGHT</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00009">test_ISR.cpp:9</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="test___i_s_r_8cpp_source.html#l00007">BTN_PIN_DOWN</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00008">BTN_PIN_LEFT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00010">BTN_PIN_OK</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00009">BTN_PIN_RIGHT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00006">BTN_PIN_UP</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00017">EVT_BTN_DOWN</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00018">EVT_BTN_LEFT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00015">EVT_BTN_OK</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00019">EVT_BTN_RIGHT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00016">EVT_BTN_UP</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00026">inputEventGroup</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a4fc01d736fe50cf5b977f755b675f11d" name="a4fc01d736fe50cf5b977f755b675f11d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4fc01d736fe50cf5b977f755b675f11d">&#9670;&#160;</a></span>setup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void setup </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00088">88</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   88</span>             {</div>
+<div class="line"><span class="lineno">   89</span>  Serial.begin(115200);</div>
+<div class="line"><span class="lineno">   90</span>  delay(1000);</div>
+<div class="line"><span class="lineno">   91</span> </div>
+<div class="line"><span class="lineno">   92</span>  <a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a> = xEventGroupCreate();</div>
+<div class="line"><span class="lineno">   93</span> </div>
+<div class="line"><span class="lineno">   94</span>  pinMode(<a class="code hl_define" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   95</span>  pinMode(<a class="code hl_define" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   96</span>  pinMode(<a class="code hl_define" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   97</span>  pinMode(<a class="code hl_define" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   98</span>  pinMode(<a class="code hl_define" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   99</span> </div>
+<div class="line"><span class="lineno">  100</span>  pinMode(<a class="code hl_define" href="#a8ad37f4d1c3053dbf4e4c33a33000d30">PIN_BTN_INTERRUPT</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">  101</span> </div>
+<div class="line"><span class="lineno">  102</span>  attachInterrupt(digitalPinToInterrupt(<a class="code hl_define" href="#a8ad37f4d1c3053dbf4e4c33a33000d30">PIN_BTN_INTERRUPT</a>), <a class="code hl_function" href="#a8a40f5078072c41d04ffe9dd0874ab71">NotifyBtn</a>, FALLING);</div>
+<div class="line"><span class="lineno">  103</span> </div>
+<div class="line"><span class="lineno">  104</span>  xTaskCreate(<a class="code hl_function" href="#aed801e03a5c22f316eab836202f884ea">TaskMonitor</a>, <span class="stringliteral">&quot;Monitor&quot;</span>, 256, NULL, 1, NULL);</div>
+<div class="line"><span class="lineno">  105</span> </div>
+<div class="line"><span class="lineno">  106</span>  Serial.println(<span class="stringliteral">&quot;FULL ISR TEST READY&quot;</span>);</div>
+<div class="line"><span class="lineno">  107</span>}</div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a8a40f5078072c41d04ffe9dd0874ab71"><div class="ttname"><a href="#a8a40f5078072c41d04ffe9dd0874ab71">NotifyBtn</a></div><div class="ttdeci">void NotifyBtn()</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00029">test_ISR.cpp:29</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_a8ad37f4d1c3053dbf4e4c33a33000d30"><div class="ttname"><a href="#a8ad37f4d1c3053dbf4e4c33a33000d30">PIN_BTN_INTERRUPT</a></div><div class="ttdeci">#define PIN_BTN_INTERRUPT</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00012">test_ISR.cpp:12</a></div></div>
+<div class="ttc" id="atest___i_s_r_8cpp_html_aed801e03a5c22f316eab836202f884ea"><div class="ttname"><a href="#aed801e03a5c22f316eab836202f884ea">TaskMonitor</a></div><div class="ttdeci">void TaskMonitor(void *pvParameters)</div><div class="ttdef"><b>Definition</b> <a href="test___i_s_r_8cpp_source.html#l00064">test_ISR.cpp:64</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="test___i_s_r_8cpp_source.html#l00007">BTN_PIN_DOWN</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00008">BTN_PIN_LEFT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00010">BTN_PIN_OK</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00009">BTN_PIN_RIGHT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00006">BTN_PIN_UP</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00026">inputEventGroup</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00012">PIN_BTN_INTERRUPT</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="aed801e03a5c22f316eab836202f884ea" name="aed801e03a5c22f316eab836202f884ea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed801e03a5c22f316eab836202f884ea">&#9670;&#160;</a></span>TaskMonitor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TaskMonitor </td>
+          <td>(</td>
+          <td class="paramtype">void *</td>          <td class="paramname"><span class="paramname"><em>pvParameters</em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00064">64</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   64</span>                                     {</div>
+<div class="line"><span class="lineno">   65</span>  (void) pvParameters;</div>
+<div class="line"><span class="lineno">   66</span> </div>
+<div class="line"><span class="lineno">   67</span>  <span class="keywordflow">for</span> (;;) {</div>
+<div class="line"><span class="lineno">   68</span>    EventBits_t bits = xEventGroupWaitBits(</div>
+<div class="line"><span class="lineno">   69</span>      <a class="code hl_variable" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a>,</div>
+<div class="line"><span class="lineno">   70</span>      <a class="code hl_define" href="#a6f52aab127c39a3aae81f40a1b9937f5">EVT_BTN_OK</a> | <a class="code hl_define" href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a> | <a class="code hl_define" href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a> | <a class="code hl_define" href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a> | <a class="code hl_define" href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a>,</div>
+<div class="line"><span class="lineno">   71</span>      pdTRUE,     <span class="comment">// clear on exit</span></div>
+<div class="line"><span class="lineno">   72</span>      pdFALSE,</div>
+<div class="line"><span class="lineno">   73</span>      portMAX_DELAY</div>
+<div class="line"><span class="lineno">   74</span>    );</div>
+<div class="line"><span class="lineno">   75</span> </div>
+<div class="line"><span class="lineno">   76</span>    Serial.print(<span class="stringliteral">&quot;EVENT RECEIVED: &quot;</span>);</div>
+<div class="line"><span class="lineno">   77</span> </div>
+<div class="line"><span class="lineno">   78</span>    <span class="keywordflow">if</span> (bits &amp; <a class="code hl_define" href="#a6f52aab127c39a3aae81f40a1b9937f5">EVT_BTN_OK</a>)    Serial.print(<span class="stringliteral">&quot;OK &quot;</span>);</div>
+<div class="line"><span class="lineno">   79</span>    <span class="keywordflow">if</span> (bits &amp; <a class="code hl_define" href="#ad39023891d962365b19024b1cccf75a1">EVT_BTN_UP</a>)    Serial.print(<span class="stringliteral">&quot;UP &quot;</span>);</div>
+<div class="line"><span class="lineno">   80</span>    <span class="keywordflow">if</span> (bits &amp; <a class="code hl_define" href="#a4f2ba49454effd81756918349ee479b6">EVT_BTN_DOWN</a>)  Serial.print(<span class="stringliteral">&quot;DOWN &quot;</span>);</div>
+<div class="line"><span class="lineno">   81</span>    <span class="keywordflow">if</span> (bits &amp; <a class="code hl_define" href="#a7a961bd77ae2f7465269a7314fc00884">EVT_BTN_LEFT</a>)  Serial.print(<span class="stringliteral">&quot;LEFT &quot;</span>);</div>
+<div class="line"><span class="lineno">   82</span>    <span class="keywordflow">if</span> (bits &amp; <a class="code hl_define" href="#ac265ca16bbcd7126dd561866de23ec87">EVT_BTN_RIGHT</a>) Serial.print(<span class="stringliteral">&quot;RIGHT &quot;</span>);</div>
+<div class="line"><span class="lineno">   83</span> </div>
+<div class="line"><span class="lineno">   84</span>    Serial.println();</div>
+<div class="line"><span class="lineno">   85</span>  }</div>
+<div class="line"><span class="lineno">   86</span>}</div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="test___i_s_r_8cpp_source.html#l00017">EVT_BTN_DOWN</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00018">EVT_BTN_LEFT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00015">EVT_BTN_OK</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00019">EVT_BTN_RIGHT</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00016">EVT_BTN_UP</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00026">inputEventGroup</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des variables</h2>
+<a id="ac09b3d9f8dc28971a99a3a8eee7f5c99" name="ac09b3d9f8dc28971a99a3a8eee7f5c99"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">&#9670;&#160;</a></span>inputEventGroup</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">EventGroupHandle_t inputEventGroup</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00026">26</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___i_s_r_8cpp_source.html#l00029">NotifyBtn()</a>, <a class="el" href="test___i_s_r_8cpp_source.html#l00088">setup()</a>, et <a class="el" href="test___i_s_r_8cpp_source.html#l00064">TaskMonitor()</a>.</p>
+
+</div>
+</div>
+<a id="a50c2f90c0464122f638390cb3b47202b" name="a50c2f90c0464122f638390cb3b47202b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a50c2f90c0464122f638390cb3b47202b">&#9670;&#160;</a></span>lastBtnInterrupt</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">volatile TickType_t lastBtnInterrupt = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___i_s_r_8cpp_source.html#l00024">24</a> du fichier <a class="el" href="test___i_s_r_8cpp_source.html">test_ISR.cpp</a>.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>

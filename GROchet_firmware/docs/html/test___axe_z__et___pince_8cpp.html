@@ -1,0 +1,370 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino: Référence du fichier src/test_AxeZ_et_Pince.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Fonctions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
+  <div class="headertitle"><div class="title">Référence du fichier test_AxeZ_et_Pince.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;Arduino.h&gt;</code><br />
+<code>#include &lt;AccelStepper.h&gt;</code><br />
+</div>
+<p><a href="test___axe_z__et___pince_8cpp_source.html">Aller au code source de ce fichier.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a17376c91bf4cd5fa69a3ddc855c5f4f6" id="r_a17376c91bf4cd5fa69a3ddc855c5f4f6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17376c91bf4cd5fa69a3ddc855c5f4f6">FULLSTEP</a>&#160;&#160;&#160;4</td></tr>
+<tr class="separator:a17376c91bf4cd5fa69a3ddc855c5f4f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c5f22b75afd01e6b1ea65cbc5a2a785" id="r_a8c5f22b75afd01e6b1ea65cbc5a2a785"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c5f22b75afd01e6b1ea65cbc5a2a785">STEPS_REV</a>&#160;&#160;&#160;4096</td></tr>
+<tr class="separator:a8c5f22b75afd01e6b1ea65cbc5a2a785"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83bf855f1f9a9a8dd21887383c1e1d74" id="r_a83bf855f1f9a9a8dd21887383c1e1d74"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>&#160;&#160;&#160;35</td></tr>
+<tr class="separator:a83bf855f1f9a9a8dd21887383c1e1d74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a952dedf38ca16835d25c084c61766535" id="r_a952dedf38ca16835d25c084c61766535"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>&#160;&#160;&#160;33</td></tr>
+<tr class="separator:a952dedf38ca16835d25c084c61766535"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1f7bfbc8949fded97e8599d36a79bcac" id="r_a1f7bfbc8949fded97e8599d36a79bcac"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>&#160;&#160;&#160;34</td></tr>
+<tr class="separator:a1f7bfbc8949fded97e8599d36a79bcac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54cf6115ea904ab9efd3eb83c7c332cd" id="r_a54cf6115ea904ab9efd3eb83c7c332cd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a>&#160;&#160;&#160;Serial2</td></tr>
+<tr class="separator:a54cf6115ea904ab9efd3eb83c7c332cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonctions</h2></td></tr>
+<tr class="memitem:a99f93fd240bf4b90d0ebf99b4a82eeaa" id="r_a99f93fd240bf4b90d0ebf99b4a82eeaa"><td class="memItemLeft" align="right" valign="top">AccelStepper&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a99f93fd240bf4b90d0ebf99b4a82eeaa">MOT_Z</a> (AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>, <a class="el" href="main__with__dynamixel_8cpp.html#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>)</td></tr>
+<tr class="separator:a99f93fd240bf4b90d0ebf99b4a82eeaa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fc01d736fe50cf5b977f755b675f11d" id="r_a4fc01d736fe50cf5b977f755b675f11d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fc01d736fe50cf5b977f755b675f11d">setup</a> ()</td></tr>
+<tr class="separator:a4fc01d736fe50cf5b977f755b675f11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe461d27b9c48d5921c00d521181f12f" id="r_afe461d27b9c48d5921c00d521181f12f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe461d27b9c48d5921c00d521181f12f">loop</a> ()</td></tr>
+<tr class="separator:afe461d27b9c48d5921c00d521181f12f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:adc6fb6ffcbec95f4b9200729215d118d" id="r_adc6fb6ffcbec95f4b9200729215d118d"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a> = 100</td></tr>
+<tr class="separator:adc6fb6ffcbec95f4b9200729215d118d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Documentation des macros</h2>
+<a id="a952dedf38ca16835d25c084c61766535" name="a952dedf38ca16835d25c084c61766535"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a952dedf38ca16835d25c084c61766535">&#9670;&#160;</a></span>DIR_PIN_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DIR_PIN_MZ&#160;&#160;&#160;33</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00010">10</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a83bf855f1f9a9a8dd21887383c1e1d74" name="a83bf855f1f9a9a8dd21887383c1e1d74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83bf855f1f9a9a8dd21887383c1e1d74">&#9670;&#160;</a></span>EN_PIN_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EN_PIN_MZ&#160;&#160;&#160;35</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00009">9</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00020">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a17376c91bf4cd5fa69a3ddc855c5f4f6" name="a17376c91bf4cd5fa69a3ddc855c5f4f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17376c91bf4cd5fa69a3ddc855c5f4f6">&#9670;&#160;</a></span>FULLSTEP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define FULLSTEP&#160;&#160;&#160;4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00005">5</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a54cf6115ea904ab9efd3eb83c7c332cd" name="a54cf6115ea904ab9efd3eb83c7c332cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a54cf6115ea904ab9efd3eb83c7c332cd">&#9670;&#160;</a></span>SerialGripper</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SerialGripper&#160;&#160;&#160;Serial2</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00013">13</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00020">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a1f7bfbc8949fded97e8599d36a79bcac" name="a1f7bfbc8949fded97e8599d36a79bcac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1f7bfbc8949fded97e8599d36a79bcac">&#9670;&#160;</a></span>STEP_PIN_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STEP_PIN_MZ&#160;&#160;&#160;34</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00011">11</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8c5f22b75afd01e6b1ea65cbc5a2a785" name="a8c5f22b75afd01e6b1ea65cbc5a2a785"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8c5f22b75afd01e6b1ea65cbc5a2a785">&#9670;&#160;</a></span>STEPS_REV</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STEPS_REV&#160;&#160;&#160;4096</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00006">6</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des fonctions</h2>
+<a id="afe461d27b9c48d5921c00d521181f12f" name="afe461d27b9c48d5921c00d521181f12f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe461d27b9c48d5921c00d521181f12f">&#9670;&#160;</a></span>loop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void loop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00035">35</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   35</span>            {</div>
+<div class="line"><span class="lineno">   36</span>  <span class="keywordflow">if</span> (Serial.available()) {</div>
+<div class="line"><span class="lineno">   37</span>    <span class="keywordtype">char</span> c = Serial.read();</div>
+<div class="line"><span class="lineno">   38</span> </div>
+<div class="line"><span class="lineno">   39</span>    <span class="comment">// Check which key was pressed</span></div>
+<div class="line"><span class="lineno">   40</span>    <span class="keywordflow">if</span> (c == <span class="charliteral">&#39;w&#39;</span>) {          <span class="comment">// Up arrow alternative</span></div>
+<div class="line"><span class="lineno">   41</span>      <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.moveTo(<a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.currentPosition() + <a class="code hl_variable" href="#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a>);</div>
+<div class="line"><span class="lineno">   42</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (c == <span class="charliteral">&#39;s&#39;</span>) {   <span class="comment">// Down arrow alternative</span></div>
+<div class="line"><span class="lineno">   43</span>      <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.moveTo(<a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.currentPosition() - <a class="code hl_variable" href="#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a>);</div>
+<div class="line"><span class="lineno">   44</span>    }</div>
+<div class="line"><span class="lineno">   45</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (c == <span class="charliteral">&#39;x&#39;</span>) {</div>
+<div class="line"><span class="lineno">   46</span>        <a class="code hl_function" href="main__with__dynamixel_8cpp.html#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a>();</div>
+<div class="line"><span class="lineno">   47</span>    }</div>
+<div class="line"><span class="lineno">   48</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (c == <span class="charliteral">&#39; &#39;</span>){</div>
+<div class="line"><span class="lineno">   49</span>        <a class="code hl_function" href="main__with__dynamixel_8cpp.html#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a>();</div>
+<div class="line"><span class="lineno">   50</span>    }</div>
+<div class="line"><span class="lineno">   51</span>  }</div>
+<div class="line"><span class="lineno">   52</span> </div>
+<div class="line"><span class="lineno">   53</span>  <span class="comment">// Keep motor running towards target</span></div>
+<div class="line"><span class="lineno">   54</span>  <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.run();</div>
+<div class="line"><span class="lineno">   55</span>}</div>
+<div class="ttc" id="amain__with__dynamixel_8cpp_html_a6a965dbf78c0db45d0e036438655f05c"><div class="ttname"><a href="main__with__dynamixel_8cpp.html#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a></div><div class="ttdeci">void fermerPince()</div><div class="ttdoc">Ferme la pince Dynamixel avec une force dépendante du niveau de difficulté.</div><div class="ttdef"><b>Definition</b> <a href="main__with__dynamixel_8cpp_source.html#l01319">main_with_dynamixel.cpp:1319</a></div></div>
+<div class="ttc" id="amain__with__dynamixel_8cpp_html_ac488621b77d6dcceeef95af389a78d4d"><div class="ttname"><a href="main__with__dynamixel_8cpp.html#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a></div><div class="ttdeci">void ouvrirPince()</div><div class="ttdoc">Ouvre complètement la pince Dynamixel.</div><div class="ttdef"><b>Definition</b> <a href="main__with__dynamixel_8cpp_source.html#l01302">main_with_dynamixel.cpp:1302</a></div></div>
+<div class="ttc" id="amain__with__dynamixel_8cpp_html_aeead6e2ab9a1779be2052b21eeb1b457"><div class="ttname"><a href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a></div><div class="ttdeci">AccelStepper MOT_Z</div><div class="ttdef"><b>Definition</b> <a href="main__with__dynamixel_8cpp_source.html#l00133">main_with_dynamixel.cpp:133</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_adc6fb6ffcbec95f4b9200729215d118d"><div class="ttname"><a href="#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a></div><div class="ttdeci">long stepIncrement</div><div class="ttdef"><b>Definition</b> <a href="test___axe_z__et___pince_8cpp_source.html#l00018">test_AxeZ_et_Pince.cpp:18</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="main__with__dynamixel_8cpp_source.html#l01319">fermerPince()</a>, <a class="el" href="main__with__dynamixel_8cpp_source.html#l00133">MOT_Z</a>, <a class="el" href="main__with__dynamixel_8cpp_source.html#l01302">ouvrirPince()</a>, et <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00018">stepIncrement</a>.</p>
+
+</div>
+</div>
+<a id="a99f93fd240bf4b90d0ebf99b4a82eeaa" name="a99f93fd240bf4b90d0ebf99b4a82eeaa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99f93fd240bf4b90d0ebf99b4a82eeaa">&#9670;&#160;</a></span>MOT_Z()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">AccelStepper MOT_Z </td>
+          <td>(</td>
+          <td class="paramtype">AccelStepper::DRIVER</td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="main__with__dynamixel_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="main__with__dynamixel_8cpp.html#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a></td>          <td class="paramname"><span class="paramname"><em></em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a4fc01d736fe50cf5b977f755b675f11d" name="a4fc01d736fe50cf5b977f755b675f11d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4fc01d736fe50cf5b977f755b675f11d">&#9670;&#160;</a></span>setup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void setup </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00020">20</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   20</span>             {</div>
+<div class="line"><span class="lineno">   21</span>  Serial.begin(115200);</div>
+<div class="line"><span class="lineno">   22</span>  <a class="code hl_define" href="#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a>.begin(9600);</div>
+<div class="line"><span class="lineno">   23</span>  delay(2000);</div>
+<div class="line"><span class="lineno">   24</span> </div>
+<div class="line"><span class="lineno">   25</span>  <span class="comment">// Moteur Z</span></div>
+<div class="line"><span class="lineno">   26</span>  pinMode(<a class="code hl_define" href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">   27</span>  digitalWrite(<a class="code hl_define" href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>, LOW); <span class="comment">// Enable motor</span></div>
+<div class="line"><span class="lineno">   28</span> </div>
+<div class="line"><span class="lineno">   29</span>  <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setMaxSpeed(4000);</div>
+<div class="line"><span class="lineno">   30</span>  <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setAcceleration(1000);</div>
+<div class="line"><span class="lineno">   31</span> </div>
+<div class="line"><span class="lineno">   32</span>  Serial.println(<span class="stringliteral">&quot;Control Z-axis with UP/DOWN arrows sent via Serial&quot;</span>);</div>
+<div class="line"><span class="lineno">   33</span>}</div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a54cf6115ea904ab9efd3eb83c7c332cd"><div class="ttname"><a href="#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a></div><div class="ttdeci">#define SerialGripper</div><div class="ttdef"><b>Definition</b> <a href="test___axe_z__et___pince_8cpp_source.html#l00013">test_AxeZ_et_Pince.cpp:13</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a83bf855f1f9a9a8dd21887383c1e1d74"><div class="ttname"><a href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a></div><div class="ttdeci">#define EN_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="test___axe_z__et___pince_8cpp_source.html#l00009">test_AxeZ_et_Pince.cpp:9</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00009">EN_PIN_MZ</a>, <a class="el" href="main__with__dynamixel_8cpp_source.html#l00133">MOT_Z</a>, et <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00013">SerialGripper</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des variables</h2>
+<a id="adc6fb6ffcbec95f4b9200729215d118d" name="adc6fb6ffcbec95f4b9200729215d118d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adc6fb6ffcbec95f4b9200729215d118d">&#9670;&#160;</a></span>stepIncrement</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long stepIncrement = 100</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00018">18</a> du fichier <a class="el" href="test___axe_z__et___pince_8cpp_source.html">test_AxeZ_et_Pince.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="test___axe_z__et___pince_8cpp_source.html#l00035">loop()</a>.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>

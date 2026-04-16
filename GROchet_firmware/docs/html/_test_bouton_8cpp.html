@@ -1,0 +1,326 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino: Référence du fichier src/TestBouton.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Fonctions</a>  </div>
+  <div class="headertitle"><div class="title">Référence du fichier TestBouton.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;Arduino.h&gt;</code><br />
+<code>#include &lt;Arduino_FreeRTOS.h&gt;</code><br />
+<code>#include &lt;semphr.h&gt;</code><br />
+<code>#include &quot;event_groups.h&quot;</code><br />
+<code>#include &lt;AccelStepper.h&gt;</code><br />
+</div>
+<p><a href="_test_bouton_8cpp_source.html">Aller au code source de ce fichier.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a81dad6c86576443fc7f5516423269ee3" id="r_a81dad6c86576443fc7f5516423269ee3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>&#160;&#160;&#160;22</td></tr>
+<tr class="separator:a81dad6c86576443fc7f5516423269ee3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a411392eb907bf9f697c1e5301402d8fd" id="r_a411392eb907bf9f697c1e5301402d8fd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>&#160;&#160;&#160;25</td></tr>
+<tr class="separator:a411392eb907bf9f697c1e5301402d8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7510b9984d34b3931c41b69c66606976" id="r_a7510b9984d34b3931c41b69c66606976"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>&#160;&#160;&#160;24</td></tr>
+<tr class="separator:a7510b9984d34b3931c41b69c66606976"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add3ef655c4e3d5bbf7cd9d5bf289125e" id="r_add3ef655c4e3d5bbf7cd9d5bf289125e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>&#160;&#160;&#160;23</td></tr>
+<tr class="separator:add3ef655c4e3d5bbf7cd9d5bf289125e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad887f97e685e75fe91752dd398a4ca18" id="r_ad887f97e685e75fe91752dd398a4ca18"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>&#160;&#160;&#160;26</td></tr>
+<tr class="separator:ad887f97e685e75fe91752dd398a4ca18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add56dedbc09f82766e39588e01978e7d" id="r_add56dedbc09f82766e39588e01978e7d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add56dedbc09f82766e39588e01978e7d">DEBOUNCE_MS</a>&#160;&#160;&#160;20</td></tr>
+<tr class="separator:add56dedbc09f82766e39588e01978e7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonctions</h2></td></tr>
+<tr class="memitem:a4fc01d736fe50cf5b977f755b675f11d" id="r_a4fc01d736fe50cf5b977f755b675f11d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fc01d736fe50cf5b977f755b675f11d">setup</a> ()</td></tr>
+<tr class="separator:a4fc01d736fe50cf5b977f755b675f11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe461d27b9c48d5921c00d521181f12f" id="r_afe461d27b9c48d5921c00d521181f12f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe461d27b9c48d5921c00d521181f12f">loop</a> ()</td></tr>
+<tr class="separator:afe461d27b9c48d5921c00d521181f12f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Documentation des macros</h2>
+<a id="a411392eb907bf9f697c1e5301402d8fd" name="a411392eb907bf9f697c1e5301402d8fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a411392eb907bf9f697c1e5301402d8fd">&#9670;&#160;</a></span>BTN_PIN_DOWN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_DOWN&#160;&#160;&#160;25</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00024">24</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_bouton_8cpp_source.html#l00041">loop()</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00030">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a7510b9984d34b3931c41b69c66606976" name="a7510b9984d34b3931c41b69c66606976"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7510b9984d34b3931c41b69c66606976">&#9670;&#160;</a></span>BTN_PIN_LEFT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_LEFT&#160;&#160;&#160;24</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00025">25</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_bouton_8cpp_source.html#l00041">loop()</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00030">setup()</a>.</p>
+
+</div>
+</div>
+<a id="ad887f97e685e75fe91752dd398a4ca18" name="ad887f97e685e75fe91752dd398a4ca18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad887f97e685e75fe91752dd398a4ca18">&#9670;&#160;</a></span>BTN_PIN_OK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_OK&#160;&#160;&#160;26</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00027">27</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_bouton_8cpp_source.html#l00041">loop()</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00030">setup()</a>.</p>
+
+</div>
+</div>
+<a id="add3ef655c4e3d5bbf7cd9d5bf289125e" name="add3ef655c4e3d5bbf7cd9d5bf289125e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add3ef655c4e3d5bbf7cd9d5bf289125e">&#9670;&#160;</a></span>BTN_PIN_RIGHT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_RIGHT&#160;&#160;&#160;23</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00026">26</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_bouton_8cpp_source.html#l00041">loop()</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00030">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a81dad6c86576443fc7f5516423269ee3" name="a81dad6c86576443fc7f5516423269ee3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a81dad6c86576443fc7f5516423269ee3">&#9670;&#160;</a></span>BTN_PIN_UP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_UP&#160;&#160;&#160;22</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00023">23</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_bouton_8cpp_source.html#l00041">loop()</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00030">setup()</a>.</p>
+
+</div>
+</div>
+<a id="add56dedbc09f82766e39588e01978e7d" name="add56dedbc09f82766e39588e01978e7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add56dedbc09f82766e39588e01978e7d">&#9670;&#160;</a></span>DEBOUNCE_MS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DEBOUNCE_MS&#160;&#160;&#160;20</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00028">28</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des fonctions</h2>
+<a id="afe461d27b9c48d5921c00d521181f12f" name="afe461d27b9c48d5921c00d521181f12f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe461d27b9c48d5921c00d521181f12f">&#9670;&#160;</a></span>loop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void loop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00041">41</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   41</span>            {  </div>
+<div class="line"><span class="lineno">   42</span>  <span class="comment">// 1.</span></div>
+<div class="line"><span class="lineno">   43</span>  Serial.print(digitalRead(<a class="code hl_define" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>));</div>
+<div class="line"><span class="lineno">   44</span>  Serial.println(<span class="stringliteral">&quot;  Rouge&quot;</span>);</div>
+<div class="line"><span class="lineno">   45</span>  </div>
+<div class="line"><span class="lineno">   46</span>  <span class="comment">// 2.</span></div>
+<div class="line"><span class="lineno">   47</span>  Serial.print(digitalRead(<a class="code hl_define" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>));</div>
+<div class="line"><span class="lineno">   48</span>  Serial.println(<span class="stringliteral">&quot;  Bleu&quot;</span>);</div>
+<div class="line"><span class="lineno">   49</span> </div>
+<div class="line"><span class="lineno">   50</span>  Serial.print(digitalRead(<a class="code hl_define" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>));</div>
+<div class="line"><span class="lineno">   51</span>  Serial.println(<span class="stringliteral">&quot;  Jaune&quot;</span>);</div>
+<div class="line"><span class="lineno">   52</span> </div>
+<div class="line"><span class="lineno">   53</span>  Serial.print(digitalRead(<a class="code hl_define" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>));</div>
+<div class="line"><span class="lineno">   54</span>  Serial.println(<span class="stringliteral">&quot;  Vert&quot;</span>);</div>
+<div class="line"><span class="lineno">   55</span> </div>
+<div class="line"><span class="lineno">   56</span>  Serial.print(digitalRead(<a class="code hl_define" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>));</div>
+<div class="line"><span class="lineno">   57</span>  Serial.println(<span class="stringliteral">&quot;  Blanc&quot;</span>);</div>
+<div class="line"><span class="lineno">   58</span> </div>
+<div class="line"><span class="lineno">   59</span>  <span class="comment">// 3.</span></div>
+<div class="line"><span class="lineno">   60</span>  <span class="keywordflow">if</span>(digitalRead(<a class="code hl_define" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>) == LOW) {</div>
+<div class="line"><span class="lineno">   61</span>    Serial.println(<span class="stringliteral">&quot;Bouton Rouge appuyer&quot;</span>);</div>
+<div class="line"><span class="lineno">   62</span>  }</div>
+<div class="line"><span class="lineno">   63</span>  Serial.println(<span class="stringliteral">&quot;------------&quot;</span>);</div>
+<div class="line"><span class="lineno">   64</span> </div>
+<div class="line"><span class="lineno">   65</span>  delay(2000);</div>
+<div class="line"><span class="lineno">   66</span>}</div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a411392eb907bf9f697c1e5301402d8fd"><div class="ttname"><a href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a></div><div class="ttdeci">#define BTN_PIN_DOWN</div><div class="ttdef"><b>Definition</b> <a href="_test_bouton_8cpp_source.html#l00024">TestBouton.cpp:24</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a7510b9984d34b3931c41b69c66606976"><div class="ttname"><a href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a></div><div class="ttdeci">#define BTN_PIN_LEFT</div><div class="ttdef"><b>Definition</b> <a href="_test_bouton_8cpp_source.html#l00025">TestBouton.cpp:25</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a81dad6c86576443fc7f5516423269ee3"><div class="ttname"><a href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a></div><div class="ttdeci">#define BTN_PIN_UP</div><div class="ttdef"><b>Definition</b> <a href="_test_bouton_8cpp_source.html#l00023">TestBouton.cpp:23</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_ad887f97e685e75fe91752dd398a4ca18"><div class="ttname"><a href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a></div><div class="ttdeci">#define BTN_PIN_OK</div><div class="ttdef"><b>Definition</b> <a href="_test_bouton_8cpp_source.html#l00027">TestBouton.cpp:27</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_add3ef655c4e3d5bbf7cd9d5bf289125e"><div class="ttname"><a href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a></div><div class="ttdeci">#define BTN_PIN_RIGHT</div><div class="ttdef"><b>Definition</b> <a href="_test_bouton_8cpp_source.html#l00026">TestBouton.cpp:26</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_test_bouton_8cpp_source.html#l00024">BTN_PIN_DOWN</a>, <a class="el" href="_test_bouton_8cpp_source.html#l00025">BTN_PIN_LEFT</a>, <a class="el" href="_test_bouton_8cpp_source.html#l00027">BTN_PIN_OK</a>, <a class="el" href="_test_bouton_8cpp_source.html#l00026">BTN_PIN_RIGHT</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00023">BTN_PIN_UP</a>.</p>
+
+</div>
+</div>
+<a id="a4fc01d736fe50cf5b977f755b675f11d" name="a4fc01d736fe50cf5b977f755b675f11d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4fc01d736fe50cf5b977f755b675f11d">&#9670;&#160;</a></span>setup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void setup </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_bouton_8cpp_source.html#l00030">30</a> du fichier <a class="el" href="_test_bouton_8cpp_source.html">TestBouton.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   30</span>             {</div>
+<div class="line"><span class="lineno">   31</span>  Serial.begin(115200);</div>
+<div class="line"><span class="lineno">   32</span>  delay(2000);</div>
+<div class="line"><span class="lineno">   33</span> </div>
+<div class="line"><span class="lineno">   34</span>  pinMode(<a class="code hl_define" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>, INPUT_PULLUP); <span class="comment">//Verifier avec Marcob input vs input_pullup (resistance interne ou pas)</span></div>
+<div class="line"><span class="lineno">   35</span>  pinMode(<a class="code hl_define" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   36</span>  pinMode(<a class="code hl_define" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   37</span>  pinMode(<a class="code hl_define" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   38</span>  pinMode(<a class="code hl_define" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>, INPUT_PULLUP);</div>
+<div class="line"><span class="lineno">   39</span>}</div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_test_bouton_8cpp_source.html#l00024">BTN_PIN_DOWN</a>, <a class="el" href="_test_bouton_8cpp_source.html#l00025">BTN_PIN_LEFT</a>, <a class="el" href="_test_bouton_8cpp_source.html#l00027">BTN_PIN_OK</a>, <a class="el" href="_test_bouton_8cpp_source.html#l00026">BTN_PIN_RIGHT</a>, et <a class="el" href="_test_bouton_8cpp_source.html#l00023">BTN_PIN_UP</a>.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>

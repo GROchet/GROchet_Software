@@ -1,0 +1,1306 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino: Référence du fichier src/TestMotor.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#enum-members">Énumérations</a> &#124;
+<a href="#func-members">Fonctions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
+  <div class="headertitle"><div class="title">Référence du fichier TestMotor.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;Arduino.h&gt;</code><br />
+<code>#include &lt;Arduino_FreeRTOS.h&gt;</code><br />
+<code>#include &lt;semphr.h&gt;</code><br />
+<code>#include &quot;event_groups.h&quot;</code><br />
+<code>#include &lt;AccelStepper.h&gt;</code><br />
+</div>
+<p><a href="_test_motor_8cpp_source.html">Aller au code source de ce fichier.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a81dad6c86576443fc7f5516423269ee3" id="r_a81dad6c86576443fc7f5516423269ee3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>&#160;&#160;&#160;22</td></tr>
+<tr class="separator:a81dad6c86576443fc7f5516423269ee3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a411392eb907bf9f697c1e5301402d8fd" id="r_a411392eb907bf9f697c1e5301402d8fd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>&#160;&#160;&#160;25</td></tr>
+<tr class="separator:a411392eb907bf9f697c1e5301402d8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7510b9984d34b3931c41b69c66606976" id="r_a7510b9984d34b3931c41b69c66606976"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>&#160;&#160;&#160;23</td></tr>
+<tr class="separator:a7510b9984d34b3931c41b69c66606976"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add3ef655c4e3d5bbf7cd9d5bf289125e" id="r_add3ef655c4e3d5bbf7cd9d5bf289125e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>&#160;&#160;&#160;24</td></tr>
+<tr class="separator:add3ef655c4e3d5bbf7cd9d5bf289125e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad887f97e685e75fe91752dd398a4ca18" id="r_ad887f97e685e75fe91752dd398a4ca18"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>&#160;&#160;&#160;26</td></tr>
+<tr class="separator:ad887f97e685e75fe91752dd398a4ca18"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ad37f4d1c3053dbf4e4c33a33000d30" id="r_a8ad37f4d1c3053dbf4e4c33a33000d30"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8ad37f4d1c3053dbf4e4c33a33000d30">PIN_BTN_INTERRUPT</a>&#160;&#160;&#160;3</td></tr>
+<tr class="separator:a8ad37f4d1c3053dbf4e4c33a33000d30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add56dedbc09f82766e39588e01978e7d" id="r_add56dedbc09f82766e39588e01978e7d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#add56dedbc09f82766e39588e01978e7d">DEBOUNCE_MS</a>&#160;&#160;&#160;20</td></tr>
+<tr class="separator:add56dedbc09f82766e39588e01978e7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac260da8b65ff914dba38c69707125517" id="r_ac260da8b65ff914dba38c69707125517"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac260da8b65ff914dba38c69707125517">PIN_LMSW_INTER</a>&#160;&#160;&#160;2</td></tr>
+<tr class="separator:ac260da8b65ff914dba38c69707125517"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca74904068804afde244c8421e6e2635" id="r_aca74904068804afde244c8421e6e2635"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aca74904068804afde244c8421e6e2635">LMTSW_Y</a>&#160;&#160;&#160;38</td></tr>
+<tr class="separator:aca74904068804afde244c8421e6e2635"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97f6a54fca64da12e5b07c2015ca7320" id="r_a97f6a54fca64da12e5b07c2015ca7320"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a97f6a54fca64da12e5b07c2015ca7320">LMTSW_X</a>&#160;&#160;&#160;40</td></tr>
+<tr class="separator:a97f6a54fca64da12e5b07c2015ca7320"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa445c85a528b0e30f69e1259da42b82a" id="r_aa445c85a528b0e30f69e1259da42b82a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa445c85a528b0e30f69e1259da42b82a">EVT_LIMIT_X</a>&#160;&#160;&#160;(1 &lt;&lt; 0)</td></tr>
+<tr class="separator:aa445c85a528b0e30f69e1259da42b82a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd5640c1997726de9bc71357d817970c" id="r_afd5640c1997726de9bc71357d817970c"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afd5640c1997726de9bc71357d817970c">EVT_LIMIT_Y</a>&#160;&#160;&#160;(1 &lt;&lt; 1)</td></tr>
+<tr class="separator:afd5640c1997726de9bc71357d817970c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a17376c91bf4cd5fa69a3ddc855c5f4f6" id="r_a17376c91bf4cd5fa69a3ddc855c5f4f6"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a17376c91bf4cd5fa69a3ddc855c5f4f6">FULLSTEP</a>&#160;&#160;&#160;4</td></tr>
+<tr class="separator:a17376c91bf4cd5fa69a3ddc855c5f4f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c5f22b75afd01e6b1ea65cbc5a2a785" id="r_a8c5f22b75afd01e6b1ea65cbc5a2a785"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c5f22b75afd01e6b1ea65cbc5a2a785">STEPS_REV</a>&#160;&#160;&#160;4096</td></tr>
+<tr class="separator:a8c5f22b75afd01e6b1ea65cbc5a2a785"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a54cf6115ea904ab9efd3eb83c7c332cd" id="r_a54cf6115ea904ab9efd3eb83c7c332cd"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a>&#160;&#160;&#160;Serial1</td></tr>
+<tr class="separator:a54cf6115ea904ab9efd3eb83c7c332cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5821991780bb7088473e2ac048b53f49" id="r_a5821991780bb7088473e2ac048b53f49"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5821991780bb7088473e2ac048b53f49">EN_PIN_M1</a>&#160;&#160;&#160;29</td></tr>
+<tr class="separator:a5821991780bb7088473e2ac048b53f49"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d8f5dfced091f2c87770d8f1e3aac2d" id="r_a4d8f5dfced091f2c87770d8f1e3aac2d"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d8f5dfced091f2c87770d8f1e3aac2d">DIR_PIN_M1</a>&#160;&#160;&#160;27</td></tr>
+<tr class="separator:a4d8f5dfced091f2c87770d8f1e3aac2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a30158cf8d934afe25c6d1b13d7f9bfe0" id="r_a30158cf8d934afe25c6d1b13d7f9bfe0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a30158cf8d934afe25c6d1b13d7f9bfe0">STEP_PIN_M1</a>&#160;&#160;&#160;28</td></tr>
+<tr class="separator:a30158cf8d934afe25c6d1b13d7f9bfe0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa67b776c27839713a0fa5626658cb180" id="r_aa67b776c27839713a0fa5626658cb180"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa67b776c27839713a0fa5626658cb180">SW_RX_M1</a>&#160;&#160;&#160;12</td></tr>
+<tr class="separator:aa67b776c27839713a0fa5626658cb180"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae05764a938c87d0fb22b7dcd48445ade" id="r_ae05764a938c87d0fb22b7dcd48445ade"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae05764a938c87d0fb22b7dcd48445ade">SW_TX_M1</a>&#160;&#160;&#160;11</td></tr>
+<tr class="separator:ae05764a938c87d0fb22b7dcd48445ade"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af952697f41257e1cf7cd2b2a8a3c3827" id="r_af952697f41257e1cf7cd2b2a8a3c3827"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af952697f41257e1cf7cd2b2a8a3c3827">EN_PIN_M2</a>&#160;&#160;&#160;32</td></tr>
+<tr class="separator:af952697f41257e1cf7cd2b2a8a3c3827"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6db96adb3d472ce4ce86a1df0492e35e" id="r_a6db96adb3d472ce4ce86a1df0492e35e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6db96adb3d472ce4ce86a1df0492e35e">DIR_PIN_M2</a>&#160;&#160;&#160;30</td></tr>
+<tr class="separator:a6db96adb3d472ce4ce86a1df0492e35e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af501a386218380369e3e00cf7ea160c7" id="r_af501a386218380369e3e00cf7ea160c7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af501a386218380369e3e00cf7ea160c7">STEP_PIN_M2</a>&#160;&#160;&#160;31</td></tr>
+<tr class="separator:af501a386218380369e3e00cf7ea160c7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabe29ed664179ecec91ce6b26e0bf586" id="r_aabe29ed664179ecec91ce6b26e0bf586"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aabe29ed664179ecec91ce6b26e0bf586">SW_RX_M2</a>&#160;&#160;&#160;10</td></tr>
+<tr class="separator:aabe29ed664179ecec91ce6b26e0bf586"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d1d16bfcecd2abb7decc83173bdf6d0" id="r_a5d1d16bfcecd2abb7decc83173bdf6d0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a5d1d16bfcecd2abb7decc83173bdf6d0">SW_TX_M2</a>&#160;&#160;&#160;9</td></tr>
+<tr class="separator:a5d1d16bfcecd2abb7decc83173bdf6d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83bf855f1f9a9a8dd21887383c1e1d74" id="r_a83bf855f1f9a9a8dd21887383c1e1d74"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>&#160;&#160;&#160;35</td></tr>
+<tr class="separator:a83bf855f1f9a9a8dd21887383c1e1d74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a952dedf38ca16835d25c084c61766535" id="r_a952dedf38ca16835d25c084c61766535"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>&#160;&#160;&#160;33</td></tr>
+<tr class="separator:a952dedf38ca16835d25c084c61766535"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1f7bfbc8949fded97e8599d36a79bcac" id="r_a1f7bfbc8949fded97e8599d36a79bcac"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>&#160;&#160;&#160;34</td></tr>
+<tr class="separator:a1f7bfbc8949fded97e8599d36a79bcac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23f93e6cc7ad6ca9eb8141bb7a069f72" id="r_a23f93e6cc7ad6ca9eb8141bb7a069f72"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a23f93e6cc7ad6ca9eb8141bb7a069f72">SW_RX_MZ</a>&#160;&#160;&#160;14</td></tr>
+<tr class="separator:a23f93e6cc7ad6ca9eb8141bb7a069f72"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42dc24509160d3d7d26a66bb9f1a4e03" id="r_a42dc24509160d3d7d26a66bb9f1a4e03"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a42dc24509160d3d7d26a66bb9f1a4e03">SW_TX_MZ</a>&#160;&#160;&#160;13</td></tr>
+<tr class="separator:a42dc24509160d3d7d26a66bb9f1a4e03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8369e9aa070f283446a1cea87a2abb87" id="r_a8369e9aa070f283446a1cea87a2abb87"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8369e9aa070f283446a1cea87a2abb87">BTN_OK</a>&#160;&#160;&#160;0</td></tr>
+<tr class="separator:a8369e9aa070f283446a1cea87a2abb87"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae55225024bd160dd59985cb17eb5a2ed" id="r_ae55225024bd160dd59985cb17eb5a2ed"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae55225024bd160dd59985cb17eb5a2ed">BTN_UP</a>&#160;&#160;&#160;1</td></tr>
+<tr class="separator:ae55225024bd160dd59985cb17eb5a2ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a58e7099c1e6ba27a4215652f7cf08fb9" id="r_a58e7099c1e6ba27a4215652f7cf08fb9"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a58e7099c1e6ba27a4215652f7cf08fb9">BTN_DOWN</a>&#160;&#160;&#160;2</td></tr>
+<tr class="separator:a58e7099c1e6ba27a4215652f7cf08fb9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7881c76074b0ea36507f46b36840f54b" id="r_a7881c76074b0ea36507f46b36840f54b"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7881c76074b0ea36507f46b36840f54b">BTN_LEFT</a>&#160;&#160;&#160;3</td></tr>
+<tr class="separator:a7881c76074b0ea36507f46b36840f54b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb8b29caaae1a7515c8bd9473e6eefb1" id="r_aeb8b29caaae1a7515c8bd9473e6eefb1"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeb8b29caaae1a7515c8bd9473e6eefb1">BTN_RIGHT</a>&#160;&#160;&#160;4</td></tr>
+<tr class="separator:aeb8b29caaae1a7515c8bd9473e6eefb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Énumérations</h2></td></tr>
+<tr class="memitem:aa51313be2faacb739a18fdeecefbac75" id="r_aa51313be2faacb739a18fdeecefbac75"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa51313be2faacb739a18fdeecefbac75">SystemState</a> { <br />
+&#160;&#160;<a class="el" href="#aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18">IDLE</a>
+, <a class="el" href="#aa51313be2faacb739a18fdeecefbac75adac545be35b69c98c6f89f5d233d22d3">LOWERING</a>
+, <a class="el" href="#aa51313be2faacb739a18fdeecefbac75a8ab2cae69d2b33297ab24a5818213f18">CLOSING</a>
+, <a class="el" href="#aa51313be2faacb739a18fdeecefbac75a80dc2ef92d14e81ec9e39d5ccd269390">LIFTING</a>
+, <br />
+&#160;&#160;<a class="el" href="#aa51313be2faacb739a18fdeecefbac75a0cf5f2263040752e7d79e0aa6d8417c0">MOVING_TO_DROPZONE</a>
+, <a class="el" href="#aa51313be2faacb739a18fdeecefbac75a8929b46ea95931821774e578512838eb">DROPPING</a>
+<br />
+ }</td></tr>
+<tr class="separator:aa51313be2faacb739a18fdeecefbac75"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonctions</h2></td></tr>
+<tr class="memitem:a4fc01d736fe50cf5b977f755b675f11d" id="r_a4fc01d736fe50cf5b977f755b675f11d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fc01d736fe50cf5b977f755b675f11d">setup</a> ()</td></tr>
+<tr class="separator:a4fc01d736fe50cf5b977f755b675f11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe461d27b9c48d5921c00d521181f12f" id="r_afe461d27b9c48d5921c00d521181f12f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe461d27b9c48d5921c00d521181f12f">loop</a> ()</td></tr>
+<tr class="separator:afe461d27b9c48d5921c00d521181f12f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a50c2f90c0464122f638390cb3b47202b" id="r_a50c2f90c0464122f638390cb3b47202b"><td class="memItemLeft" align="right" valign="top">volatile TickType_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a50c2f90c0464122f638390cb3b47202b">lastBtnInterrupt</a> = 0</td></tr>
+<tr class="separator:a50c2f90c0464122f638390cb3b47202b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2b04ddb19106e5feb7860ffcd5c46b3b" id="r_a2b04ddb19106e5feb7860ffcd5c46b3b"><td class="memItemLeft" align="right" valign="top">EventGroupHandle_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a2b04ddb19106e5feb7860ffcd5c46b3b">limitEventGroup</a></td></tr>
+<tr class="separator:a2b04ddb19106e5feb7860ffcd5c46b3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a218b4f7c6cc2681a99c23a3b089d68b1" id="r_a218b4f7c6cc2681a99c23a3b089d68b1"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a218b4f7c6cc2681a99c23a3b089d68b1">speed</a> = 2</td></tr>
+<tr class="separator:a218b4f7c6cc2681a99c23a3b089d68b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53083d8e6469525cf0c303f5a15d2a3d" id="r_a53083d8e6469525cf0c303f5a15d2a3d"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a53083d8e6469525cf0c303f5a15d2a3d">MAX_POS_X</a> = 50000</td></tr>
+<tr class="separator:a53083d8e6469525cf0c303f5a15d2a3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8fd470d13c93f6368505b9cf3c362b2f" id="r_a8fd470d13c93f6368505b9cf3c362b2f"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8fd470d13c93f6368505b9cf3c362b2f">MAX_POS_Y</a> = 50000</td></tr>
+<tr class="separator:a8fd470d13c93f6368505b9cf3c362b2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1053a93945092c9896c669f633e54070" id="r_a1053a93945092c9896c669f633e54070"><td class="memItemLeft" align="right" valign="top">AccelStepper&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1053a93945092c9896c669f633e54070">MOT_A</a> = AccelStepper(AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#a30158cf8d934afe25c6d1b13d7f9bfe0">STEP_PIN_M1</a>,<a class="el" href="main__with__dynamixel_8cpp.html#a4d8f5dfced091f2c87770d8f1e3aac2d">DIR_PIN_M1</a>)</td></tr>
+<tr class="separator:a1053a93945092c9896c669f633e54070"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af4f393dd1208966ebf728b3dc66b4bb6" id="r_af4f393dd1208966ebf728b3dc66b4bb6"><td class="memItemLeft" align="right" valign="top">AccelStepper&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a> = AccelStepper(AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#af501a386218380369e3e00cf7ea160c7">STEP_PIN_M2</a>,<a class="el" href="main__with__dynamixel_8cpp.html#a6db96adb3d472ce4ce86a1df0492e35e">DIR_PIN_M2</a>)</td></tr>
+<tr class="separator:af4f393dd1208966ebf728b3dc66b4bb6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeead6e2ab9a1779be2052b21eeb1b457" id="r_aeead6e2ab9a1779be2052b21eeb1b457"><td class="memItemLeft" align="right" valign="top">AccelStepper&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a> = AccelStepper(AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>,<a class="el" href="main__with__dynamixel_8cpp.html#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>)</td></tr>
+<tr class="separator:aeead6e2ab9a1779be2052b21eeb1b457"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d51b5c8e2952bf88576ce6c9c17ae3a" id="r_a4d51b5c8e2952bf88576ce6c9c17ae3a"><td class="memItemLeft" align="right" valign="top">volatile <a class="el" href="main__with__dynamixel_8cpp.html#aa51313be2faacb739a18fdeecefbac75">SystemState</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4d51b5c8e2952bf88576ce6c9c17ae3a">currentState</a> = <a class="el" href="main__with__dynamixel_8cpp.html#aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18">IDLE</a></td></tr>
+<tr class="separator:a4d51b5c8e2952bf88576ce6c9c17ae3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7637e2697c289232afa010948f9b62e4" id="r_a7637e2697c289232afa010948f9b62e4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a7637e2697c289232afa010948f9b62e4">toutouAttrape</a> = false</td></tr>
+<tr class="separator:a7637e2697c289232afa010948f9b62e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac09b3d9f8dc28971a99a3a8eee7f5c99" id="r_ac09b3d9f8dc28971a99a3a8eee7f5c99"><td class="memItemLeft" align="right" valign="top">EventGroupHandle_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">inputEventGroup</a></td></tr>
+<tr class="separator:ac09b3d9f8dc28971a99a3a8eee7f5c99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae60c82085f2587943a1035fa9af99cce" id="r_ae60c82085f2587943a1035fa9af99cce"><td class="memItemLeft" align="right" valign="top">EventGroupHandle_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ae60c82085f2587943a1035fa9af99cce">toutouEventGroup</a></td></tr>
+<tr class="separator:ae60c82085f2587943a1035fa9af99cce"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97fdacb13304251dc759c691e31f6767" id="r_a97fdacb13304251dc759c691e31f6767"><td class="memItemLeft" align="right" valign="top">TaskHandle_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a97fdacb13304251dc759c691e31f6767">motorTaskHandle</a> = NULL</td></tr>
+<tr class="separator:a97fdacb13304251dc759c691e31f6767"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acb3e510a4c376d6460bff33f78fc49ca" id="r_acb3e510a4c376d6460bff33f78fc49ca"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#acb3e510a4c376d6460bff33f78fc49ca">targetA</a> = 0</td></tr>
+<tr class="separator:acb3e510a4c376d6460bff33f78fc49ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1856eb65522751793cbb678f189d4329" id="r_a1856eb65522751793cbb678f189d4329"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1856eb65522751793cbb678f189d4329">targetB</a> = 0</td></tr>
+<tr class="separator:a1856eb65522751793cbb678f189d4329"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af0035382ad3052a5a3edc8812a373b0b" id="r_af0035382ad3052a5a3edc8812a373b0b"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af0035382ad3052a5a3edc8812a373b0b">posX</a> = 0</td></tr>
+<tr class="separator:af0035382ad3052a5a3edc8812a373b0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad9353f6894c8d55ba59f991ac5fa54b" id="r_aad9353f6894c8d55ba59f991ac5fa54b"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aad9353f6894c8d55ba59f991ac5fa54b">posY</a> = 0</td></tr>
+<tr class="separator:aad9353f6894c8d55ba59f991ac5fa54b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a623c5321a443d40644f715d1cd48efa5" id="r_a623c5321a443d40644f715d1cd48efa5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a623c5321a443d40644f715d1cd48efa5">bouton</a> = <a class="el" href="#ae55225024bd160dd59985cb17eb5a2ed">BTN_UP</a></td></tr>
+<tr class="separator:a623c5321a443d40644f715d1cd48efa5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Documentation des macros</h2>
+<a id="a58e7099c1e6ba27a4215652f7cf08fb9" name="a58e7099c1e6ba27a4215652f7cf08fb9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a58e7099c1e6ba27a4215652f7cf08fb9">&#9670;&#160;</a></span>BTN_DOWN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_DOWN&#160;&#160;&#160;2</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00082">82</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7881c76074b0ea36507f46b36840f54b" name="a7881c76074b0ea36507f46b36840f54b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7881c76074b0ea36507f46b36840f54b">&#9670;&#160;</a></span>BTN_LEFT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_LEFT&#160;&#160;&#160;3</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00083">83</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8369e9aa070f283446a1cea87a2abb87" name="a8369e9aa070f283446a1cea87a2abb87"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8369e9aa070f283446a1cea87a2abb87">&#9670;&#160;</a></span>BTN_OK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_OK&#160;&#160;&#160;0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00080">80</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a411392eb907bf9f697c1e5301402d8fd" name="a411392eb907bf9f697c1e5301402d8fd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a411392eb907bf9f697c1e5301402d8fd">&#9670;&#160;</a></span>BTN_PIN_DOWN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_DOWN&#160;&#160;&#160;25</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00012">12</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a7510b9984d34b3931c41b69c66606976" name="a7510b9984d34b3931c41b69c66606976"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7510b9984d34b3931c41b69c66606976">&#9670;&#160;</a></span>BTN_PIN_LEFT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_LEFT&#160;&#160;&#160;23</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00013">13</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad887f97e685e75fe91752dd398a4ca18" name="ad887f97e685e75fe91752dd398a4ca18"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad887f97e685e75fe91752dd398a4ca18">&#9670;&#160;</a></span>BTN_PIN_OK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_OK&#160;&#160;&#160;26</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00015">15</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="add3ef655c4e3d5bbf7cd9d5bf289125e" name="add3ef655c4e3d5bbf7cd9d5bf289125e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add3ef655c4e3d5bbf7cd9d5bf289125e">&#9670;&#160;</a></span>BTN_PIN_RIGHT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_RIGHT&#160;&#160;&#160;24</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00014">14</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a81dad6c86576443fc7f5516423269ee3" name="a81dad6c86576443fc7f5516423269ee3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a81dad6c86576443fc7f5516423269ee3">&#9670;&#160;</a></span>BTN_PIN_UP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_PIN_UP&#160;&#160;&#160;22</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00011">11</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aeb8b29caaae1a7515c8bd9473e6eefb1" name="aeb8b29caaae1a7515c8bd9473e6eefb1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeb8b29caaae1a7515c8bd9473e6eefb1">&#9670;&#160;</a></span>BTN_RIGHT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_RIGHT&#160;&#160;&#160;4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00084">84</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae55225024bd160dd59985cb17eb5a2ed" name="ae55225024bd160dd59985cb17eb5a2ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae55225024bd160dd59985cb17eb5a2ed">&#9670;&#160;</a></span>BTN_UP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define BTN_UP&#160;&#160;&#160;1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00081">81</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="add56dedbc09f82766e39588e01978e7d" name="add56dedbc09f82766e39588e01978e7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add56dedbc09f82766e39588e01978e7d">&#9670;&#160;</a></span>DEBOUNCE_MS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DEBOUNCE_MS&#160;&#160;&#160;20</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00018">18</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4d8f5dfced091f2c87770d8f1e3aac2d" name="a4d8f5dfced091f2c87770d8f1e3aac2d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d8f5dfced091f2c87770d8f1e3aac2d">&#9670;&#160;</a></span>DIR_PIN_M1</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DIR_PIN_M1&#160;&#160;&#160;27</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00042">42</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a6db96adb3d472ce4ce86a1df0492e35e" name="a6db96adb3d472ce4ce86a1df0492e35e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6db96adb3d472ce4ce86a1df0492e35e">&#9670;&#160;</a></span>DIR_PIN_M2</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DIR_PIN_M2&#160;&#160;&#160;30</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00049">49</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a952dedf38ca16835d25c084c61766535" name="a952dedf38ca16835d25c084c61766535"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a952dedf38ca16835d25c084c61766535">&#9670;&#160;</a></span>DIR_PIN_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DIR_PIN_MZ&#160;&#160;&#160;33</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00056">56</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a5821991780bb7088473e2ac048b53f49" name="a5821991780bb7088473e2ac048b53f49"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5821991780bb7088473e2ac048b53f49">&#9670;&#160;</a></span>EN_PIN_M1</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EN_PIN_M1&#160;&#160;&#160;29</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00041">41</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="af952697f41257e1cf7cd2b2a8a3c3827" name="af952697f41257e1cf7cd2b2a8a3c3827"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af952697f41257e1cf7cd2b2a8a3c3827">&#9670;&#160;</a></span>EN_PIN_M2</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EN_PIN_M2&#160;&#160;&#160;32</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00048">48</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a83bf855f1f9a9a8dd21887383c1e1d74" name="a83bf855f1f9a9a8dd21887383c1e1d74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83bf855f1f9a9a8dd21887383c1e1d74">&#9670;&#160;</a></span>EN_PIN_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EN_PIN_MZ&#160;&#160;&#160;35</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00055">55</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="aa445c85a528b0e30f69e1259da42b82a" name="aa445c85a528b0e30f69e1259da42b82a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa445c85a528b0e30f69e1259da42b82a">&#9670;&#160;</a></span>EVT_LIMIT_X</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_LIMIT_X&#160;&#160;&#160;(1 &lt;&lt; 0)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00025">25</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="afd5640c1997726de9bc71357d817970c" name="afd5640c1997726de9bc71357d817970c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd5640c1997726de9bc71357d817970c">&#9670;&#160;</a></span>EVT_LIMIT_Y</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define EVT_LIMIT_Y&#160;&#160;&#160;(1 &lt;&lt; 1)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00026">26</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a17376c91bf4cd5fa69a3ddc855c5f4f6" name="a17376c91bf4cd5fa69a3ddc855c5f4f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a17376c91bf4cd5fa69a3ddc855c5f4f6">&#9670;&#160;</a></span>FULLSTEP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define FULLSTEP&#160;&#160;&#160;4</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00029">29</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a97f6a54fca64da12e5b07c2015ca7320" name="a97f6a54fca64da12e5b07c2015ca7320"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97f6a54fca64da12e5b07c2015ca7320">&#9670;&#160;</a></span>LMTSW_X</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define LMTSW_X&#160;&#160;&#160;40</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00023">23</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aca74904068804afde244c8421e6e2635" name="aca74904068804afde244c8421e6e2635"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca74904068804afde244c8421e6e2635">&#9670;&#160;</a></span>LMTSW_Y</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define LMTSW_Y&#160;&#160;&#160;38</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00022">22</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8ad37f4d1c3053dbf4e4c33a33000d30" name="a8ad37f4d1c3053dbf4e4c33a33000d30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8ad37f4d1c3053dbf4e4c33a33000d30">&#9670;&#160;</a></span>PIN_BTN_INTERRUPT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PIN_BTN_INTERRUPT&#160;&#160;&#160;3</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00016">16</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac260da8b65ff914dba38c69707125517" name="ac260da8b65ff914dba38c69707125517"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac260da8b65ff914dba38c69707125517">&#9670;&#160;</a></span>PIN_LMSW_INTER</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define PIN_LMSW_INTER&#160;&#160;&#160;2</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00021">21</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a54cf6115ea904ab9efd3eb83c7c332cd" name="a54cf6115ea904ab9efd3eb83c7c332cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a54cf6115ea904ab9efd3eb83c7c332cd">&#9670;&#160;</a></span>SerialGripper</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SerialGripper&#160;&#160;&#160;Serial1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00038">38</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a30158cf8d934afe25c6d1b13d7f9bfe0" name="a30158cf8d934afe25c6d1b13d7f9bfe0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a30158cf8d934afe25c6d1b13d7f9bfe0">&#9670;&#160;</a></span>STEP_PIN_M1</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STEP_PIN_M1&#160;&#160;&#160;28</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00043">43</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="af501a386218380369e3e00cf7ea160c7" name="af501a386218380369e3e00cf7ea160c7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af501a386218380369e3e00cf7ea160c7">&#9670;&#160;</a></span>STEP_PIN_M2</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STEP_PIN_M2&#160;&#160;&#160;31</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00050">50</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a1f7bfbc8949fded97e8599d36a79bcac" name="a1f7bfbc8949fded97e8599d36a79bcac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1f7bfbc8949fded97e8599d36a79bcac">&#9670;&#160;</a></span>STEP_PIN_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STEP_PIN_MZ&#160;&#160;&#160;34</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00057">57</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a8c5f22b75afd01e6b1ea65cbc5a2a785" name="a8c5f22b75afd01e6b1ea65cbc5a2a785"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8c5f22b75afd01e6b1ea65cbc5a2a785">&#9670;&#160;</a></span>STEPS_REV</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STEPS_REV&#160;&#160;&#160;4096</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00030">30</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa67b776c27839713a0fa5626658cb180" name="aa67b776c27839713a0fa5626658cb180"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa67b776c27839713a0fa5626658cb180">&#9670;&#160;</a></span>SW_RX_M1</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SW_RX_M1&#160;&#160;&#160;12</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00044">44</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aabe29ed664179ecec91ce6b26e0bf586" name="aabe29ed664179ecec91ce6b26e0bf586"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aabe29ed664179ecec91ce6b26e0bf586">&#9670;&#160;</a></span>SW_RX_M2</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SW_RX_M2&#160;&#160;&#160;10</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00051">51</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a23f93e6cc7ad6ca9eb8141bb7a069f72" name="a23f93e6cc7ad6ca9eb8141bb7a069f72"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a23f93e6cc7ad6ca9eb8141bb7a069f72">&#9670;&#160;</a></span>SW_RX_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SW_RX_MZ&#160;&#160;&#160;14</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00058">58</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae05764a938c87d0fb22b7dcd48445ade" name="ae05764a938c87d0fb22b7dcd48445ade"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae05764a938c87d0fb22b7dcd48445ade">&#9670;&#160;</a></span>SW_TX_M1</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SW_TX_M1&#160;&#160;&#160;11</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00045">45</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a5d1d16bfcecd2abb7decc83173bdf6d0" name="a5d1d16bfcecd2abb7decc83173bdf6d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d1d16bfcecd2abb7decc83173bdf6d0">&#9670;&#160;</a></span>SW_TX_M2</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SW_TX_M2&#160;&#160;&#160;9</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00052">52</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a42dc24509160d3d7d26a66bb9f1a4e03" name="a42dc24509160d3d7d26a66bb9f1a4e03"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42dc24509160d3d7d26a66bb9f1a4e03">&#9670;&#160;</a></span>SW_TX_MZ</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SW_TX_MZ&#160;&#160;&#160;13</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00059">59</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation du type de l'énumération</h2>
+<a id="aa51313be2faacb739a18fdeecefbac75" name="aa51313be2faacb739a18fdeecefbac75"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa51313be2faacb739a18fdeecefbac75">&#9670;&#160;</a></span>SystemState</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="main__with__dynamixel_8cpp.html#aa51313be2faacb739a18fdeecefbac75">SystemState</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Valeurs énumérées</th></tr><tr><td class="fieldname"><a id="aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18" name="aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18"></a>IDLE&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa51313be2faacb739a18fdeecefbac75adac545be35b69c98c6f89f5d233d22d3" name="aa51313be2faacb739a18fdeecefbac75adac545be35b69c98c6f89f5d233d22d3"></a>LOWERING&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa51313be2faacb739a18fdeecefbac75a8ab2cae69d2b33297ab24a5818213f18" name="aa51313be2faacb739a18fdeecefbac75a8ab2cae69d2b33297ab24a5818213f18"></a>CLOSING&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa51313be2faacb739a18fdeecefbac75a80dc2ef92d14e81ec9e39d5ccd269390" name="aa51313be2faacb739a18fdeecefbac75a80dc2ef92d14e81ec9e39d5ccd269390"></a>LIFTING&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa51313be2faacb739a18fdeecefbac75a0cf5f2263040752e7d79e0aa6d8417c0" name="aa51313be2faacb739a18fdeecefbac75a0cf5f2263040752e7d79e0aa6d8417c0"></a>MOVING_TO_DROPZONE&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="aa51313be2faacb739a18fdeecefbac75a8929b46ea95931821774e578512838eb" name="aa51313be2faacb739a18fdeecefbac75a8929b46ea95931821774e578512838eb"></a>DROPPING&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00065">65</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   65</span>                 {</div>
+<div class="line"><span class="lineno">   66</span>  <a class="code hl_enumvalue" href="#aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18">IDLE</a>,</div>
+<div class="line"><span class="lineno">   67</span>  <a class="code hl_enumvalue" href="#aa51313be2faacb739a18fdeecefbac75adac545be35b69c98c6f89f5d233d22d3">LOWERING</a>, <span class="comment">//On descend l&#39;axe Z</span></div>
+<div class="line"><span class="lineno">   68</span>  <a class="code hl_enumvalue" href="#aa51313be2faacb739a18fdeecefbac75a8ab2cae69d2b33297ab24a5818213f18">CLOSING</a>, <span class="comment">//Pince fermée</span></div>
+<div class="line"><span class="lineno">   69</span>  <a class="code hl_enumvalue" href="#aa51313be2faacb739a18fdeecefbac75a80dc2ef92d14e81ec9e39d5ccd269390">LIFTING</a>, <span class="comment">//Remonter Axe Z</span></div>
+<div class="line"><span class="lineno">   70</span>  <a class="code hl_enumvalue" href="#aa51313be2faacb739a18fdeecefbac75a0cf5f2263040752e7d79e0aa6d8417c0">MOVING_TO_DROPZONE</a>, <span class="comment">//Se déplacer vers la zone de dépôt</span></div>
+<div class="line"><span class="lineno">   71</span>  <a class="code hl_enumvalue" href="#aa51313be2faacb739a18fdeecefbac75a8929b46ea95931821774e578512838eb">DROPPING</a>, <span class="comment">//Pince ouverte</span></div>
+<div class="line"><span class="lineno">   72</span>};</div>
+<div class="ttc" id="a_test_motor_8cpp_html_aa51313be2faacb739a18fdeecefbac75a0cf5f2263040752e7d79e0aa6d8417c0"><div class="ttname"><a href="#aa51313be2faacb739a18fdeecefbac75a0cf5f2263040752e7d79e0aa6d8417c0">MOVING_TO_DROPZONE</a></div><div class="ttdeci">@ MOVING_TO_DROPZONE</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00070">TestMotor.cpp:70</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_aa51313be2faacb739a18fdeecefbac75a80dc2ef92d14e81ec9e39d5ccd269390"><div class="ttname"><a href="#aa51313be2faacb739a18fdeecefbac75a80dc2ef92d14e81ec9e39d5ccd269390">LIFTING</a></div><div class="ttdeci">@ LIFTING</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00069">TestMotor.cpp:69</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_aa51313be2faacb739a18fdeecefbac75a8929b46ea95931821774e578512838eb"><div class="ttname"><a href="#aa51313be2faacb739a18fdeecefbac75a8929b46ea95931821774e578512838eb">DROPPING</a></div><div class="ttdeci">@ DROPPING</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00071">TestMotor.cpp:71</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_aa51313be2faacb739a18fdeecefbac75a8ab2cae69d2b33297ab24a5818213f18"><div class="ttname"><a href="#aa51313be2faacb739a18fdeecefbac75a8ab2cae69d2b33297ab24a5818213f18">CLOSING</a></div><div class="ttdeci">@ CLOSING</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00068">TestMotor.cpp:68</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_aa51313be2faacb739a18fdeecefbac75adac545be35b69c98c6f89f5d233d22d3"><div class="ttname"><a href="#aa51313be2faacb739a18fdeecefbac75adac545be35b69c98c6f89f5d233d22d3">LOWERING</a></div><div class="ttdeci">@ LOWERING</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00067">TestMotor.cpp:67</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18"><div class="ttname"><a href="#aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18">IDLE</a></div><div class="ttdeci">@ IDLE</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00066">TestMotor.cpp:66</a></div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<h2 class="groupheader">Documentation des fonctions</h2>
+<a id="afe461d27b9c48d5921c00d521181f12f" name="afe461d27b9c48d5921c00d521181f12f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe461d27b9c48d5921c00d521181f12f">&#9670;&#160;</a></span>loop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void loop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00133">133</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  133</span>            {</div>
+<div class="line"><span class="lineno">  134</span>  <span class="comment">/*</span></div>
+<div class="line"><span class="lineno">  135</span><span class="comment">  int deltaX = 0;</span></div>
+<div class="line"><span class="lineno">  136</span><span class="comment">  int deltaY = 0;</span></div>
+<div class="line"><span class="lineno">  137</span><span class="comment"></span> </div>
+<div class="line"><span class="lineno">  138</span><span class="comment">  // Calcul des deltas selon boutons </span></div>
+<div class="line"><span class="lineno">  139</span><span class="comment">  if(bouton == BTN_UP)    deltaX += speed;</span></div>
+<div class="line"><span class="lineno">  140</span><span class="comment">  if(bouton == BTN_DOWN)  deltaX -= speed;</span></div>
+<div class="line"><span class="lineno">  141</span><span class="comment">  if(bouton == BTN_LEFT)  deltaY += speed;</span></div>
+<div class="line"><span class="lineno">  142</span><span class="comment">  if(bouton == BTN_RIGHT) deltaY -= speed;</span></div>
+<div class="line"><span class="lineno">  143</span><span class="comment">  </span></div>
+<div class="line"><span class="lineno">  144</span><span class="comment">  // Respect des software maximum/min limits</span></div>
+<div class="line"><span class="lineno">  145</span><span class="comment">  if(posX + deltaX &gt; MAX_POS_X) deltaX = MAX_POS_X - posX;</span></div>
+<div class="line"><span class="lineno">  146</span><span class="comment">  if(posY + deltaY &gt; MAX_POS_Y) deltaY = MAX_POS_Y - posY;</span></div>
+<div class="line"><span class="lineno">  147</span><span class="comment">  if(posX + deltaX &lt; 0) deltaX = -posX;</span></div>
+<div class="line"><span class="lineno">  148</span><span class="comment">  if(posY + deltaY &lt; 0) deltaY = -posY;</span></div>
+<div class="line"><span class="lineno">  149</span><span class="comment"></span> </div>
+<div class="line"><span class="lineno">  150</span><span class="comment">  // Update positions</span></div>
+<div class="line"><span class="lineno">  151</span><span class="comment">  posX += deltaX;</span></div>
+<div class="line"><span class="lineno">  152</span><span class="comment">  posY += deltaY;</span></div>
+<div class="line"><span class="lineno">  153</span><span class="comment"></span> </div>
+<div class="line"><span class="lineno">  154</span><span class="comment">  // CoreXY mapping</span></div>
+<div class="line"><span class="lineno">  155</span><span class="comment">  long targetA = posX + posY;</span></div>
+<div class="line"><span class="lineno">  156</span><span class="comment">  long targetB = posX - posY;</span></div>
+<div class="line"><span class="lineno">  157</span><span class="comment">    </span></div>
+<div class="line"><span class="lineno">  158</span><span class="comment">  MOT_A.moveTo(targetA);</span></div>
+<div class="line"><span class="lineno">  159</span><span class="comment">  MOT_B.moveTo(targetB);</span></div>
+<div class="line"><span class="lineno">  160</span><span class="comment"></span> </div>
+<div class="line"><span class="lineno">  161</span><span class="comment">  MOT_A.run();</span></div>
+<div class="line"><span class="lineno">  162</span><span class="comment">  MOT_B.run();</span></div>
+<div class="line"><span class="lineno">  163</span><span class="comment">  */</span></div>
+<div class="line"><span class="lineno">  164</span> </div>
+<div class="line"><span class="lineno">  165</span>  <a class="code hl_variable" href="#acb3e510a4c376d6460bff33f78fc49ca">targetA</a> += <a class="code hl_variable" href="#a218b4f7c6cc2681a99c23a3b089d68b1">speed</a>;</div>
+<div class="line"><span class="lineno">  166</span>  <a class="code hl_variable" href="#a1856eb65522751793cbb678f189d4329">targetB</a> += <a class="code hl_variable" href="#a218b4f7c6cc2681a99c23a3b089d68b1">speed</a>;</div>
+<div class="line"><span class="lineno">  167</span>    </div>
+<div class="line"><span class="lineno">  168</span>  <a class="code hl_variable" href="#a1053a93945092c9896c669f633e54070">MOT_A</a>.moveTo(<a class="code hl_variable" href="#acb3e510a4c376d6460bff33f78fc49ca">targetA</a>);</div>
+<div class="line"><span class="lineno">  169</span>  <a class="code hl_variable" href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a>.moveTo(<a class="code hl_variable" href="#a1856eb65522751793cbb678f189d4329">targetB</a>);</div>
+<div class="line"><span class="lineno">  170</span> </div>
+<div class="line"><span class="lineno">  171</span>  <a class="code hl_variable" href="#a1053a93945092c9896c669f633e54070">MOT_A</a>.run();</div>
+<div class="line"><span class="lineno">  172</span>  <a class="code hl_variable" href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a>.run();</div>
+<div class="line"><span class="lineno">  173</span>}</div>
+<div class="ttc" id="a_test_motor_8cpp_html_a1053a93945092c9896c669f633e54070"><div class="ttname"><a href="#a1053a93945092c9896c669f633e54070">MOT_A</a></div><div class="ttdeci">AccelStepper MOT_A</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00061">TestMotor.cpp:61</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a1856eb65522751793cbb678f189d4329"><div class="ttname"><a href="#a1856eb65522751793cbb678f189d4329">targetB</a></div><div class="ttdeci">long targetB</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00087">TestMotor.cpp:87</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a218b4f7c6cc2681a99c23a3b089d68b1"><div class="ttname"><a href="#a218b4f7c6cc2681a99c23a3b089d68b1">speed</a></div><div class="ttdeci">int speed</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00031">TestMotor.cpp:31</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_acb3e510a4c376d6460bff33f78fc49ca"><div class="ttname"><a href="#acb3e510a4c376d6460bff33f78fc49ca">targetA</a></div><div class="ttdeci">long targetA</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00086">TestMotor.cpp:86</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_af4f393dd1208966ebf728b3dc66b4bb6"><div class="ttname"><a href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a></div><div class="ttdeci">AccelStepper MOT_B</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00062">TestMotor.cpp:62</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_test_motor_8cpp_source.html#l00061">MOT_A</a>, <a class="el" href="_test_motor_8cpp_source.html#l00062">MOT_B</a>, <a class="el" href="_test_motor_8cpp_source.html#l00031">speed</a>, <a class="el" href="_test_motor_8cpp_source.html#l00086">targetA</a>, et <a class="el" href="_test_motor_8cpp_source.html#l00087">targetB</a>.</p>
+
+</div>
+</div>
+<a id="a4fc01d736fe50cf5b977f755b675f11d" name="a4fc01d736fe50cf5b977f755b675f11d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4fc01d736fe50cf5b977f755b675f11d">&#9670;&#160;</a></span>setup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void setup </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00095">95</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   95</span>             {</div>
+<div class="line"><span class="lineno">   96</span>  Serial.begin(115200);</div>
+<div class="line"><span class="lineno">   97</span>  <a class="code hl_define" href="#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a>.begin(115200);</div>
+<div class="line"><span class="lineno">   98</span>  delay(2000);</div>
+<div class="line"><span class="lineno">   99</span> </div>
+<div class="line"><span class="lineno">  100</span>  <span class="comment">//MOTEURS</span></div>
+<div class="line"><span class="lineno">  101</span>  <span class="comment">//----------------</span></div>
+<div class="line"><span class="lineno">  102</span>  <span class="comment">//Moteur 1</span></div>
+<div class="line"><span class="lineno">  103</span>  pinMode(<a class="code hl_define" href="#a5821991780bb7088473e2ac048b53f49">EN_PIN_M1</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  104</span>  pinMode(<a class="code hl_define" href="#a30158cf8d934afe25c6d1b13d7f9bfe0">STEP_PIN_M1</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  105</span>  pinMode(<a class="code hl_define" href="#a4d8f5dfced091f2c87770d8f1e3aac2d">DIR_PIN_M1</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  106</span>  digitalWrite(<a class="code hl_define" href="#a5821991780bb7088473e2ac048b53f49">EN_PIN_M1</a>, LOW);</div>
+<div class="line"><span class="lineno">  107</span> </div>
+<div class="line"><span class="lineno">  108</span>  <span class="comment">//Moteur 2</span></div>
+<div class="line"><span class="lineno">  109</span>  pinMode(<a class="code hl_define" href="#af952697f41257e1cf7cd2b2a8a3c3827">EN_PIN_M2</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  110</span>  pinMode(<a class="code hl_define" href="#af501a386218380369e3e00cf7ea160c7">STEP_PIN_M2</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  111</span>  pinMode(<a class="code hl_define" href="#a6db96adb3d472ce4ce86a1df0492e35e">DIR_PIN_M2</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  112</span>  digitalWrite(<a class="code hl_define" href="#af952697f41257e1cf7cd2b2a8a3c3827">EN_PIN_M2</a>, LOW);</div>
+<div class="line"><span class="lineno">  113</span> </div>
+<div class="line"><span class="lineno">  114</span>  <span class="comment">//Moteur Z</span></div>
+<div class="line"><span class="lineno">  115</span>  pinMode(<a class="code hl_define" href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  116</span>  pinMode(<a class="code hl_define" href="#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  117</span>  pinMode(<a class="code hl_define" href="#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>, OUTPUT);</div>
+<div class="line"><span class="lineno">  118</span>  digitalWrite(<a class="code hl_define" href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>, LOW);</div>
+<div class="line"><span class="lineno">  119</span> </div>
+<div class="line"><span class="lineno">  120</span>  <a class="code hl_variable" href="#a1053a93945092c9896c669f633e54070">MOT_A</a>.setMaxSpeed(8000);</div>
+<div class="line"><span class="lineno">  121</span>  <a class="code hl_variable" href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a>.setMaxSpeed(8000);</div>
+<div class="line"><span class="lineno">  122</span>  <a class="code hl_variable" href="#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setMaxSpeed(4000);</div>
+<div class="line"><span class="lineno">  123</span> </div>
+<div class="line"><span class="lineno">  124</span>  <a class="code hl_variable" href="#a1053a93945092c9896c669f633e54070">MOT_A</a>.setAcceleration(2000);</div>
+<div class="line"><span class="lineno">  125</span>  <a class="code hl_variable" href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a>.setAcceleration(2000);</div>
+<div class="line"><span class="lineno">  126</span>  <a class="code hl_variable" href="#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setAcceleration(1000);</div>
+<div class="line"><span class="lineno">  127</span> </div>
+<div class="line"><span class="lineno">  128</span>  <a class="code hl_variable" href="#a1053a93945092c9896c669f633e54070">MOT_A</a>.setCurrentPosition(0);</div>
+<div class="line"><span class="lineno">  129</span>  <a class="code hl_variable" href="#af4f393dd1208966ebf728b3dc66b4bb6">MOT_B</a>.setCurrentPosition(0);</div>
+<div class="line"><span class="lineno">  130</span>  <a class="code hl_variable" href="#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setCurrentPosition(0);</div>
+<div class="line"><span class="lineno">  131</span>}</div>
+<div class="ttc" id="a_test_motor_8cpp_html_a1f7bfbc8949fded97e8599d36a79bcac"><div class="ttname"><a href="#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a></div><div class="ttdeci">#define STEP_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00057">TestMotor.cpp:57</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a30158cf8d934afe25c6d1b13d7f9bfe0"><div class="ttname"><a href="#a30158cf8d934afe25c6d1b13d7f9bfe0">STEP_PIN_M1</a></div><div class="ttdeci">#define STEP_PIN_M1</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00043">TestMotor.cpp:43</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a4d8f5dfced091f2c87770d8f1e3aac2d"><div class="ttname"><a href="#a4d8f5dfced091f2c87770d8f1e3aac2d">DIR_PIN_M1</a></div><div class="ttdeci">#define DIR_PIN_M1</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00042">TestMotor.cpp:42</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a54cf6115ea904ab9efd3eb83c7c332cd"><div class="ttname"><a href="#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a></div><div class="ttdeci">#define SerialGripper</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00038">TestMotor.cpp:38</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a5821991780bb7088473e2ac048b53f49"><div class="ttname"><a href="#a5821991780bb7088473e2ac048b53f49">EN_PIN_M1</a></div><div class="ttdeci">#define EN_PIN_M1</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00041">TestMotor.cpp:41</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a6db96adb3d472ce4ce86a1df0492e35e"><div class="ttname"><a href="#a6db96adb3d472ce4ce86a1df0492e35e">DIR_PIN_M2</a></div><div class="ttdeci">#define DIR_PIN_M2</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00049">TestMotor.cpp:49</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a83bf855f1f9a9a8dd21887383c1e1d74"><div class="ttname"><a href="#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a></div><div class="ttdeci">#define EN_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00055">TestMotor.cpp:55</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_a952dedf38ca16835d25c084c61766535"><div class="ttname"><a href="#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a></div><div class="ttdeci">#define DIR_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00056">TestMotor.cpp:56</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_aeead6e2ab9a1779be2052b21eeb1b457"><div class="ttname"><a href="#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a></div><div class="ttdeci">AccelStepper MOT_Z</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00063">TestMotor.cpp:63</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_af501a386218380369e3e00cf7ea160c7"><div class="ttname"><a href="#af501a386218380369e3e00cf7ea160c7">STEP_PIN_M2</a></div><div class="ttdeci">#define STEP_PIN_M2</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00050">TestMotor.cpp:50</a></div></div>
+<div class="ttc" id="a_test_motor_8cpp_html_af952697f41257e1cf7cd2b2a8a3c3827"><div class="ttname"><a href="#af952697f41257e1cf7cd2b2a8a3c3827">EN_PIN_M2</a></div><div class="ttdeci">#define EN_PIN_M2</div><div class="ttdef"><b>Definition</b> <a href="_test_motor_8cpp_source.html#l00048">TestMotor.cpp:48</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_test_motor_8cpp_source.html#l00042">DIR_PIN_M1</a>, <a class="el" href="_test_motor_8cpp_source.html#l00049">DIR_PIN_M2</a>, <a class="el" href="_test_motor_8cpp_source.html#l00056">DIR_PIN_MZ</a>, <a class="el" href="_test_motor_8cpp_source.html#l00041">EN_PIN_M1</a>, <a class="el" href="_test_motor_8cpp_source.html#l00048">EN_PIN_M2</a>, <a class="el" href="_test_motor_8cpp_source.html#l00055">EN_PIN_MZ</a>, <a class="el" href="_test_motor_8cpp_source.html#l00061">MOT_A</a>, <a class="el" href="_test_motor_8cpp_source.html#l00062">MOT_B</a>, <a class="el" href="_test_motor_8cpp_source.html#l00063">MOT_Z</a>, <a class="el" href="_test_motor_8cpp_source.html#l00038">SerialGripper</a>, <a class="el" href="_test_motor_8cpp_source.html#l00043">STEP_PIN_M1</a>, <a class="el" href="_test_motor_8cpp_source.html#l00050">STEP_PIN_M2</a>, et <a class="el" href="_test_motor_8cpp_source.html#l00057">STEP_PIN_MZ</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des variables</h2>
+<a id="a623c5321a443d40644f715d1cd48efa5" name="a623c5321a443d40644f715d1cd48efa5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a623c5321a443d40644f715d1cd48efa5">&#9670;&#160;</a></span>bouton</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int bouton = <a class="el" href="#ae55225024bd160dd59985cb17eb5a2ed">BTN_UP</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00093">93</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a4d51b5c8e2952bf88576ce6c9c17ae3a" name="a4d51b5c8e2952bf88576ce6c9c17ae3a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4d51b5c8e2952bf88576ce6c9c17ae3a">&#9670;&#160;</a></span>currentState</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">volatile <a class="el" href="main__with__dynamixel_8cpp.html#aa51313be2faacb739a18fdeecefbac75">SystemState</a> currentState = <a class="el" href="main__with__dynamixel_8cpp.html#aa51313be2faacb739a18fdeecefbac75afd6a0e4343048b10646dd2976cc5ad18">IDLE</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00073">73</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ac09b3d9f8dc28971a99a3a8eee7f5c99" name="ac09b3d9f8dc28971a99a3a8eee7f5c99"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac09b3d9f8dc28971a99a3a8eee7f5c99">&#9670;&#160;</a></span>inputEventGroup</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">EventGroupHandle_t inputEventGroup</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00076">76</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a50c2f90c0464122f638390cb3b47202b" name="a50c2f90c0464122f638390cb3b47202b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a50c2f90c0464122f638390cb3b47202b">&#9670;&#160;</a></span>lastBtnInterrupt</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">volatile TickType_t lastBtnInterrupt = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00017">17</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2b04ddb19106e5feb7860ffcd5c46b3b" name="a2b04ddb19106e5feb7860ffcd5c46b3b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b04ddb19106e5feb7860ffcd5c46b3b">&#9670;&#160;</a></span>limitEventGroup</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">EventGroupHandle_t limitEventGroup</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00024">24</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a53083d8e6469525cf0c303f5a15d2a3d" name="a53083d8e6469525cf0c303f5a15d2a3d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a53083d8e6469525cf0c303f5a15d2a3d">&#9670;&#160;</a></span>MAX_POS_X</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long MAX_POS_X = 50000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00035">35</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a8fd470d13c93f6368505b9cf3c362b2f" name="a8fd470d13c93f6368505b9cf3c362b2f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8fd470d13c93f6368505b9cf3c362b2f">&#9670;&#160;</a></span>MAX_POS_Y</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long MAX_POS_Y = 50000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00036">36</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a1053a93945092c9896c669f633e54070" name="a1053a93945092c9896c669f633e54070"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1053a93945092c9896c669f633e54070">&#9670;&#160;</a></span>MOT_A</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">AccelStepper MOT_A = AccelStepper(AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#a30158cf8d934afe25c6d1b13d7f9bfe0">STEP_PIN_M1</a>,<a class="el" href="main__with__dynamixel_8cpp.html#a4d8f5dfced091f2c87770d8f1e3aac2d">DIR_PIN_M1</a>)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00061">61</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00133">loop()</a>, et <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="af4f393dd1208966ebf728b3dc66b4bb6" name="af4f393dd1208966ebf728b3dc66b4bb6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af4f393dd1208966ebf728b3dc66b4bb6">&#9670;&#160;</a></span>MOT_B</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">AccelStepper MOT_B = AccelStepper(AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#af501a386218380369e3e00cf7ea160c7">STEP_PIN_M2</a>,<a class="el" href="main__with__dynamixel_8cpp.html#a6db96adb3d472ce4ce86a1df0492e35e">DIR_PIN_M2</a>)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00062">62</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00133">loop()</a>, et <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="aeead6e2ab9a1779be2052b21eeb1b457" name="aeead6e2ab9a1779be2052b21eeb1b457"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeead6e2ab9a1779be2052b21eeb1b457">&#9670;&#160;</a></span>MOT_Z</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">AccelStepper MOT_Z = AccelStepper(AccelStepper::DRIVER, <a class="el" href="main__with__dynamixel_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>,<a class="el" href="main__with__dynamixel_8cpp.html#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00063">63</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00095">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a97fdacb13304251dc759c691e31f6767" name="a97fdacb13304251dc759c691e31f6767"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97fdacb13304251dc759c691e31f6767">&#9670;&#160;</a></span>motorTaskHandle</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">TaskHandle_t motorTaskHandle = NULL</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00078">78</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af0035382ad3052a5a3edc8812a373b0b" name="af0035382ad3052a5a3edc8812a373b0b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af0035382ad3052a5a3edc8812a373b0b">&#9670;&#160;</a></span>posX</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long posX = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00090">90</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aad9353f6894c8d55ba59f991ac5fa54b" name="aad9353f6894c8d55ba59f991ac5fa54b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad9353f6894c8d55ba59f991ac5fa54b">&#9670;&#160;</a></span>posY</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long posY = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00091">91</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a218b4f7c6cc2681a99c23a3b089d68b1" name="a218b4f7c6cc2681a99c23a3b089d68b1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a218b4f7c6cc2681a99c23a3b089d68b1">&#9670;&#160;</a></span>speed</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int speed = 2</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00031">31</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00133">loop()</a>.</p>
+
+</div>
+</div>
+<a id="acb3e510a4c376d6460bff33f78fc49ca" name="acb3e510a4c376d6460bff33f78fc49ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acb3e510a4c376d6460bff33f78fc49ca">&#9670;&#160;</a></span>targetA</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long targetA = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00086">86</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00133">loop()</a>.</p>
+
+</div>
+</div>
+<a id="a1856eb65522751793cbb678f189d4329" name="a1856eb65522751793cbb678f189d4329"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1856eb65522751793cbb678f189d4329">&#9670;&#160;</a></span>targetB</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long targetB = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00087">87</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_test_motor_8cpp_source.html#l00133">loop()</a>.</p>
+
+</div>
+</div>
+<a id="a7637e2697c289232afa010948f9b62e4" name="a7637e2697c289232afa010948f9b62e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7637e2697c289232afa010948f9b62e4">&#9670;&#160;</a></span>toutouAttrape</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool toutouAttrape = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00074">74</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ae60c82085f2587943a1035fa9af99cce" name="ae60c82085f2587943a1035fa9af99cce"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae60c82085f2587943a1035fa9af99cce">&#9670;&#160;</a></span>toutouEventGroup</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">EventGroupHandle_t toutouEventGroup</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_test_motor_8cpp_source.html#l00077">77</a> du fichier <a class="el" href="_test_motor_8cpp_source.html">TestMotor.cpp</a>.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>

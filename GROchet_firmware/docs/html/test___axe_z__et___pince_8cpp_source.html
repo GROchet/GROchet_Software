@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino:  Fichier source de src/test_AxeZ_et_Pince.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="headertitle"><div class="title">test_AxeZ_et_Pince.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="test___axe_z__et___pince_8cpp.html">Aller à la documentation de ce fichier.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#include &lt;Arduino.h&gt;</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include &lt;AccelStepper.h&gt;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span> </div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">//MOTEURS</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a17376c91bf4cd5fa69a3ddc855c5f4f6">    5</a></span><span class="preprocessor">#define FULLSTEP 4 </span><span class="comment">// 4 fils par moteurs</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a8c5f22b75afd01e6b1ea65cbc5a2a785">    6</a></span><span class="preprocessor">#define STEPS_REV 4096</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span> </div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="comment">//Moteur Z</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a83bf855f1f9a9a8dd21887383c1e1d74">    9</a></span><span class="preprocessor">#define EN_PIN_MZ 35</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a952dedf38ca16835d25c084c61766535">   10</a></span><span class="preprocessor">#define DIR_PIN_MZ 33</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">   11</a></span><span class="preprocessor">#define STEP_PIN_MZ 34</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a54cf6115ea904ab9efd3eb83c7c332cd">   13</a></span><span class="preprocessor">#define SerialGripper    Serial2</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span> </div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a99f93fd240bf4b90d0ebf99b4a82eeaa">   16</a></span>AccelStepper <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>(AccelStepper::DRIVER, <a class="code hl_define" href="test___axe_z__et___pince_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a>, <a class="code hl_define" href="test___axe_z__et___pince_8cpp.html#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a>);</div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#adc6fb6ffcbec95f4b9200729215d118d">   18</a></span><span class="keywordtype">long</span> <a class="code hl_variable" href="test___axe_z__et___pince_8cpp.html#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a> = 100; <span class="comment">// Number of steps per key press</span></div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
+<div class="foldopen" id="foldopen00020" data-start="{" data-end="}">
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#a4fc01d736fe50cf5b977f755b675f11d">   20</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="test___axe_z__et___pince_8cpp.html#a4fc01d736fe50cf5b977f755b675f11d">setup</a>() {</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>  Serial.begin(115200);</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>  <a class="code hl_define" href="test___axe_z__et___pince_8cpp.html#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a>.begin(9600);</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>  delay(2000);</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>  <span class="comment">// Moteur Z</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>  pinMode(<a class="code hl_define" href="test___axe_z__et___pince_8cpp.html#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>, OUTPUT);</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>  digitalWrite(<a class="code hl_define" href="test___axe_z__et___pince_8cpp.html#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a>, LOW); <span class="comment">// Enable motor</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span> </div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setMaxSpeed(4000);</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>  <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.setAcceleration(1000);</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>  Serial.println(<span class="stringliteral">&quot;Control Z-axis with UP/DOWN arrows sent via Serial&quot;</span>);</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>}</div>
+</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
+<div class="foldopen" id="foldopen00035" data-start="{" data-end="}">
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno"><a class="line" href="test___axe_z__et___pince_8cpp.html#afe461d27b9c48d5921c00d521181f12f">   35</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="test___axe_z__et___pince_8cpp.html#afe461d27b9c48d5921c00d521181f12f">loop</a>() {</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  <span class="keywordflow">if</span> (Serial.available()) {</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordtype">char</span> c = Serial.read();</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="comment">// Check which key was pressed</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="keywordflow">if</span> (c == <span class="charliteral">&#39;w&#39;</span>) {          <span class="comment">// Up arrow alternative</span></div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>      <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.moveTo(<a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.currentPosition() + <a class="code hl_variable" href="test___axe_z__et___pince_8cpp.html#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a>);</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (c == <span class="charliteral">&#39;s&#39;</span>) {   <span class="comment">// Down arrow alternative</span></div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>      <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.moveTo(<a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.currentPosition() - <a class="code hl_variable" href="test___axe_z__et___pince_8cpp.html#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a>);</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    }</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (c == <span class="charliteral">&#39;x&#39;</span>) {</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        <a class="code hl_function" href="main__with__dynamixel_8cpp.html#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a>();</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    }</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (c == <span class="charliteral">&#39; &#39;</span>){</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>        <a class="code hl_function" href="main__with__dynamixel_8cpp.html#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a>();</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    }</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  }</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>  <span class="comment">// Keep motor running towards target</span></div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  <a class="code hl_variable" href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a>.run();</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>}</div>
+</div>
+<div class="ttc" id="amain__with__dynamixel_8cpp_html_a6a965dbf78c0db45d0e036438655f05c"><div class="ttname"><a href="main__with__dynamixel_8cpp.html#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a></div><div class="ttdeci">void fermerPince()</div><div class="ttdoc">Ferme la pince Dynamixel avec une force dépendante du niveau de difficulté.</div><div class="ttdef"><b>Definition</b> <a href="main__with__dynamixel_8cpp_source.html#l01319">main_with_dynamixel.cpp:1319</a></div></div>
+<div class="ttc" id="amain__with__dynamixel_8cpp_html_ac488621b77d6dcceeef95af389a78d4d"><div class="ttname"><a href="main__with__dynamixel_8cpp.html#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a></div><div class="ttdeci">void ouvrirPince()</div><div class="ttdoc">Ouvre complètement la pince Dynamixel.</div><div class="ttdef"><b>Definition</b> <a href="main__with__dynamixel_8cpp_source.html#l01302">main_with_dynamixel.cpp:1302</a></div></div>
+<div class="ttc" id="amain__with__dynamixel_8cpp_html_aeead6e2ab9a1779be2052b21eeb1b457"><div class="ttname"><a href="main__with__dynamixel_8cpp.html#aeead6e2ab9a1779be2052b21eeb1b457">MOT_Z</a></div><div class="ttdeci">AccelStepper MOT_Z</div><div class="ttdef"><b>Definition</b> <a href="main__with__dynamixel_8cpp_source.html#l00133">main_with_dynamixel.cpp:133</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a1f7bfbc8949fded97e8599d36a79bcac"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#a1f7bfbc8949fded97e8599d36a79bcac">STEP_PIN_MZ</a></div><div class="ttdeci">#define STEP_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="#l00011">test_AxeZ_et_Pince.cpp:11</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a4fc01d736fe50cf5b977f755b675f11d"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#a4fc01d736fe50cf5b977f755b675f11d">setup</a></div><div class="ttdeci">void setup()</div><div class="ttdef"><b>Definition</b> <a href="#l00020">test_AxeZ_et_Pince.cpp:20</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a54cf6115ea904ab9efd3eb83c7c332cd"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#a54cf6115ea904ab9efd3eb83c7c332cd">SerialGripper</a></div><div class="ttdeci">#define SerialGripper</div><div class="ttdef"><b>Definition</b> <a href="#l00013">test_AxeZ_et_Pince.cpp:13</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a83bf855f1f9a9a8dd21887383c1e1d74"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#a83bf855f1f9a9a8dd21887383c1e1d74">EN_PIN_MZ</a></div><div class="ttdeci">#define EN_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="#l00009">test_AxeZ_et_Pince.cpp:9</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_a952dedf38ca16835d25c084c61766535"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#a952dedf38ca16835d25c084c61766535">DIR_PIN_MZ</a></div><div class="ttdeci">#define DIR_PIN_MZ</div><div class="ttdef"><b>Definition</b> <a href="#l00010">test_AxeZ_et_Pince.cpp:10</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_adc6fb6ffcbec95f4b9200729215d118d"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#adc6fb6ffcbec95f4b9200729215d118d">stepIncrement</a></div><div class="ttdeci">long stepIncrement</div><div class="ttdef"><b>Definition</b> <a href="#l00018">test_AxeZ_et_Pince.cpp:18</a></div></div>
+<div class="ttc" id="atest___axe_z__et___pince_8cpp_html_afe461d27b9c48d5921c00d521181f12f"><div class="ttname"><a href="test___axe_z__et___pince_8cpp.html#afe461d27b9c48d5921c00d521181f12f">loop</a></div><div class="ttdeci">void loop()</div><div class="ttdef"><b>Definition</b> <a href="#l00035">test_AxeZ_et_Pince.cpp:35</a></div></div>
+</div><!-- fragment --></div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>

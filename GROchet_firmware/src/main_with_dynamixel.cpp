@@ -578,11 +578,18 @@ EventGroupHandle_t inputEventGroup;
 
 volatile bool jsonMoveActive = false;
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Initialise le système embarqué et configure tous les matériels et tâches RTOS.
  *
- * @details Nom de la fonction : setup
- * @param Aucun paramètre
+ * Configure les composants suivants:
+ * - Communication série à 115200 baud
+ * - Moteur Dynamixel pour la pince (détection d'ID et mode de fonctionnement)
+ * - Moteurs pas à pas (axes X, Y et Z)
+ * - Boutons de contrôle et leurs interruptions
+ * - Fins de course (limit switches)
+ * - Bandes de LED (affichage et état)
+ * - Tâches FreeRTOS pour le contrôle moteur, la machine d'état, la communication JSON et l'interface
+ *
  * @return void
  */
 void setup(){
@@ -695,21 +702,22 @@ void setup(){
     vTaskStartScheduler();
 }
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Boucle principale (non utilisée, le système fonctionne avec FreeRTOS).
  *
- * @details Nom de la fonction : loop
- * @param Aucun paramètre
+ * Cette fonction reste vide car la planification est gérée par le planificateur FreeRTOS.
+ *
  * @return void
  */
 void loop(){
 }
 
-/** 
- * @brief Effectue le référencement (homing) des axes X et Y en utilisant les fins de course afin de repositionner le système à l'origine (0,0).
+/**
+ * @brief Effectue le référencement (homing) des axes X et Y en utilisant les fins de course.
  *
- * @details Nom de la fonction : homeXY
- * @param Aucun paramètre
+ * Positionne le système à l'origine (0,0) en utilisant les capteurs de fin de course.
+ * D'abord l'axe X est référencé, puis l'axe Y. Les positions des moteurs sont réinitialisées à 0.
+ *
  * @return void
  */
 void homeXY(){
@@ -760,11 +768,14 @@ void homeXY(){
     posY = 0;
 }
 
-/** 
- * @brief Tâche RTOS principale qui implémente la machine à états du système et gère les transitions entre les différentes phases du jeu.
+/**
+ * @brief Tâche RTOS qui gère la machine d'état du système et les transitions entre les phases du jeu.
  *
- * @details Nom de la fonction : TaskStateControl
- * @param void *pvParameters
+ * Contrôle les états suivants: ACCUEIL, SETUP, DIFF_CHOOSE, IDLE, LOWERING, CLOSING,
+ * LIFTING, MOVING_TO_DROPZONE, et DROPPING. Gère les chronomètres, les animations LED
+ * et la détection des objets attrapés.
+ *
+ * @param pvParameters Pointeur sur les paramètres (non utilisé)
  * @return void
  */
 void TaskStateControl(void *pvParameters){
@@ -924,11 +935,13 @@ void TaskStateControl(void *pvParameters){
   }
 }
 
-/** 
- * @brief Tâche RTOS qui envoie périodiquement l'état du système au format JSON via la liaison série lorsque des changements sont détectés.
+/**
+ * @brief Tâche RTOS qui envoie périodiquement l'état du système au format JSON via la liaison série.
  *
- * @details Nom de la fonction : TaskCommJsonSend
- * @param void *pvParameters
+ * Détecte les changements dans les positions, états, paramètres et états des boutons,
+ * puis envoie uniquement les données modifiées au format JSON pour optimiser la bande passante.
+ *
+ * @param pvParameters Pointeur sur les paramètres (non utilisé)
  * @return void
  */
 void TaskCommJsonSend(void *pvParameters){
@@ -1119,11 +1132,12 @@ void TaskCommJsonSend(void *pvParameters){
     }
 }
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Envoie un instantané complet de tous les paramètres du système au format JSON.
  *
- * @details Nom de la fonction : sendFullSnapshot
- * @param Aucun paramètre
+ * Utilisée à l'initialisation pour synchroniser l'interface distante avec l'état actuel du système.
+ * Inclut les positions, états, paramètres de la pince, limites de déplacement et couleurs LED.
+ *
  * @return void
  */
 void sendFullSnapshot(){
@@ -1178,11 +1192,13 @@ void sendFullSnapshot(){
     Serial.print('\n');
 }
 
-/** 
- * @brief Tâche RTOS responsable du pilotage des moteurs (XY et Z), incluant le contrôle manuel via les boutons.
+/**
+ * @brief Tâche RTOS qui contrôle les moteurs pas à pas (XY et Z).
  *
- * @details Nom de la fonction : TaskMotorControl
- * @param void *pvParameters
+ * Lit les états des boutons pour le contrôle manuel, calcule les positions cibles en coordonnées XY,
+ * puis exécute les mouvements des moteurs selon les instructions de la machine d'état ou des entrées JSON.
+ *
+ * @param pvParameters Pointeur sur les paramètres (non utilisé)
  * @return void
  */
 void TaskMotorControl(void *pvParameters){
@@ -1232,11 +1248,12 @@ void TaskMotorControl(void *pvParameters){
     }
 }
 
-/** 
- * @brief Routine d'interruption déclenchée par les fins de course pour signaler un événement.
+/**
+ * @brief Routine d'interruption déclenchée par les fins de course (limit switches).
  *
- * @details Nom de la fonction : NotifySwitch
- * @param Aucun paramètre
+ * Détecte quand les axes X ou Y atteignent leurs limites et signale l'événement via un groupe d'événements.
+ * Utilise un déclenchement sur flanc descendant (FALLING).
+ *
  * @return void
  */
 void NotifySwitch(){
@@ -1255,11 +1272,12 @@ void NotifySwitch(){
 	}
 }
 
-/** 
- * @brief Routine d'interruption associée au bouton OK avec gestion de l'anti-rebond.
+/**
+ * @brief Routine d'interruption du bouton OK avec gestion de l'anti-rebond.
  *
- * @details Nom de la fonction : NotifyOkButton
- * @param Aucun paramètre
+ * Détecte les appuis sur le bouton OK en ignorant les rebonds pendant la période de debounce (20 ms).
+ * Signale l'événement via le groupe d'événements.
+ *
  * @return void
  */
 void NotifyOkButton(){
@@ -1273,11 +1291,12 @@ void NotifyOkButton(){
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
-/** 
- * @brief Ouvre la pince Dynamixel en positionnant le moteur jusqu'à la position ouverte définie.
+/**
+ * @brief Ouvre complètement la pince Dynamixel.
  *
- * @details Nom de la fonction : ouvrirPince
- * @param Aucun paramètre
+ * Positionne la pince à OPEN_POS avec le courant MOVE_CURRENT et attend que le moteur atteigne la position.
+ * Boucle jusqu'à ce que la position actuelle soit à moins de 50 unités de OPEN_POS.
+ *
  * @return void
  */
 void ouvrirPince(){
@@ -1289,11 +1308,12 @@ void ouvrirPince(){
     }
 }
 
-/** 
- * @brief Ferme la pince Dynamixel avec une force dépendant du niveau de difficulté.
+/**
+ * @brief Ferme la pince Dynamixel avec une force dépendante du niveau de difficulté.
  *
- * @details Nom de la fonction : fermerPince
- * @param Aucun paramètre
+ * Positionne la pince à CLOSED_POS avec le courant défini par force[difficulty].
+ * Boucle jusqu'à ce que la position actuelle soit à moins de 50 unités de CLOSED_POS.
+ *
  * @return void
  */
 void fermerPince(){
@@ -1305,11 +1325,13 @@ void fermerPince(){
     }
 }
 
-/** 
- * @brief Analyse les messages JSON reçus et exécute les commandes correspondantes (mouvements, pince, configuration, etc.).
+/**
+ * @brief Analyse et traite les messages JSON reçus depuis l'interface distante.
  *
- * @details Nom de la fonction : processJson
- * @param char *incoming
+ * Supporte trois types de messages: "commande" (mouvements et actions), "pers" (paramètres personnalisés),
+ * et "rep" (réglages de configuration). Exécute les actions appropriées selon le type et le contenu du message.
+ *
+ * @param incoming Chaîne de caractères contenant le message JSON à traiter
  * @return void
  */
 void processJson(char *incoming){
@@ -1470,12 +1492,13 @@ void processJson(char *incoming){
     }
 }
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Ajoute un caractère au tampon de réception circulaire.
  *
- * @details Nom de la fonction : rxBufferPush
- * @param char c
- * @return static inline void
+ * Si le tampon est plein, écrase le caractère le plus ancien. Utilisée par l'interruption de réception série.
+ *
+ * @param c Caractère à ajouter au tampon
+ * @return void
  */
 static inline void rxBufferPush(char c){
     uint16_t next = (rxHead + 1) % RX_BUF_SIZE;
@@ -1487,12 +1510,11 @@ static inline void rxBufferPush(char c){
     rxHead = next;
 }
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Récupère et enlève le caractère suivant du tampon de réception circulaire.
  *
- * @details Nom de la fonction : rxBufferPop
- * @param char &c
- * @return static inline bool
+ * @param c Référence au caractère qui recevra la valeur extraite du tampon
+ * @return true si un caractère a été extrait, false si le tampon est vide
  */
 static inline bool rxBufferPop(char &c){
     if (rxTail == rxHead) return false;
@@ -1502,11 +1524,13 @@ static inline bool rxBufferPop(char &c){
     return true;
 }
 
-/** 
- * @brief Tâche RTOS qui lit les données série, reconstruit les messages JSON et appelle leur traitement.
+/**
+ * @brief Tâche RTOS qui reçoit et traite les messages JSON depuis la liaison série.
  *
- * @details Nom de la fonction : TaskCommJsonReceive
- * @param void *pvParameters
+ * Lit les données du port série, les accumule dans un tampon circulaire, reconstruit les messages
+ * ligne par ligne (séparés par des retours à la ligne), puis appelle processJson pour chaque message complet.
+ *
+ * @param pvParameters Pointeur sur les paramètres (non utilisé)
  * @return void
  */
 void TaskCommJsonReceive(void *pvParameters){
@@ -1547,12 +1571,15 @@ void TaskCommJsonReceive(void *pvParameters){
 // SONAR
 //----------------------
 
-/** 
- * @brief Détecte la capture d'un objet à l'aide du capteur ultrason en analysant les variations de distance.
+/**
+ * @brief Détecte si un objet a été attrapé en utilisant le capteur ultrason (sonar).
  *
- * @details Nom de la fonction : toutouAttrape
- * @param uint32_t temps_actif, int distance_attrape
- * @return bool
+ * Mesure la distance de l'objet pendant une période donnée et détecte les changements de distance.
+ * Retourne vrai si la distance s'éloigne de plus de 2 cm de la distance cible initiale.
+ *
+ * @param temps_actif Durée en millisecondes pendant laquelle détecter la capture
+ * @param distance_attrape Distance de référence en centimètres de l'objet attendu
+ * @return true si un objet a été attrapé, false sinon
  */
 bool toutouAttrape(uint32_t temps_actif, int distance_attrape){
     float temps_retour_signal;
@@ -1594,26 +1621,28 @@ bool toutouAttrape(uint32_t temps_actif, int distance_attrape){
 // UI RETRO
 //----------------------
 
-// Fonction qui transforme des coordonnées de la matrice 13x14 en numéro de LED pour la librairie NeoPixel
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Transforme les coordonnées d'une demi-matrice (14x13) en index LED.
  *
- * @details Nom de la fonction : transformationIntermediaire
- * @param int x, int y
- * @return int
+ * Convertit les coordonnées x, y en index linéaire pour la bibliothèque NeoPixel.
+ *
+ * @param x Coordonnée X (0-13)
+ * @param y Coordonnée Y (0-12)
+ * @return Index LED dans le tableau de pixels (0-181)
  */
 int transformationIntermediaire(int x, int y){
     int indexIntermediaire = (y * largeur) + x;
     return indexIntermediaire;
 };
  
-// Fonction qui transforme des coordonnées de la matrice LED complète (13x28) en numéro de LED pour la librairie NeoPixel
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Transforme les coordonnées de la matrice LED complète (28x13) en index LED.
  *
- * @details Nom de la fonction : transformationCoordonnees
- * @param int x, int y
- * @return int
+ * Gère deux demi-matrices côte à côte en appelant transformationIntermediaire pour chacune.
+ *
+ * @param x Coordonnée X (0-27)
+ * @param y Coordonnée Y (0-12)
+ * @return Index LED dans le tableau complet de pixels (0-363)
  */
 int transformationCoordonnees(int x, int y){
     int index = 0;
@@ -1628,13 +1657,15 @@ int transformationCoordonnees(int x, int y){
     return index;
 };
  
-// Fonction qui allume d'une certaine couleur UNE LED correspondant aux coordonnées de la matrice 13x28
-// La variable couleur contient pixels.Color(R,G,B)
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Allume une LED aux coordonnées spécifiées avec la couleur donnée.
  *
- * @details Nom de la fonction : allumeLED
- * @param int x, int y, uint32_t couleur
+ * Vérifie que les coordonnées sont dans les limites de la matrice (0-27, 0-12)
+ * puis définit la couleur du pixel correspondant.
+ *
+ * @param x Coordonnée X de la LED (0-27)
+ * @param y Coordonnée Y de la LED (0-12)
+ * @param couleur Couleur RGB au format pixels.Color(R,G,B)
  * @return void
  */
 void allumeLED(int x, int y, uint32_t couleur){
@@ -1644,12 +1675,15 @@ void allumeLED(int x, int y, uint32_t couleur){
     }
 };
  
-// Recoit une lettre en argument, et l'affiche aux coordonnées données en argument, selon couleur
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Affiche une lettre sur la matrice LED à partir d'une matrice de pixels 5x3.
  *
- * @details Nom de la fonction : ecrireLettre
- * @param const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur
+ * Lit la matrice de caractères stockée en mémoire PROGMEM et allume les LEDs correspondantes.
+ *
+ * @param matriceLettre Matrice 5x3 représentant le motif de la lettre
+ * @param xDepart Coordonnée X de départ pour afficher la lettre
+ * @param yDepart Coordonnée Y de départ pour afficher la lettre
+ * @param couleur Couleur RGB pour afficher la lettre
  * @return void
  */
 void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
@@ -1662,13 +1696,13 @@ void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, u
     }
 };
  
-// Fonction qui trouve la lettre dans la matrice 3D de l'alphabet
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Trouve l'index d'un caractère dans le tableau d'alphabet défini.
  *
- * @details Nom de la fonction : trouverIndexAlphabet
- * @param char c
- * @return int
+ * Supporte les lettres majuscules (A-Z), les chiffres (0-9) et quelques caractères spéciaux (!, :, /).
+ *
+ * @param c Caractère à rechercher
+ * @return Index dans le tableau alphabet, ou -1 si le caractère n'est pas trouvé
  */
 int trouverIndexAlphabet(char c){
     int index = 0;
@@ -1693,12 +1727,15 @@ int trouverIndexAlphabet(char c){
     return index;
 };
  
-//Fonction qui appelle ecrireLettre jsuqu'à ce que le mot soit écrit complètement
-/** 
- * @brief Affiche un mot complet sur la matrice LED en utilisant la table de caractères définie.
+/**
+ * @brief Affiche un mot complet sur la matrice LED.
  *
- * @details Nom de la fonction : ecrireMot
- * @param const char *mot, int xDepart, int yDepart, uint32_t couleur
+ * Affiche chaque caractère du mot en l'espaçant de largeurLettre pixels horizontalement.
+ *
+ * @param mot Chaîne de caractères à afficher
+ * @param xDepart Coordonnée X de départ pour afficher le mot
+ * @param yDepart Coordonnée Y de départ pour afficher le mot
+ * @param couleur Couleur RGB pour afficher le mot
  * @return void
  */
 void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur){
@@ -1711,13 +1748,13 @@ void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur){
     }
 }
  
-//Retourne la longueur du mot
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Calcule la longueur d'une chaîne de caractères.
  *
- * @details Nom de la fonction : longueurMot
- * @param const char *mot
- * @return int
+ * Compte le nombre de caractères jusqu'au terminateur nul.
+ *
+ * @param mot Chaîne de caractères dont on veut connaître la longueur
+ * @return Nombre de caractères (sans le terminateur nul)
  */
 int longueurMot(const char *mot){
     int longueur = 0;
@@ -1727,12 +1764,15 @@ int longueurMot(const char *mot){
     return longueur;
 }
 
-//Fait défiler un mot horizontalement sur l'affichage
-/** 
- * @brief Fait défiler horizontalement un texte sur la matrice LED.
+/**
+ * @brief Fait défiler horizontalement un texte sur la matrice LED de droite à gauche.
  *
- * @details Nom de la fonction : defilerTexte
- * @param const char *mot, int yDepart, uint32_t couleur
+ * Le texte commence à la droite de l'écran et disparaît à la gauche.
+ * À chaque appel, le texte avance d'un pixel vers la gauche.
+ *
+ * @param mot Texte à faire défiler
+ * @param yDepart Coordonnée Y du texte à défiler
+ * @param couleur Couleur RGB du texte
  * @return void
  */
 void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
@@ -1745,11 +1785,13 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
     }
 }
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Tâche RTOS qui gère l'affichage rétro de la matrice LED.
  *
- * @details Nom de la fonction : TaskRetroUI
- * @param void *pvParameters
+ * Met à jour l'affichage selon l'état actuel (menu d'accueil, sélection de difficulté, écrans gagnant/perdant).
+ * Gère également l'éclairage interne et externe de la machine.
+ *
+ * @param pvParameters Pointeur sur les paramètres (non utilisé)
  * @return void
  */
 void TaskRetroUI(void *pvParameters){
@@ -1812,12 +1854,11 @@ void TaskRetroUI(void *pvParameters){
     }
 }
 
-//Affichage de l'écran d'accueil, "GROCHET" + bandes de couleurs. Les bandes de couleur défilent de 1 entre chaque appel de fonction
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Affiche l'écran d'accueil avec le texte "GROCHET" et des bandes de couleurs animées.
  *
- * @details Nom de la fonction : EcranAccueil
- * @param Aucun paramètre
+ * Les bandes de couleur défilent horizontalement à chaque appel pour créer un effet d'animation.
+ *
  * @return void
  */
 void EcranAccueil(){
@@ -1839,12 +1880,11 @@ void EcranAccueil(){
     if (decalage == 3) decalage = 0;
 }
 
-//Affichage de l'écran perdant: "Meilleure chance la prochaine fois" + petits "x" rouges
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Affiche l'écran de défaite avec le texte "MEILLEURE CHANCE LA PROCHAINE FOIS" défilant.
  *
- * @details Nom de la fonction : EcranPerdant
- * @param Aucun paramètre
+ * Le texte bleu défile de droite à gauche avec un motif de petits "x" rouges en haut et en bas de l'écran.
+ *
  * @return void
  */
 void EcranPerdant(){
@@ -1874,12 +1914,11 @@ void EcranPerdant(){
     }
 }
 
-//Affichage de l'écran gagnant: "Bravo!" + petits coeurs rose.
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Affiche l'écran de victoire avec le texte "Bravo!" et des motifs de cœurs roses.
  *
- * @details Nom de la fonction : EcranGagnant
- * @param Aucun paramètre
+ * L'écran clignote en alternant l'affichage du texte et des cœurs.
+ *
  * @return void
  */
 void EcranGagnant(){
@@ -1932,12 +1971,12 @@ void EcranGagnant(){
     pixels.show();
 }
 
-//Affichage de l'écran de difficulté, "Choix difficulté" qui défile et la difficulté actuelle affichée, réponse aux boutons droite/gauche aussi
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Affiche l'écran de sélection de la difficulté du jeu.
  *
- * @details Nom de la fonction : EcranDiff
- * @param Aucun paramètre
+ * Affiche le texte "CHOIX DIFFICULTE" qui défile, la difficulté actuelle (FACILE, MOYEN, EXPERT)
+ * et une flèche directionnelle. Les boutons gauche/droite permettent de changer la difficulté.
+ *
  * @return void
  */
 void EcranDiff(){
@@ -1996,12 +2035,13 @@ void EcranDiff(){
 // LED Strips
 //----------------------------
 
-//Réinitialise les LED des coordonnées envoyées
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Éteint les LEDs dans la plage spécifiée.
  *
- * @details Nom de la fonction : reinit_LED
- * @param int debut, int fin
+ * Réinitialise la couleur de toutes les LEDs de la plage à noir (éteint).
+ *
+ * @param debut Index de début de la plage de LEDs à éteindre (inclus)
+ * @param fin Index de fin de la plage de LEDs à éteindre (exclu)
  * @return void
  */
 void reinit_LED(int debut, int fin){
@@ -2010,12 +2050,12 @@ void reinit_LED(int debut, int fin){
     }
 }
 
-// Allume les leds de l'intérieur de la machine selon la couleur
-/** 
- * @brief Allume les LEDs internes de la machine avec une couleur spécifiée.
+/**
+ * @brief Contrôle l'éclairage interne de la machine.
  *
- * @details Nom de la fonction : eclairage_int_boite
- * @param const uint8_t *RGB
+ * Éteint d'abord toutes les LEDs internes, puis les allume avec la couleur RGB spécifiée.
+ *
+ * @param RGB Pointeur sur un tableau de 3 octets [R, G, B] (valeurs 0-255)
  * @return void
  */
 void eclairage_int_boite(const uint8_t *RGB){ 
@@ -2027,12 +2067,12 @@ void eclairage_int_boite(const uint8_t *RGB){
     pixels_LED.show();
 };
 
-//Allume les leds verticales du devant de la machine  (motif qui se décale à chaque appel)
-/** 
- * @brief Anime les LEDs externes avec un motif dynamique défilant.
+/**
+ * @brief Anime l'éclairage externe (bandes LED verticales) de la machine.
  *
- * @details Nom de la fonction : eclairage_LED_ext
- * @param Aucun paramètre
+ * Affiche un motif rotatif en trois couleurs (rose, orange, bleu) qui se décale à chaque appel,
+ * créant l'impression d'un mouvement continu des bandes LED avant et arrière.
+ *
  * @return void
  */
 void eclairage_LED_ext(){
@@ -2065,11 +2105,11 @@ void eclairage_LED_ext(){
     decalage = (decalage + 1) % 3;
 };
 
-/** 
- * @brief Fonction utilitaire du système embarqué. Eteindre les leds
+/**
+ * @brief Éteint toutes les LEDs du compteur de temps.
  *
- * @details Nom de la fonction : eteindreCompteur
- * @param Aucun paramètre
+ * Remet les LEDs du compteur (OFFSET_LED_COMPTEUR) à noir.
+ *
  * @return void
  */
 void eteindreCompteur(){
@@ -2080,11 +2120,11 @@ void eteindreCompteur(){
     pixels_LED.show();
 }
 
-/** 
- * @brief Fonction utilitaire du système embarqué.
+/**
+ * @brief Allume toutes les LEDs du compteur de temps en vert.
  *
- * @details Nom de la fonction : allumerCompteur
- * @param Aucun paramètre
+ * Éclaire le compteur avec la couleur verte (VERT_l) pour indiquer le temps restant disponible.
+ *
  * @return void
  */
 void allumerCompteur(){
@@ -2094,12 +2134,14 @@ void allumerCompteur(){
     pixels_LED.show();
 }
 
-/** 
- * @brief Calcule une couleur RGB en fonction d'un ratio (transition du vert vers le rouge en passant par le jaune).
+/**
+ * @brief Calcule une couleur de gradient du vert au rouge en passant par le jaune.
  *
- * @details Nom de la fonction : gradient_couleur
- * @param float ratio
- * @return uint32_t
+ * Pour un ratio de 1.0 (100%), la couleur est verte. À 0.0 (0%), la couleur est rouge.
+ * La transition passe par le jaune à ratio = 0.5. Utilé pour le compteur de temps.
+ *
+ * @param ratio Rapport entre 0.0 et 1.0 indiquant la position dans le dégradé
+ * @return Couleur RGB au format pixels_LED.Color(R, G, B)
  */
 uint32_t gradient_couleur(float ratio){
 

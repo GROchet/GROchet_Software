@@ -1,0 +1,689 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino: Référence du fichier src/OpenRB-150.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="summary">
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Fonctions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
+  <div class="headertitle"><div class="title">Référence du fichier OpenRB-150.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<div class="textblock"><code>#include &lt;Dynamixel2Arduino.h&gt;</code><br />
+</div>
+<p><a href="_open_r_b-150_8cpp_source.html">Aller au code source de ce fichier.</a></p>
+<table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:af5240a49e70ff6e269be7c077059cfe0" id="r_af5240a49e70ff6e269be7c077059cfe0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af5240a49e70ff6e269be7c077059cfe0">DXL_SERIAL</a>&#160;&#160;&#160;Serial1</td></tr>
+<tr class="separator:af5240a49e70ff6e269be7c077059cfe0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a96c1b1f174eb046793a44d2246563e5a" id="r_a96c1b1f174eb046793a44d2246563e5a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a96c1b1f174eb046793a44d2246563e5a">DXL_DIR_PIN</a>&#160;&#160;&#160;-1</td></tr>
+<tr class="separator:a96c1b1f174eb046793a44d2246563e5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab258c77e471c7b037398e6232b381552" id="r_ab258c77e471c7b037398e6232b381552"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab258c77e471c7b037398e6232b381552">MOVE_CURRENT</a>&#160;&#160;&#160;300</td></tr>
+<tr class="separator:ab258c77e471c7b037398e6232b381552"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ace88776bdab22dd879d030fb06dcd730" id="r_ace88776bdab22dd879d030fb06dcd730"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ace88776bdab22dd879d030fb06dcd730">GRIP_CURRENT</a>&#160;&#160;&#160;50</td></tr>
+<tr class="separator:ace88776bdab22dd879d030fb06dcd730"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afb952c5a4d8df93f2a51cd68fb4e1719" id="r_afb952c5a4d8df93f2a51cd68fb4e1719"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afb952c5a4d8df93f2a51cd68fb4e1719">STALL_CURRENT</a>&#160;&#160;&#160;40</td></tr>
+<tr class="separator:afb952c5a4d8df93f2a51cd68fb4e1719"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13729e52a7ad542d6e67c5b2aba354cf" id="r_a13729e52a7ad542d6e67c5b2aba354cf"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a13729e52a7ad542d6e67c5b2aba354cf">VEL_THRESHOLD</a>&#160;&#160;&#160;5</td></tr>
+<tr class="separator:a13729e52a7ad542d6e67c5b2aba354cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64328ac24c21436e7aa9895caa439f86" id="r_a64328ac24c21436e7aa9895caa439f86"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a64328ac24c21436e7aa9895caa439f86">STALL_CONFIRM</a>&#160;&#160;&#160;300</td></tr>
+<tr class="separator:a64328ac24c21436e7aa9895caa439f86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
+Fonctions</h2></td></tr>
+<tr class="memitem:af47a2e6084e4571c5244616093b50ff5" id="r_af47a2e6084e4571c5244616093b50ff5"><td class="memItemLeft" align="right" valign="top">Dynamixel2Arduino&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a> (<a class="el" href="main__with__dynamixel_8cpp.html#af5240a49e70ff6e269be7c077059cfe0">DXL_SERIAL</a>, <a class="el" href="main__with__dynamixel_8cpp.html#a96c1b1f174eb046793a44d2246563e5a">DXL_DIR_PIN</a>)</td></tr>
+<tr class="separator:af47a2e6084e4571c5244616093b50ff5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac488621b77d6dcceeef95af389a78d4d" id="r_ac488621b77d6dcceeef95af389a78d4d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a> ()</td></tr>
+<tr class="separator:ac488621b77d6dcceeef95af389a78d4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6a965dbf78c0db45d0e036438655f05c" id="r_a6a965dbf78c0db45d0e036438655f05c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a> ()</td></tr>
+<tr class="separator:a6a965dbf78c0db45d0e036438655f05c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6cd6df836baeab8c824eded6bad7848e" id="r_a6cd6df836baeab8c824eded6bad7848e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a6cd6df836baeab8c824eded6bad7848e">detecterToutou</a> ()</td></tr>
+<tr class="separator:a6cd6df836baeab8c824eded6bad7848e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8c195bd7b5686f360a0499789178a097" id="r_a8c195bd7b5686f360a0499789178a097"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a8c195bd7b5686f360a0499789178a097">calibrer</a> ()</td></tr>
+<tr class="separator:a8c195bd7b5686f360a0499789178a097"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a05cd8ea035ed92be0bbf291b9585932e" id="r_a05cd8ea035ed92be0bbf291b9585932e"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a05cd8ea035ed92be0bbf291b9585932e">crc8</a> (uint8_t *data, uint8_t len)</td></tr>
+<tr class="separator:a05cd8ea035ed92be0bbf291b9585932e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4fc01d736fe50cf5b977f755b675f11d" id="r_a4fc01d736fe50cf5b977f755b675f11d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a4fc01d736fe50cf5b977f755b675f11d">setup</a> ()</td></tr>
+<tr class="separator:a4fc01d736fe50cf5b977f755b675f11d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afe461d27b9c48d5921c00d521181f12f" id="r_afe461d27b9c48d5921c00d521181f12f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#afe461d27b9c48d5921c00d521181f12f">loop</a> ()</td></tr>
+<tr class="separator:afe461d27b9c48d5921c00d521181f12f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:aa4bf0b442979307da233506f31d17b55" id="r_aa4bf0b442979307da233506f31d17b55"><td class="memItemLeft" align="right" valign="top">int16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a> = 3305</td></tr>
+<tr class="separator:aa4bf0b442979307da233506f31d17b55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab0f1b3b6cd7b10dcc109a949551068f7" id="r_ab0f1b3b6cd7b10dcc109a949551068f7"><td class="memItemLeft" align="right" valign="top">int16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a> = 6705</td></tr>
+<tr class="separator:ab0f1b3b6cd7b10dcc109a949551068f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a52dee84b265584e154de34c62c57d202" id="r_a52dee84b265584e154de34c62c57d202"><td class="memItemLeft" align="right" valign="top">int16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a52dee84b265584e154de34c62c57d202">ACTUAL_POS</a> = 0</td></tr>
+<tr class="separator:a52dee84b265584e154de34c62c57d202"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e6927fa1486224044e568f9c370519b" id="r_a1e6927fa1486224044e568f9c370519b"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a1e6927fa1486224044e568f9c370519b">id</a> = 102</td></tr>
+<tr class="separator:a1e6927fa1486224044e568f9c370519b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<h2 class="groupheader">Documentation des macros</h2>
+<a id="a96c1b1f174eb046793a44d2246563e5a" name="a96c1b1f174eb046793a44d2246563e5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a96c1b1f174eb046793a44d2246563e5a">&#9670;&#160;</a></span>DXL_DIR_PIN</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DXL_DIR_PIN&#160;&#160;&#160;-1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00004">4</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af5240a49e70ff6e269be7c077059cfe0" name="af5240a49e70ff6e269be7c077059cfe0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5240a49e70ff6e269be7c077059cfe0">&#9670;&#160;</a></span>DXL_SERIAL</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define DXL_SERIAL&#160;&#160;&#160;Serial1</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00003">3</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ace88776bdab22dd879d030fb06dcd730" name="ace88776bdab22dd879d030fb06dcd730"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ace88776bdab22dd879d030fb06dcd730">&#9670;&#160;</a></span>GRIP_CURRENT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define GRIP_CURRENT&#160;&#160;&#160;50</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00011">11</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00110">fermerPince()</a>.</p>
+
+</div>
+</div>
+<a id="ab258c77e471c7b037398e6232b381552" name="ab258c77e471c7b037398e6232b381552"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab258c77e471c7b037398e6232b381552">&#9670;&#160;</a></span>MOVE_CURRENT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define MOVE_CURRENT&#160;&#160;&#160;300</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00010">10</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00105">ouvrirPince()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00026">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a64328ac24c21436e7aa9895caa439f86" name="a64328ac24c21436e7aa9895caa439f86"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64328ac24c21436e7aa9895caa439f86">&#9670;&#160;</a></span>STALL_CONFIRM</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STALL_CONFIRM&#160;&#160;&#160;300</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00014">14</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">detecterToutou()</a>.</p>
+
+</div>
+</div>
+<a id="afb952c5a4d8df93f2a51cd68fb4e1719" name="afb952c5a4d8df93f2a51cd68fb4e1719"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afb952c5a4d8df93f2a51cd68fb4e1719">&#9670;&#160;</a></span>STALL_CURRENT</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define STALL_CURRENT&#160;&#160;&#160;40</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00012">12</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">detecterToutou()</a>.</p>
+
+</div>
+</div>
+<a id="a13729e52a7ad542d6e67c5b2aba354cf" name="a13729e52a7ad542d6e67c5b2aba354cf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a13729e52a7ad542d6e67c5b2aba354cf">&#9670;&#160;</a></span>VEL_THRESHOLD</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define VEL_THRESHOLD&#160;&#160;&#160;5</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00013">13</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">detecterToutou()</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des fonctions</h2>
+<a id="a8c195bd7b5686f360a0499789178a097" name="a8c195bd7b5686f360a0499789178a097"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8c195bd7b5686f360a0499789178a097">&#9670;&#160;</a></span>calibrer()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void calibrer </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00115">115</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  115</span>                {</div>
+<div class="line"><span class="lineno">  116</span>    Serial.println(<span class="stringliteral">&quot;=== CALIBRATION ===&quot;</span>);</div>
+<div class="line"><span class="lineno">  117</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.torqueOff(<span class="keywordtype">id</span>);  <span class="comment">// let user move freely</span></div>
+<div class="line"><span class="lineno">  118</span> </div>
+<div class="line"><span class="lineno">  119</span>    <span class="comment">// ── Open position ──</span></div>
+<div class="line"><span class="lineno">  120</span>    Serial.println(<span class="stringliteral">&quot;Move gripper to OPEN position, then wait...&quot;</span>);</div>
+<div class="line"><span class="lineno">  121</span>    delay(5000);</div>
+<div class="line"><span class="lineno">  122</span>    <a class="code hl_variable" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a> = <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.getPresentPosition(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">  123</span>    Serial.print(<span class="stringliteral">&quot;OPEN_POS locked: &quot;</span>); Serial.println(<a class="code hl_variable" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a>);</div>
+<div class="line"><span class="lineno">  124</span> </div>
+<div class="line"><span class="lineno">  125</span>    <span class="comment">// ── Closed position ──</span></div>
+<div class="line"><span class="lineno">  126</span>    Serial.println(<span class="stringliteral">&quot;Move gripper to CLOSED position, then wait...&quot;</span>);</div>
+<div class="line"><span class="lineno">  127</span>    delay(5000);</div>
+<div class="line"><span class="lineno">  128</span>    <a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a> = <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.getPresentPosition(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">  129</span>    Serial.print(<span class="stringliteral">&quot;CLOSED_POS confirmée: &quot;</span>); Serial.println(<a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a>);</div>
+<div class="line"><span class="lineno">  130</span> </div>
+<div class="line"><span class="lineno">  131</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.torqueOn(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">  132</span>    Serial.print(<span class="stringliteral">&quot;Plage de valeur: &quot;</span>); Serial.println(<a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a> - <a class="code hl_variable" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a>);</div>
+<div class="line"><span class="lineno">  133</span>    Serial.println(<span class="stringliteral">&quot;Calibration finie.&quot;</span>);</div>
+<div class="line"><span class="lineno">  134</span>}</div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_aa4bf0b442979307da233506f31d17b55"><div class="ttname"><a href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a></div><div class="ttdeci">int16_t OPEN_POS</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00006">OpenRB-150.cpp:6</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_ab0f1b3b6cd7b10dcc109a949551068f7"><div class="ttname"><a href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a></div><div class="ttdeci">int16_t CLOSED_POS</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00007">OpenRB-150.cpp:7</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_af47a2e6084e4571c5244616093b50ff5"><div class="ttname"><a href="#af47a2e6084e4571c5244616093b50ff5">dxl</a></div><div class="ttdeci">Dynamixel2Arduino dxl(DXL_SERIAL, DXL_DIR_PIN)</div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_open_r_b-150_8cpp_source.html#l00007">CLOSED_POS</a>, <a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00006">OPEN_POS</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>.</p>
+
+</div>
+</div>
+<a id="a05cd8ea035ed92be0bbf291b9585932e" name="a05cd8ea035ed92be0bbf291b9585932e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a05cd8ea035ed92be0bbf291b9585932e">&#9670;&#160;</a></span>crc8()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint8_t crc8 </td>
+          <td>(</td>
+          <td class="paramtype">uint8_t *</td>          <td class="paramname"><span class="paramname"><em>data</em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint8_t</td>          <td class="paramname"><span class="paramname"><em>len</em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00162">162</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  162</span>                                         {</div>
+<div class="line"><span class="lineno">  163</span>  uint8_t crc = 0x00; </div>
+<div class="line"><span class="lineno">  164</span>  <span class="keywordflow">for</span> (uint8_t i = 0;i&lt;len;i++){</div>
+<div class="line"><span class="lineno">  165</span>    crc ^= data[i];</div>
+<div class="line"><span class="lineno">  166</span>    <span class="keywordflow">for</span> (uint8_t b = 0;b&lt;8;b++){</div>
+<div class="line"><span class="lineno">  167</span>      <span class="keywordflow">if</span>(crc &amp; 0x80) crc = (crc &lt;&lt; 1) ^ 0x07;</div>
+<div class="line"><span class="lineno">  168</span>      <span class="keywordflow">else</span> crc &lt;&lt;= 1;</div>
+<div class="line"><span class="lineno">  169</span>    }</div>
+<div class="line"><span class="lineno">  170</span>  }</div>
+<div class="line"><span class="lineno">  171</span>  <span class="keywordflow">return</span> crc;</div>
+<div class="line"><span class="lineno">  172</span>}</div>
+</div><!-- fragment -->
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>.</p>
+
+</div>
+</div>
+<a id="a6cd6df836baeab8c824eded6bad7848e" name="a6cd6df836baeab8c824eded6bad7848e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6cd6df836baeab8c824eded6bad7848e">&#9670;&#160;</a></span>detecterToutou()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int detecterToutou </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">136</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  136</span>                     {</div>
+<div class="line"><span class="lineno">  137</span>    <span class="keyword">static</span> uint32_t stallSince = 0;  <span class="comment">// temps depuis la première détection de stall</span></div>
+<div class="line"><span class="lineno">  138</span> </div>
+<div class="line"><span class="lineno">  139</span>    int32_t pos     = <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.getPresentPosition(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">  140</span>    int32_t vel     = <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.getPresentVelocity(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">  141</span>    int16_t current = (int16_t)<a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.readControlTableItem(ControlTableItem::PRESENT_CURRENT, <span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">  142</span> </div>
+<div class="line"><span class="lineno">  143</span>    <span class="keywordflow">if</span> (pos &gt;= <a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a> - 5) {</div>
+<div class="line"><span class="lineno">  144</span>        stallSince = 0;</div>
+<div class="line"><span class="lineno">  145</span>        <span class="keywordflow">return</span> 2;  <span class="comment">// fermé au complet, rien attrapé</span></div>
+<div class="line"><span class="lineno">  146</span>    }</div>
+<div class="line"><span class="lineno">  147</span> </div>
+<div class="line"><span class="lineno">  148</span>    <span class="keywordflow">if</span> (abs(current) &gt;= <a class="code hl_define" href="#afb952c5a4d8df93f2a51cd68fb4e1719">STALL_CURRENT</a> &amp;&amp; abs(vel) &lt; <a class="code hl_define" href="#a13729e52a7ad542d6e67c5b2aba354cf">VEL_THRESHOLD</a>) {</div>
+<div class="line"><span class="lineno">  149</span>        <span class="keywordflow">if</span> (stallSince == 0) stallSince = millis();  <span class="comment">// premiere détection de stall</span></div>
+<div class="line"><span class="lineno">  150</span>        </div>
+<div class="line"><span class="lineno">  151</span>        <span class="keywordflow">if</span> (millis() - stallSince &gt;= <a class="code hl_define" href="#a64328ac24c21436e7aa9895caa439f86">STALL_CONFIRM</a>) {</div>
+<div class="line"><span class="lineno">  152</span>            stallSince = 0;</div>
+<div class="line"><span class="lineno">  153</span>            <span class="keywordflow">return</span> 1;  <span class="comment">// stall confirmé = toutou attrapé</span></div>
+<div class="line"><span class="lineno">  154</span>        }</div>
+<div class="line"><span class="lineno">  155</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><span class="lineno">  156</span>        stallSince = 0;  <span class="comment">// condition broke, reset timer</span></div>
+<div class="line"><span class="lineno">  157</span>    }</div>
+<div class="line"><span class="lineno">  158</span> </div>
+<div class="line"><span class="lineno">  159</span>    <span class="keywordflow">return</span> 0;  <span class="comment">// Encore en mouvement, pas encore de conclusion sur toutou attrapé ou pas</span></div>
+<div class="line"><span class="lineno">  160</span>}</div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a13729e52a7ad542d6e67c5b2aba354cf"><div class="ttname"><a href="#a13729e52a7ad542d6e67c5b2aba354cf">VEL_THRESHOLD</a></div><div class="ttdeci">#define VEL_THRESHOLD</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00013">OpenRB-150.cpp:13</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a64328ac24c21436e7aa9895caa439f86"><div class="ttname"><a href="#a64328ac24c21436e7aa9895caa439f86">STALL_CONFIRM</a></div><div class="ttdeci">#define STALL_CONFIRM</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00014">OpenRB-150.cpp:14</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_afb952c5a4d8df93f2a51cd68fb4e1719"><div class="ttname"><a href="#afb952c5a4d8df93f2a51cd68fb4e1719">STALL_CURRENT</a></div><div class="ttdeci">#define STALL_CURRENT</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00012">OpenRB-150.cpp:12</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_open_r_b-150_8cpp_source.html#l00007">CLOSED_POS</a>, <a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00014">STALL_CONFIRM</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00012">STALL_CURRENT</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00013">VEL_THRESHOLD</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>.</p>
+
+</div>
+</div>
+<a id="af47a2e6084e4571c5244616093b50ff5" name="af47a2e6084e4571c5244616093b50ff5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af47a2e6084e4571c5244616093b50ff5">&#9670;&#160;</a></span>dxl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Dynamixel2Arduino dxl </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="main__with__dynamixel_8cpp.html#af5240a49e70ff6e269be7c077059cfe0">DXL_SERIAL</a></td>          <td class="paramname"><span class="paramname"><em></em></span>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="main__with__dynamixel_8cpp.html#a96c1b1f174eb046793a44d2246563e5a">DXL_DIR_PIN</a></td>          <td class="paramname"><span class="paramname"><em></em></span>&#160;)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00115">calibrer()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">detecterToutou()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00110">fermerPince()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00105">ouvrirPince()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00026">setup()</a>.</p>
+
+</div>
+</div>
+<a id="a6a965dbf78c0db45d0e036438655f05c" name="a6a965dbf78c0db45d0e036438655f05c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6a965dbf78c0db45d0e036438655f05c">&#9670;&#160;</a></span>fermerPince()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void fermerPince </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00110">110</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  110</span>                   {</div>
+<div class="line"><span class="lineno">  111</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.writeControlTableItem(ControlTableItem::GOAL_CURRENT, <span class="keywordtype">id</span>, <a class="code hl_define" href="#ace88776bdab22dd879d030fb06dcd730">GRIP_CURRENT</a>);</div>
+<div class="line"><span class="lineno">  112</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.setGoalPosition(<span class="keywordtype">id</span>, <a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a>, UNIT_RAW);</div>
+<div class="line"><span class="lineno">  113</span>}</div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_ace88776bdab22dd879d030fb06dcd730"><div class="ttname"><a href="#ace88776bdab22dd879d030fb06dcd730">GRIP_CURRENT</a></div><div class="ttdeci">#define GRIP_CURRENT</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00011">OpenRB-150.cpp:11</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_open_r_b-150_8cpp_source.html#l00007">CLOSED_POS</a>, <a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00011">GRIP_CURRENT</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>.</p>
+
+</div>
+</div>
+<a id="afe461d27b9c48d5921c00d521181f12f" name="afe461d27b9c48d5921c00d521181f12f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afe461d27b9c48d5921c00d521181f12f">&#9670;&#160;</a></span>loop()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void loop </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">52</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   52</span>            {</div>
+<div class="line"><span class="lineno">   53</span>    <span class="comment">// Wait until we have 2 bytes (msg + CRC)</span></div>
+<div class="line"><span class="lineno">   54</span>    <span class="keywordflow">if</span> (Serial3.available() &lt; 2) <span class="keywordflow">return</span>;</div>
+<div class="line"><span class="lineno">   55</span> </div>
+<div class="line"><span class="lineno">   56</span>    uint8_t msg   = Serial3.read();</div>
+<div class="line"><span class="lineno">   57</span>    uint8_t rxCrc = Serial3.read();</div>
+<div class="line"><span class="lineno">   58</span> </div>
+<div class="line"><span class="lineno">   59</span>    <span class="comment">// Validate CRC — drop bad frames silently</span></div>
+<div class="line"><span class="lineno">   60</span>    <span class="keywordflow">if</span> (rxCrc != <a class="code hl_function" href="#a05cd8ea035ed92be0bbf291b9585932e">crc8</a>(&amp;msg, 1)) <span class="keywordflow">return</span>;</div>
+<div class="line"><span class="lineno">   61</span> </div>
+<div class="line"><span class="lineno">   62</span>    uint8_t response = 0;</div>
+<div class="line"><span class="lineno">   63</span> </div>
+<div class="line"><span class="lineno">   64</span>    <span class="comment">// ── Act on bits ──</span></div>
+<div class="line"><span class="lineno">   65</span>    <span class="keywordflow">if</span> (msg &amp; 0x01) <a class="code hl_function" href="#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a>();</div>
+<div class="line"><span class="lineno">   66</span>    <span class="keywordflow">if</span> (msg &amp; 0x02) <a class="code hl_function" href="#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a>();</div>
+<div class="line"><span class="lineno">   67</span>    <span class="keywordflow">if</span> (msg &amp; 0x08) {</div>
+<div class="line"><span class="lineno">   68</span>        <a class="code hl_function" href="#a8c195bd7b5686f360a0499789178a097">calibrer</a>();</div>
+<div class="line"><span class="lineno">   69</span>        response |= 0x08; <span class="comment">// Calibration done</span></div>
+<div class="line"><span class="lineno">   70</span>    }</div>
+<div class="line"><span class="lineno">   71</span> </div>
+<div class="line"><span class="lineno">   72</span>    <span class="keywordflow">if</span> (msg &amp; 0x04) { <span class="comment">//4 = bit qui dit de verifier toutou</span></div>
+<div class="line"><span class="lineno">   73</span>        <span class="keywordtype">int</span> status = <a class="code hl_function" href="#a6cd6df836baeab8c824eded6bad7848e">detecterToutou</a>();</div>
+<div class="line"><span class="lineno">   74</span>        <span class="keywordflow">if</span> (status == 1) response |= 0x01;  <span class="comment">// toutou_attrape</span></div>
+<div class="line"><span class="lineno">   75</span>        <span class="keywordflow">if</span> (status == 2) {</div>
+<div class="line"><span class="lineno">   76</span>            <a class="code hl_function" href="#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a>(); <span class="comment">// éviter de staller le moteur</span></div>
+<div class="line"><span class="lineno">   77</span>            response |= 0x02;  <span class="comment">// rien attrapé</span></div>
+<div class="line"><span class="lineno">   78</span>        }</div>
+<div class="line"><span class="lineno">   79</span>        <span class="keywordflow">if</span> (status == 0) response |= 0x04;  <span class="comment">// en mouvement (ni toutou attrapé ni rien attrapé)</span></div>
+<div class="line"><span class="lineno">   80</span>    }</div>
+<div class="line"><span class="lineno">   81</span> </div>
+<div class="line"><span class="lineno">   82</span>    <span class="comment">// ── Send response ──</span></div>
+<div class="line"><span class="lineno">   83</span>    <a class="code hl_variable" href="#a52dee84b265584e154de34c62c57d202">ACTUAL_POS</a> = <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.getPresentPosition(<span class="keywordtype">id</span>); <span class="comment">// On lit la position actuelle à chaque requete pour l&#39;envoyer dans la réponse, comme ça on a toujours la position à jour dans Unity sans avoir besoin d&#39;une requete spécifique pour ça</span></div>
+<div class="line"><span class="lineno">   84</span>    uint8_t frame[8];</div>
+<div class="line"><span class="lineno">   85</span>    frame[0] = response;</div>
+<div class="line"><span class="lineno">   86</span> </div>
+<div class="line"><span class="lineno">   87</span>    <span class="comment">// OPEN_POS</span></div>
+<div class="line"><span class="lineno">   88</span>    frame[1] = <a class="code hl_variable" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a> &amp; 0xFF;</div>
+<div class="line"><span class="lineno">   89</span>    frame[2] = (<a class="code hl_variable" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a> &gt;&gt; 8) &amp; 0xFF;</div>
+<div class="line"><span class="lineno">   90</span> </div>
+<div class="line"><span class="lineno">   91</span>    <span class="comment">// CLOSED_POS</span></div>
+<div class="line"><span class="lineno">   92</span>    frame[3] = <a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a> &amp; 0xFF;</div>
+<div class="line"><span class="lineno">   93</span>    frame[4] = (<a class="code hl_variable" href="#ab0f1b3b6cd7b10dcc109a949551068f7">CLOSED_POS</a> &gt;&gt; 8) &amp; 0xFF;</div>
+<div class="line"><span class="lineno">   94</span> </div>
+<div class="line"><span class="lineno">   95</span>    <span class="comment">// ACTUAL_POS</span></div>
+<div class="line"><span class="lineno">   96</span>    frame[5] = <a class="code hl_variable" href="#a52dee84b265584e154de34c62c57d202">ACTUAL_POS</a> &amp; 0xFF;</div>
+<div class="line"><span class="lineno">   97</span>    frame[6] = (<a class="code hl_variable" href="#a52dee84b265584e154de34c62c57d202">ACTUAL_POS</a> &gt;&gt; 8) &amp; 0xFF;</div>
+<div class="line"><span class="lineno">   98</span> </div>
+<div class="line"><span class="lineno">   99</span>    <span class="comment">// CRC</span></div>
+<div class="line"><span class="lineno">  100</span>    frame[7] = <a class="code hl_function" href="#a05cd8ea035ed92be0bbf291b9585932e">crc8</a>(frame, 7);</div>
+<div class="line"><span class="lineno">  101</span> </div>
+<div class="line"><span class="lineno">  102</span>    Serial3.write(frame, 8);</div>
+<div class="line"><span class="lineno">  103</span>}</div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a05cd8ea035ed92be0bbf291b9585932e"><div class="ttname"><a href="#a05cd8ea035ed92be0bbf291b9585932e">crc8</a></div><div class="ttdeci">uint8_t crc8(uint8_t *data, uint8_t len)</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00162">OpenRB-150.cpp:162</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a52dee84b265584e154de34c62c57d202"><div class="ttname"><a href="#a52dee84b265584e154de34c62c57d202">ACTUAL_POS</a></div><div class="ttdeci">int16_t ACTUAL_POS</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00008">OpenRB-150.cpp:8</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a6a965dbf78c0db45d0e036438655f05c"><div class="ttname"><a href="#a6a965dbf78c0db45d0e036438655f05c">fermerPince</a></div><div class="ttdeci">void fermerPince()</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00110">OpenRB-150.cpp:110</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a6cd6df836baeab8c824eded6bad7848e"><div class="ttname"><a href="#a6cd6df836baeab8c824eded6bad7848e">detecterToutou</a></div><div class="ttdeci">int detecterToutou()</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00136">OpenRB-150.cpp:136</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_a8c195bd7b5686f360a0499789178a097"><div class="ttname"><a href="#a8c195bd7b5686f360a0499789178a097">calibrer</a></div><div class="ttdeci">void calibrer()</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00115">OpenRB-150.cpp:115</a></div></div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_ac488621b77d6dcceeef95af389a78d4d"><div class="ttname"><a href="#ac488621b77d6dcceeef95af389a78d4d">ouvrirPince</a></div><div class="ttdeci">void ouvrirPince()</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00105">OpenRB-150.cpp:105</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_open_r_b-150_8cpp_source.html#l00008">ACTUAL_POS</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00115">calibrer()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00007">CLOSED_POS</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00162">crc8()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">detecterToutou()</a>, <a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00110">fermerPince()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00006">OPEN_POS</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00105">ouvrirPince()</a>.</p>
+
+</div>
+</div>
+<a id="ac488621b77d6dcceeef95af389a78d4d" name="ac488621b77d6dcceeef95af389a78d4d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac488621b77d6dcceeef95af389a78d4d">&#9670;&#160;</a></span>ouvrirPince()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ouvrirPince </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00105">105</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">  105</span>                   {</div>
+<div class="line"><span class="lineno">  106</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.writeControlTableItem(ControlTableItem::GOAL_CURRENT, <span class="keywordtype">id</span>, <a class="code hl_define" href="#ab258c77e471c7b037398e6232b381552">MOVE_CURRENT</a>);</div>
+<div class="line"><span class="lineno">  107</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.setGoalPosition(<span class="keywordtype">id</span>, <a class="code hl_variable" href="#aa4bf0b442979307da233506f31d17b55">OPEN_POS</a>, UNIT_RAW);</div>
+<div class="line"><span class="lineno">  108</span>}</div>
+<div class="ttc" id="a_open_r_b-150_8cpp_html_ab258c77e471c7b037398e6232b381552"><div class="ttname"><a href="#ab258c77e471c7b037398e6232b381552">MOVE_CURRENT</a></div><div class="ttdeci">#define MOVE_CURRENT</div><div class="ttdef"><b>Definition</b> <a href="_open_r_b-150_8cpp_source.html#l00010">OpenRB-150.cpp:10</a></div></div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00010">MOVE_CURRENT</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00006">OPEN_POS</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>.</p>
+
+</div>
+</div>
+<a id="a4fc01d736fe50cf5b977f755b675f11d" name="a4fc01d736fe50cf5b977f755b675f11d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4fc01d736fe50cf5b977f755b675f11d">&#9670;&#160;</a></span>setup()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void setup </td>
+          <td>(</td>
+          <td class="paramname"><span class="paramname"><em></em></span></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00026">26</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+<div class="fragment"><div class="line"><span class="lineno">   26</span>             {</div>
+<div class="line"><span class="lineno">   27</span>    Serial.begin(115200);</div>
+<div class="line"><span class="lineno">   28</span>    Serial3.begin(9600);  <span class="comment">//Pour communication UART</span></div>
+<div class="line"><span class="lineno">   29</span>    delay(2000);</div>
+<div class="line"><span class="lineno">   30</span> </div>
+<div class="line"><span class="lineno">   31</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.begin(57600);</div>
+<div class="line"><span class="lineno">   32</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.setPortProtocolVersion(2.0);</div>
+<div class="line"><span class="lineno">   33</span> </div>
+<div class="line"><span class="lineno">   34</span>    <span class="keywordflow">for</span> (uint8_t i = 1; i &lt; 253; i++) {</div>
+<div class="line"><span class="lineno">   35</span>        <span class="keywordflow">if</span> (<a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.ping(i)) {</div>
+<div class="line"><span class="lineno">   36</span>            Serial.print(<span class="stringliteral">&quot;Found Dynamixel ID: &quot;</span>);</div>
+<div class="line"><span class="lineno">   37</span>            Serial.println(i);</div>
+<div class="line"><span class="lineno">   38</span>            <span class="keywordtype">id</span> = i;</div>
+<div class="line"><span class="lineno">   39</span>        }</div>
+<div class="line"><span class="lineno">   40</span>    }</div>
+<div class="line"><span class="lineno">   41</span> </div>
+<div class="line"><span class="lineno">   42</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.torqueOff(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">   43</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.setOperatingMode(<span class="keywordtype">id</span>, OP_EXTENDED_POSITION);</div>
+<div class="line"><span class="lineno">   44</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.torqueOn(<span class="keywordtype">id</span>);</div>
+<div class="line"><span class="lineno">   45</span> </div>
+<div class="line"><span class="lineno">   46</span>    <a class="code hl_variable" href="#a52dee84b265584e154de34c62c57d202">ACTUAL_POS</a> = <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.getPresentPosition(<span class="keywordtype">id</span>); <span class="comment">// Lire la position actuelle à l&#39;initialisation</span></div>
+<div class="line"><span class="lineno">   47</span> </div>
+<div class="line"><span class="lineno">   48</span>    <a class="code hl_function" href="#af47a2e6084e4571c5244616093b50ff5">dxl</a>.writeControlTableItem(ControlTableItem::GOAL_CURRENT, <span class="keywordtype">id</span>, <a class="code hl_define" href="#ab258c77e471c7b037398e6232b381552">MOVE_CURRENT</a>);</div>
+<div class="line"><span class="lineno">   49</span>    Serial.println(<span class="stringliteral">&quot;Ready.&quot;</span>);</div>
+<div class="line"><span class="lineno">   50</span>}</div>
+</div><!-- fragment -->
+<p class="reference">Références <a class="el" href="_open_r_b-150_8cpp_source.html#l00008">ACTUAL_POS</a>, <a class="el" href="#af47a2e6084e4571c5244616093b50ff5">dxl()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00010">MOVE_CURRENT</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Documentation des variables</h2>
+<a id="a52dee84b265584e154de34c62c57d202" name="a52dee84b265584e154de34c62c57d202"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a52dee84b265584e154de34c62c57d202">&#9670;&#160;</a></span>ACTUAL_POS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int16_t ACTUAL_POS = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00008">8</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00026">setup()</a>.</p>
+
+</div>
+</div>
+<a id="ab0f1b3b6cd7b10dcc109a949551068f7" name="ab0f1b3b6cd7b10dcc109a949551068f7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab0f1b3b6cd7b10dcc109a949551068f7">&#9670;&#160;</a></span>CLOSED_POS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int16_t CLOSED_POS = 6705</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00007">7</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00115">calibrer()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00136">detecterToutou()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00110">fermerPince()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>.</p>
+
+</div>
+</div>
+<a id="a1e6927fa1486224044e568f9c370519b" name="a1e6927fa1486224044e568f9c370519b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e6927fa1486224044e568f9c370519b">&#9670;&#160;</a></span>id</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint8_t id = 102</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00017">17</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aa4bf0b442979307da233506f31d17b55" name="aa4bf0b442979307da233506f31d17b55"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa4bf0b442979307da233506f31d17b55">&#9670;&#160;</a></span>OPEN_POS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int16_t OPEN_POS = 3305</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Définition à la ligne <a class="el" href="_open_r_b-150_8cpp_source.html#l00006">6</a> du fichier <a class="el" href="_open_r_b-150_8cpp_source.html">OpenRB-150.cpp</a>.</p>
+
+<p class="reference">Référencé par <a class="el" href="_open_r_b-150_8cpp_source.html#l00115">calibrer()</a>, <a class="el" href="_open_r_b-150_8cpp_source.html#l00052">loop()</a>, et <a class="el" href="_open_r_b-150_8cpp_source.html#l00105">ouvrirPince()</a>.</p>
+
+</div>
+</div>
+</div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
+<head>
+<meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=11"/>
+<meta name="generator" content="Doxygen 1.11.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>GROchet Code Arduino:  Fichier source de src/TestBouton.cpp</title>
+<link href="tabs.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="dynsections.js"></script>
+<script type="text/javascript" src="clipboard.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="cookie.js"></script>
+<link href="search/search.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="search/searchdata.js"></script>
+<script type="text/javascript" src="search/search.js"></script>
+<link href="doxygen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+<div id="top"><!-- do not remove this div, it is closed by doxygen! -->
+<div id="titlearea">
+<table cellspacing="0" cellpadding="0">
+ <tbody>
+ <tr id="projectrow">
+  <td id="projectalign">
+   <div id="projectname">GROchet Code Arduino
+   </div>
+   <div id="projectbrief">Système de contrôle Arduino pour une pince mécanique de jeu interactif GROchet avec moteurs pas à pas et dynamixel</div>
+  </td>
+ </tr>
+ </tbody>
+</table>
+</div>
+<!-- end header part -->
+<!-- Généré par Doxygen 1.11.0 -->
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+var searchBox = new SearchBox("searchBox", "search/",'.html');
+/* @license-end */
+</script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() { codefold.init(0); });
+/* @license-end */
+</script>
+<script type="text/javascript" src="menudata.js"></script>
+<script type="text/javascript" src="menu.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function() {
+  initMenu('',true,false,'search.php','Recherche',false);
+  $(function() { init_search(); });
+});
+/* @license-end */
+</script>
+<div id="main-nav"></div>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+$(function(){ initResizable(false); });
+/* @license-end */
+</script>
+<!-- window showing the filter options -->
+<div id="MSearchSelectWindow"
+     onmouseover="return searchBox.OnSearchSelectShow()"
+     onmouseout="return searchBox.OnSearchSelectHide()"
+     onkeydown="return searchBox.OnSearchSelectKey(event)">
+</div>
+
+<!-- iframe showing the search results (closed by default) -->
+<div id="MSearchResultsWindow">
+<div id="MSearchResults">
+<div class="SRPage">
+<div id="SRIndex">
+<div id="SRResults"></div>
+<div class="SRStatus" id="Loading">Chargement...</div>
+<div class="SRStatus" id="Searching">Recherche...</div>
+<div class="SRStatus" id="NoMatches">Aucune correspondance</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="nav-path" class="navpath">
+  <ul>
+<li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li>  </ul>
+</div>
+</div><!-- top -->
+<div id="doc-content">
+<div class="header">
+  <div class="headertitle"><div class="title">TestBouton.cpp</div></div>
+</div><!--header-->
+<div class="contents">
+<a href="_test_bouton_8cpp.html">Aller à la documentation de ce fichier.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="preprocessor">#include &lt;Arduino.h&gt;</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="preprocessor">#include &lt;Arduino_FreeRTOS.h&gt;</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="preprocessor">#include &lt;semphr.h&gt;</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;event_groups.h&quot;</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;AccelStepper.h&gt;</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span> </div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="comment">/*Code pour tester le branchement des boutons, teste effectuer le 2026-03-11 par Cloé</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="comment">1. Commencer par tester la lecture du bouton rouge. Résulta : 0 -&gt; appuyer et 1 -&gt; pas appuyer</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="comment">2. Tester la lecture de tous les bouton. Résulta : </span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment"></span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="comment">J&#39;ai inverser les numéro de pin de Left et right pour corespondre couleur</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="comment"></span> </div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="comment">Rouge : 0 -&gt; appuyer et 1 -&gt; pas appuyer</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="comment">Bleu : 0 -&gt; appuyer et 0 -&gt; pas appuyer ----&gt; Pas fonctionner (pin 25)</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="comment">Jaune : 0 -&gt; appuyer et 1 -&gt; pas appuyer</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="comment">Vert : 0 -&gt; appuyer et 0 -&gt; pas appuyer ----&gt; Pas fonctionner (pin 23)</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="comment">Blanc : 0 -&gt; appuyer et 1 -&gt; pas appuyer</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="comment"></span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="comment">3. Test de la logique de lorsque bouton = low signifie actionner -&gt; Fonctionnel</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="comment">*/</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="comment">//BOUTONS</span></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#a81dad6c86576443fc7f5516423269ee3">   23</a></span><span class="preprocessor">#define BTN_PIN_UP 22</span></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#a411392eb907bf9f697c1e5301402d8fd">   24</a></span><span class="preprocessor">#define BTN_PIN_DOWN 25</span></div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#a7510b9984d34b3931c41b69c66606976">   25</a></span><span class="preprocessor">#define BTN_PIN_LEFT 24</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#add3ef655c4e3d5bbf7cd9d5bf289125e">   26</a></span><span class="preprocessor">#define BTN_PIN_RIGHT 23</span></div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#ad887f97e685e75fe91752dd398a4ca18">   27</a></span><span class="preprocessor">#define BTN_PIN_OK 26</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#add56dedbc09f82766e39588e01978e7d">   28</a></span><span class="preprocessor">#define DEBOUNCE_MS 20</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span> </div>
+<div class="foldopen" id="foldopen00030" data-start="{" data-end="}">
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#a4fc01d736fe50cf5b977f755b675f11d">   30</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="_test_bouton_8cpp.html#a4fc01d736fe50cf5b977f755b675f11d">setup</a>() {</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>  Serial.begin(115200);</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>  delay(2000);</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span> </div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  pinMode(<a class="code hl_define" href="_test_bouton_8cpp.html#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>, INPUT_PULLUP); <span class="comment">//Verifier avec Marcob input vs input_pullup (resistance interne ou pas)</span></div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  pinMode(<a class="code hl_define" href="_test_bouton_8cpp.html#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>, INPUT_PULLUP);</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  pinMode(<a class="code hl_define" href="_test_bouton_8cpp.html#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>, INPUT_PULLUP);</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>  pinMode(<a class="code hl_define" href="_test_bouton_8cpp.html#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>, INPUT_PULLUP);</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>  pinMode(<a class="code hl_define" href="_test_bouton_8cpp.html#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>, INPUT_PULLUP);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>}</div>
+</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span> </div>
+<div class="foldopen" id="foldopen00041" data-start="{" data-end="}">
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="_test_bouton_8cpp.html#afe461d27b9c48d5921c00d521181f12f">   41</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="_test_bouton_8cpp.html#afe461d27b9c48d5921c00d521181f12f">loop</a>() {  </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>  <span class="comment">// 1.</span></div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>  Serial.print(digitalRead(<a class="code hl_define" href="_test_bouton_8cpp.html#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>));</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>  Serial.println(<span class="stringliteral">&quot;  Rouge&quot;</span>);</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>  </div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>  <span class="comment">// 2.</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  Serial.print(digitalRead(<a class="code hl_define" href="_test_bouton_8cpp.html#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a>));</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>  Serial.println(<span class="stringliteral">&quot;  Bleu&quot;</span>);</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  Serial.print(digitalRead(<a class="code hl_define" href="_test_bouton_8cpp.html#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a>));</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>  Serial.println(<span class="stringliteral">&quot;  Jaune&quot;</span>);</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>  Serial.print(digitalRead(<a class="code hl_define" href="_test_bouton_8cpp.html#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a>));</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  Serial.println(<span class="stringliteral">&quot;  Vert&quot;</span>);</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  Serial.print(digitalRead(<a class="code hl_define" href="_test_bouton_8cpp.html#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a>));</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>  Serial.println(<span class="stringliteral">&quot;  Blanc&quot;</span>);</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>  <span class="comment">// 3.</span></div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>  <span class="keywordflow">if</span>(digitalRead(<a class="code hl_define" href="_test_bouton_8cpp.html#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a>) == LOW) {</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    Serial.println(<span class="stringliteral">&quot;Bouton Rouge appuyer&quot;</span>);</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>  }</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>  Serial.println(<span class="stringliteral">&quot;------------&quot;</span>);</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>  delay(2000);</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>}</div>
+</div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a411392eb907bf9f697c1e5301402d8fd"><div class="ttname"><a href="_test_bouton_8cpp.html#a411392eb907bf9f697c1e5301402d8fd">BTN_PIN_DOWN</a></div><div class="ttdeci">#define BTN_PIN_DOWN</div><div class="ttdef"><b>Definition</b> <a href="#l00024">TestBouton.cpp:24</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a4fc01d736fe50cf5b977f755b675f11d"><div class="ttname"><a href="_test_bouton_8cpp.html#a4fc01d736fe50cf5b977f755b675f11d">setup</a></div><div class="ttdeci">void setup()</div><div class="ttdef"><b>Definition</b> <a href="#l00030">TestBouton.cpp:30</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a7510b9984d34b3931c41b69c66606976"><div class="ttname"><a href="_test_bouton_8cpp.html#a7510b9984d34b3931c41b69c66606976">BTN_PIN_LEFT</a></div><div class="ttdeci">#define BTN_PIN_LEFT</div><div class="ttdef"><b>Definition</b> <a href="#l00025">TestBouton.cpp:25</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_a81dad6c86576443fc7f5516423269ee3"><div class="ttname"><a href="_test_bouton_8cpp.html#a81dad6c86576443fc7f5516423269ee3">BTN_PIN_UP</a></div><div class="ttdeci">#define BTN_PIN_UP</div><div class="ttdef"><b>Definition</b> <a href="#l00023">TestBouton.cpp:23</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_ad887f97e685e75fe91752dd398a4ca18"><div class="ttname"><a href="_test_bouton_8cpp.html#ad887f97e685e75fe91752dd398a4ca18">BTN_PIN_OK</a></div><div class="ttdeci">#define BTN_PIN_OK</div><div class="ttdef"><b>Definition</b> <a href="#l00027">TestBouton.cpp:27</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_add3ef655c4e3d5bbf7cd9d5bf289125e"><div class="ttname"><a href="_test_bouton_8cpp.html#add3ef655c4e3d5bbf7cd9d5bf289125e">BTN_PIN_RIGHT</a></div><div class="ttdeci">#define BTN_PIN_RIGHT</div><div class="ttdef"><b>Definition</b> <a href="#l00026">TestBouton.cpp:26</a></div></div>
+<div class="ttc" id="a_test_bouton_8cpp_html_afe461d27b9c48d5921c00d521181f12f"><div class="ttname"><a href="_test_bouton_8cpp.html#afe461d27b9c48d5921c00d521181f12f">loop</a></div><div class="ttdeci">void loop()</div><div class="ttdef"><b>Definition</b> <a href="#l00041">TestBouton.cpp:41</a></div></div>
+</div><!-- fragment --></div><!-- contents -->
+<!-- start footer part -->
+<hr class="footer"/><address class="footer"><small>
+Généré par&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.11.0
+</small></address>
+</div><!-- doc-content -->
+</body>
+</html>
