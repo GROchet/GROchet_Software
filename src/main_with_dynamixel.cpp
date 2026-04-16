@@ -20,8 +20,8 @@
 //-------------------
 //Difficulté
 //-------------------
-int16_t temps[] = {50,100,150}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
-int16_t force[] = {50,100,150}; //A ajuster selon les tests, en unités brutes du dynamixel
+int16_t temps[] = {10,30,60}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
+int16_t force[] = {5,2,1}; //A ajuster selon les tests, en unités brutes du dynamixel
 int16_t speed[] = {100,150,250}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
 int8_t difficulty = 0; // 0 = easy, 1 = medium, 2 = hard. A ajuster selon les tests
 
@@ -81,8 +81,8 @@ int16_t OPEN_POS = 3406;
 int16_t CLOSED_POS = 6805;
 int16_t ACTUAL_POS = 0;
 
-#define MOVE_CURRENT    300 // Courant à appliquer pour déplacer la pince (unités brutes)
-#define GRIP_CURRENT    50 // Courant à appliquer pour fermer la pince (unités brutes)
+#define MOVE_CURRENT    100 // Courant à appliquer pour déplacer la pince (unités brutes)
+#define GRIP_CURRENT    5 // Courant à appliquer pour fermer la pince (unités brutes)
 #define STALL_CURRENT   40 // Courant en dessous duquel on considère que le moteur est en stall (unités brutes)
 #define VEL_THRESHOLD   5 // Vitesse en dessous de laquelle on considère que le moteur est à l'arrêt (unités brutes)
 #define STALL_CONFIRM   300 // Temps de suite que le moteur doit être à l'arrêt pour confirmer un stall (ms)
@@ -440,7 +440,8 @@ enum RetroUIState{
     SELECTION_DIFFICULTE,
     ECRAN_PERDANT,
     ECRAN_GAGNANT,
-    RIEN
+    RIEN,
+    TIMER,
 };
 volatile RetroUIState retroUIState = ECRAN_ACCUEIL;
 
@@ -529,7 +530,7 @@ int longueurMot(const char *mot);
 void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 void ecranAccueil(const char *mot);
 void processJson(char *incoming);
-bool toutouAttrape(int temps_actif, int distance_attrape);
+bool toutouAttrape(uint32_t temps_actif, int distance_attrape);
 
 void EcranAccueil();
 void EcranPerdant();
@@ -571,6 +572,8 @@ void setup() {
     dxl.torqueOn(id);
     ACTUAL_POS = dxl.getPresentPosition(id); // Lire la position actuelle à l'initialisation
     dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
+
+    dxl.writeControlTableItem(ControlTableItem::CURRENT_LIMIT, id, 1);
 
 	//BOUTONS
 	//----------------
@@ -718,7 +721,7 @@ void TaskStateControl (void *pvParameters) {
             vTaskResume(hMotorTask);
             retroUIState = RIEN;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            ouvrirPince();
+            //ouvrirPince();
             homeXY();
             //Remonter axe Z à ajouter
 			currentState = DIFF_CHOOSE;
@@ -733,16 +736,39 @@ void TaskStateControl (void *pvParameters) {
 
             currentState = IDLE;
             break;
-	    case IDLE:
-            retroUIState = ECRAN_ACCUEIL;
+	    case IDLE:{
+            retroUIState = TIMER;
             vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
             vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
-            xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
+            TickType_t start = xTaskGetTickCount();
+            TickType_t duration = pdMS_TO_TICKS(temps[difficulty] * 1000);
+            int dernierDecompte = -10;
+
+            while ((xTaskGetTickCount() - start) < duration) {
+                // check bouton NON BLOQUANT
+                int decompte = duration - ((xTaskGetTickCount() - start) / 1000);
+                if(decompte < 0) decompte = 0;
+                
+                if(decompte != dernierDecompte){
+                    dernierDecompte = decompte;
+                    pixels.clear();
+                    char nombreTexte[3];
+                    sprintf(nombreTexte, "%02d", decompte);
+                    ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 0, 0));
+                    pixels.show();
+                }
+
+                if (xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20))) {
+                    break;
+                }
+                vTaskDelay(pdMS_TO_TICKS(40));
+            }
             manualControlEnabled = false; // Disable manual control
             currentState = LOWERING;
 			break;
-	    case LOWERING:
+        }
+	    case LOWERING:{
 			//Séquence de mouvement vers le bas
             while(1){ // Tant que l'axe Z n'est pas presque au plus bas
                 MOT_Z.moveTo(MOT_Z.currentPosition() - speed[difficulty]) ; // Update internal position
@@ -755,13 +781,13 @@ void TaskStateControl (void *pvParameters) {
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant que la pince est fermée
 			currentState = CLOSING;
 			break;
-
+        }
 	    case CLOSING:{  
 			fermerPince();
 			currentState = LIFTING;
 			break;
 	    }
-	    case LIFTING:
+	    case LIFTING:{
 			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
             vTaskResume(hMotorTask); // S'assurer que la tâche de communication est active pour envoyer les mises à jour de position pendant le levage
 			MOT_Z.moveTo(liftedZPos);
@@ -770,6 +796,7 @@ void TaskStateControl (void *pvParameters) {
             }
 			currentState = MOVING_TO_DROPZONE;
 			break;
+        }
 
 	    case MOVING_TO_DROPZONE: //DONE
 			//Séquence de mouvement vers la dropzone
@@ -784,7 +811,7 @@ void TaskStateControl (void *pvParameters) {
             if(win)retroUIState = ECRAN_GAGNANT;
             else retroUIState = ECRAN_PERDANT;
             vTaskDelay(pdMS_TO_TICKS(5000));
-			currentState = IDLE;
+			currentState = DIFF_CHOOSE;
 			break;
 	    }
 	}
@@ -1035,8 +1062,6 @@ void sendFullSnapshot() {
 void TaskMotorControl(void *pvParameters) {
     (void) pvParameters;
 
-    const long btnIncrement = 100; // increment for buttons, can also use speed[difficulty]
-
     for (;;) {
         if(manualControlEnabled){
             // ── Read buttons ──
@@ -1118,9 +1143,11 @@ void ouvrirPince() {
 }
 
 void fermerPince() {
-    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, GRIP_CURRENT);
+    dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, force[difficulty]);
     dxl.setGoalPosition(id, CLOSED_POS, UNIT_RAW);
     while (ACTUAL_POS < CLOSED_POS - 50) { // Tant que la pince n'est pas presque fermée
+        Serial.print("SKIBIDI");
+        Serial.println(dxl.getPresentCurrent(id));
         vTaskDelay(pdMS_TO_TICKS(50));
         ACTUAL_POS = dxl.getPresentPosition(id);
     }
@@ -1349,7 +1376,7 @@ void TaskCommJsonReceive(void *pvParameters) {
     }
 }
 
-bool toutouAttrape(int temps_actif, int distance_attrape) {
+bool toutouAttrape(uint32_t temps_actif, int distance_attrape) {
     float temps_retour_signal;
     float distance_parcourue;
     int reussi = 0;
@@ -1527,6 +1554,8 @@ void TaskRetroUI(void *pvParameters){
                 break;
             case ECRAN_PERDANT:
                 EcranPerdant();
+                break;
+            case TIMER:
                 break;
             case RIEN:
                 [[fallthrough]];
