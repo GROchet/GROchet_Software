@@ -52,7 +52,6 @@ volatile TickType_t lastBtnInterrupt = 0;
 #define EVT_BTN_LEFT (1 << 3)
 #define EVT_BTN_RIGHT (1 << 4)
 
-// Global variables (only motor task writes)
 volatile bool btnUp = false;
 volatile bool btnDown = false;
 volatile bool btnLeft = false;
@@ -774,7 +773,7 @@ void TaskStateControl(void *pvParameters){
   for(;;) {
 
 	switch(currentState) {
-        case ACCUEIL:
+        case ACCU#EIL:
             vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant l'écran d'accueil
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
@@ -806,7 +805,7 @@ void TaskStateControl(void *pvParameters){
             retroUIState = TIMER;
             //vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
             vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
-            manualControlEnabled = true; // Allow manual control in TaskMotorControl
+            manualControlEnabled = true; // permettre le controle manuel de l'axe XY avec les boutons
             TickType_t start = xTaskGetTickCount();
             TickType_t duration = pdMS_TO_TICKS(temps[difficulty] * 1000);
             int dernierDecompte = -10;
@@ -884,7 +883,7 @@ void TaskStateControl(void *pvParameters){
                 }
                 vTaskDelay(pdMS_TO_TICKS(40));
             }
-            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant que la pince est fermée
+            vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant qu'on ramasse un toutou'
 			currentState = CLOSING;
 			break;
         }
@@ -894,8 +893,8 @@ void TaskStateControl(void *pvParameters){
 			break;
 	    }
 	    case LIFTING:{
-			//WAIT FOR Z TO BE LIFTED, THEN MOVE TO DROPZONE
-            vTaskResume(hMotorTask); // S'assurer que la tâche de communication est active pour envoyer les mises à jour de position pendant le levage
+			//Attendre qu'on soit rendus à liftedZPos, apres retour au home
+            vTaskResume(hMotorTask);
 			MOT_Z.moveTo(liftedZPos);
             while(abs(MOT_Z.currentPosition() - liftedZPos) > 50) {
                 vTaskDelay(pdMS_TO_TICKS(20));
@@ -904,13 +903,13 @@ void TaskStateControl(void *pvParameters){
 			break;
         }
 
-	    case MOVING_TO_DROPZONE: //DONE
-			//Séquence de mouvement vers la dropzone
+	    case MOVING_TO_DROPZONE: 
+			//Séquence de mouvement vers la zone de dépot
 			homeXY();
 			currentState = DROPPING;
 			break;
 
-	    case DROPPING:{ //DONE;
+	    case DROPPING:{ 
 			dxl.writeControlTableItem(ControlTableItem::GOAL_CURRENT, id, MOVE_CURRENT);
             dxl.setGoalPosition(id, OPEN_POS, UNIT_RAW); // Ouvrir la pince sans attendre qu'on aie fini d'ouvrir.
             bool win = toutouAttrape(4000,17);
@@ -1481,11 +1480,9 @@ void processJson(char *incoming){
 static inline void rxBufferPush(char c){
     uint16_t next = (rxHead + 1) % RX_BUF_SIZE;
 
-    // overflow protection: drop oldest data
     if (next == rxTail) {
         rxTail = (rxTail + 1) % RX_BUF_SIZE;
     }
-
     rxBuf[rxHead] = c;
     rxHead = next;
 }
@@ -1520,21 +1517,10 @@ void TaskCommJsonReceive(void *pvParameters){
 
     for (;;) {
 
-        // 1. READ SERIAL → RING BUFFER ONLY
         while (Serial.available()) {
             char c = Serial.read();
             rxBufferPush(c);
         }
-        /*
-        if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
-            while (Serial.available()) {
-                char c = Serial.read();
-                rxBufferPush(c);
-            }
-            xSemaphoreGive(serialMutex);
-        }*/
-
-        // 2. PARSE LINES FROM BUFFER
         char c;
         while (rxBufferPop(c)) {
 
@@ -1598,7 +1584,7 @@ bool toutouAttrape(uint32_t temps_actif, int distance_attrape){
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(50)); // important
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 
     return false;
@@ -2079,9 +2065,8 @@ void eclairage_LED_ext(){
     decalage = (decalage + 1) % 3;
 };
 
-//Eteindre les leds
 /** 
- * @brief Fonction utilitaire du système embarqué.
+ * @brief Fonction utilitaire du système embarqué. Eteindre les leds
  *
  * @details Nom de la fonction : eteindreCompteur
  * @param Aucun paramètre
