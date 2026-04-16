@@ -4,3 +4,6 @@
 [submodule "Documentation/Electrique/LED_Fabric"]
 	path = Documentation/Electrique/LED_Fabric
 	url = git@github.com:RacoonDOEggs/LED_Fabric.git
+[submodule "GROchet_interface_operateur"]
+	path = GROchet_interface_operateur
+	url = https://github.com/GROchet/GROchet_interface_operateur.git
