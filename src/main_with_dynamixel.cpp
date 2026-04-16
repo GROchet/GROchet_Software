@@ -102,8 +102,8 @@ int deltaY = 0;
 long posX = 0;
 long posY = 0;
 
-long MAX_POS_X = 13100;
-long MAX_POS_Y = 12998;
+long MAX_POS_X = 7000;
+long MAX_POS_Y = -6500;
 
 //Moteur 1
 #define EN_PIN_M1 29
@@ -773,7 +773,7 @@ void TaskStateControl(void *pvParameters){
   for(;;) {
 
 	switch(currentState) {
-        case ACCU#EIL:
+        case ACCUEIL:
             vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant l'écran d'accueil
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant l'écran d'accueil
             retroUIState = ECRAN_ACCUEIL;
@@ -786,9 +786,12 @@ void TaskStateControl(void *pvParameters){
             vTaskResume(hMotorTask);
             retroUIState = RIEN;
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
-            //ouvrirPince();
+            ouvrirPince();
             homeXY();
-            //Remonter axe Z à ajouter
+            MOT_Z.moveTo(liftedZPos);
+            while(abs(MOT_Z.currentPosition() - liftedZPos) > 50) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+            }
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
@@ -810,8 +813,8 @@ void TaskStateControl(void *pvParameters){
             TickType_t duration = pdMS_TO_TICKS(temps[difficulty] * 1000);
             int dernierDecompte = -10;
             static int lastOff = 0; //Pour led strip décompte
-
-            while ((xTaskGetTickCount() - start) < duration) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            while (1) {
 
                 TickType_t elapsedTicks = xTaskGetTickCount() - start;
                 int elapsedSec = elapsedTicks / configTICK_RATE_HZ;
@@ -858,7 +861,7 @@ void TaskStateControl(void *pvParameters){
                     pixels_LED.show();
                 }
 
-                if (xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20))) {
+                if (xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20)) || (xTaskGetTickCount() - start) >= duration) {
                     break;
                 }
 
@@ -1206,10 +1209,10 @@ void TaskMotorControl(void *pvParameters){
                 long targetX = curX;
                 long targetY = curY;
 
-                if (up)    targetX += speed[difficulty];
-                if (down)  targetX -= speed[difficulty];
-                if (left)  targetY += speed[difficulty]; 
-                if (right) targetY -= speed[difficulty]; 
+                if (up & (abs(curX) <= abs(MAX_POS_X)))               targetX += speed[difficulty];
+                if (down & (digitalRead(LMTSW_X) != LOW))   targetX -= speed[difficulty];
+                if (left & (digitalRead(LMTSW_Y) != LOW))   targetY += speed[difficulty]; 
+                if (right  & (abs(curY) <= abs(MAX_POS_Y)))           targetY -= speed[difficulty];
 
                 // ── Set moveTo targets if there is any movement ──
                 posX = targetX; 
@@ -1926,7 +1929,7 @@ void EcranGagnant(){
 
         decalage = 23;
     }
-    if (afficher) ecrireMot("Bravo!", 3, 4, pixels.Color(0, 20, 5));
+    if (afficher) ecrireMot("BRAVO!", 3, 4, pixels.Color(0, 20, 5));
 
     afficher = !afficher;
     pixels.show();
