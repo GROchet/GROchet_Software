@@ -4,6 +4,7 @@ Le GROchet est une machine à pince open source de laquelle il est possible de c
 
 **DÉMO**
 
+<img width="207" height="276" alt="673243722_931227729696474_8485299145041720249_n" src="https://github.com/user-attachments/assets/53a651e6-47cf-40d1-ba85-473bd198a376" />
 
 **Équipe:**
 - Marc-Olivier Beaulieu
