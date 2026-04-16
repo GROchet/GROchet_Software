@@ -7,3 +7,4 @@
 [submodule "GROchet_interface_operateur"]
 	path = GROchet_interface_operateur
 	url = https://github.com/GROchet/GROchet_interface_operateur.git
+	branch = main
