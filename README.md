@@ -14,4 +14,4 @@ Le GROchet est une machine à pince open source de laquelle il est possible de c
 - Cloé Mercier
 
 
-Toute la documentation relative au projet est disponible sur le wiki: (wiki)[https://github.com/GROchet/GROchet_Software/wiki]
+Toute la documentation relative au projet est disponible sur le wiki:  [Wiki](https://github.com/GROchet/GROchet_Software/wiki)
