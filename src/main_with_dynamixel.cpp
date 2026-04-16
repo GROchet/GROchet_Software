@@ -6,8 +6,7 @@
 #include <ArduinoJson.h>
 #include <Dynamixel2Arduino.h>
 #include <Adafruit_NeoPixel.h>
-#include <FastLED.h>
-
+#include <avr/pgmspace.h>
 
 //À considérer avant de Run la premiere fois :
 
@@ -22,7 +21,7 @@
 //-------------------
 //Difficulté
 //-------------------
-int16_t temps[] = {10,30,60}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
+int16_t temps[] = {60,30,20}; //A ajuster selon les tests, en s, pour chaque difficulté (easy, medium, hard). Temps pendant lequel le toutou doit être attrapé pour valider la prise et passer à l'étape suivante. Peut être différent selon la difficulté choisie.
 int16_t force[] = {5,2,1}; //A ajuster selon les tests, en unités brutes du dynamixel
 int16_t speed[] = {100,150,250}; //A ajuster selon les tests, en unités de vitesse du stepper (peut être différent selon le système et les moteurs utilisés)
 int8_t difficulty = 0; // 0 = easy, 1 = medium, 2 = hard. A ajuster selon les tests
@@ -37,7 +36,7 @@ enum LedColor {
     LED_MAUVE, //6
     LED_BLANC //7
 };
-LedColor ledColor = LED_ROSE; // Couleur actuelle des LEDs, à ajuster selon les tests
+LedColor ledColor = LED_VERT; // Couleur actuelle des LEDs, à ajuster selon les tests
 
 // -------------------
 //BOUTONS
@@ -154,14 +153,23 @@ volatile bool manualControlEnabled = false; // Flag pour indiquer si le contrôl
 SemaphoreHandle_t serialMutex;
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-uint32_t BLANC_ = pixels.Color(15, 15, 15);
-uint32_t ROUGE_ = pixels.Color(15, 0, 0);
-uint32_t JAUNE_ = pixels.Color(15, 15, 0);
-uint32_t ORANGE_ = pixels.Color(20, 5, 0);
+uint32_t BLANC = pixels.Color(15, 15, 15);
+uint32_t ROUGE = pixels.Color(15, 0, 0);
+uint32_t JAUNE = pixels.Color(15, 15, 0);
+uint32_t ORANGE = pixels.Color(20, 5, 0);
+
+const uint8_t ROUGE_l[] = {75, 0, 0};
+const uint8_t ROSE_l[] = {75, 0, 75};
+const uint8_t ORANGE_l[] = {75, 50, 0};
+const uint8_t BLEU_l[] = {0, 55, 75};
+const uint8_t VERT_l[] = {0, 75, 0};
+const uint8_t JAUNE_l[] = {75, 75, 0};
+const uint8_t MAUVE_l[] = {59, 0, 75};
+const uint8_t BLANC_l[] = {75, 75, 75};
 
 // Transformation des lettres et chiffres en matrice 5x3
 // Nombre de caractères, nombre de lignes par lettre et nombre de colonnes par lettre
-byte alphabet[39][5][3] = {
+const uint8_t alphabet[39][5][3] PROGMEM= {
     {// A
      {1, 1, 1},
      {1, 0, 1},
@@ -447,31 +455,21 @@ enum RetroUIState{
 };
 volatile RetroUIState retroUIState = ECRAN_ACCUEIL;
 
-//--------------------
-//LED SPLIT
 //----------------------
-#define NUMPIXELS_BANDE 20
-#define NUM_LEDS (NUMPIXELS_BANDE * 11)
-
-CRGB leds[NUM_LEDS];
-
+// LED STRIP
+//----------------------
 #define PIN_LED 4
 
+#define NUMPIXELS_BANDE 20
 #define OFFSET_LED_GAUCHE 0
 #define OFFSET_LED_COMPTEUR 40
 #define OFFSET_LED_DROIT 100
 #define OFFSET_LED_INT 140
 
-static int n_LED_total = NUMPIXELS_BANDE * 11;
+static int n_LED_compteur = NUMPIXELS_BANDE*3;
+static int n_LED_total = NUMPIXELS_BANDE*11;
 
-CRGB ROUGE  = CRGB(75, 0, 0);
-CRGB ROSE  = CRGB(75, 0, 75);
-CRGB ORANGE = CRGB(75, 60, 0);
-CRGB BLEU   = CRGB(0, 55, 75);
-CRGB VERT   = CRGB(0, 75, 0);
-CRGB JAUNE  = CRGB(75, 75, 0);
-CRGB MAUVE  = CRGB(59, 0, 65);
-CRGB BLANC  = CRGB(75, 75, 75);
+Adafruit_NeoPixel pixels_LED(n_LED_total, PIN_LED, NEO_GRB + NEO_KHZ800);
 
 
 // -------------------
@@ -492,8 +490,8 @@ enum SystemState {
 
 volatile SystemState currentState = ACCUEIL;
 
-static StaticJsonDocument<384> doc_i;
-static StaticJsonDocument<768> doc_o;
+static StaticJsonDocument<256> doc_i;
+static StaticJsonDocument<512> doc_o;
 
 struct LastState{
     long posX = -999999;
@@ -536,7 +534,7 @@ TaskHandle_t hRetroUI   = NULL;
 TaskHandle_t hCommSend  = NULL;
 TaskHandle_t hCommRecv  = NULL;
 
-#define RX_BUF_SIZE 128
+#define RX_BUF_SIZE 128 //128 tanto FOURCHETTE
 
 static char rxBuf[RX_BUF_SIZE];
 static volatile uint16_t rxHead = 0;
@@ -552,7 +550,7 @@ void sendFullSnapshot();
 int transformationIntermediaire(int x, int y);
 int transformationCoordonnees(int x, int y);
 void allumeLED(int x, int y, uint32_t couleur);
-void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur);
+void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur);
 int trouverIndexAlphabet(char c);
 void ecrireMot(const char *mot, int xDepart, int yDepart, uint32_t couleur);
 int longueurMot(const char *mot);
@@ -560,7 +558,11 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur);
 void ecranAccueil(const char *mot);
 void processJson(char *incoming);
 bool toutouAttrape(uint32_t temps_actif, int distance_attrape);
-void eclairage_int_boite(CRGB color);
+
+void eteindreCompteur();
+
+void eclairage_int_boite(const uint8_t *RGB);
+void reinit_LED(int debut, int fin);
 
 void EcranAccueil();
 void EcranPerdant();
@@ -570,6 +572,11 @@ void TaskRetroUI(void *pvParameters);
 
 static inline void rxBufferPush(char c);
 static inline bool rxBufferPop(char &c);
+
+uint32_t gradient_couleur(float ratio);
+
+
+void eclairage_LED_ext();
 
 //Global variables for RTOS synchronization
 EventGroupHandle_t inputEventGroup;
@@ -658,12 +665,9 @@ void setup() {
     pixels.clear();
     pixels.show();
 
-    FastLED.addLeds<WS2812B, PIN_LED, GRB>(leds, NUM_LEDS);
-    FastLED.clear();
-    FastLED.show();
-
-
-    eclairage_int_boite(ROUGE);
+    pixels_LED.begin();
+    pixels_LED.clear();
+    pixels_LED.show();
 
 	//RTOS
 	//----------------
@@ -673,10 +677,19 @@ void setup() {
     serialMutex = xSemaphoreCreateMutex();
 
 	xTaskCreate(TaskMotorControl, "MotorTask", 128, NULL, 3, &hMotorTask);
-	xTaskCreate(TaskStateControl, "StateTask", 512, NULL, 4, NULL);
+	xTaskCreate(TaskStateControl, "StateTask", 384, NULL, 4, NULL);
 	xTaskCreate(TaskCommJsonSend,    "CommSend",256, NULL, 3, &hCommSend);
 	xTaskCreate(TaskCommJsonReceive, "CommRecv", 384, NULL, 3, &hCommRecv);
     xTaskCreate(TaskRetroUI, "RetroUI", 128, NULL, 3, &hRetroUI); //128 is ok, we chose 256 to be safe
+
+    Serial.print(F("Stack headroom CommSend: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hCommSend));
+    Serial.print(F("Stack headroom MotorTask: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hMotorTask));
+    Serial.print(F("Stack headroom RetroUI: "));
+    Serial.println(uxTaskGetStackHighWaterMark(hRetroUI));
+
+    eclairage_int_boite(ROSE_l);
 
     vTaskStartScheduler();
 }
@@ -757,10 +770,10 @@ void TaskStateControl (void *pvParameters) {
 			currentState = DIFF_CHOOSE;
 			break;
         case DIFF_CHOOSE:
-            vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant le choix de la difficulté pour éviter les interférences
+            //vTaskSuspend(hCommRecv); // Suspendre la tâche de réception JSON pendant le choix de la difficulté pour éviter les interférences
             vTaskSuspend(hMotorTask); // Suspendre la tâche de contrôle des moteurs pendant le choix de la difficulté
             retroUIState = SELECTION_DIFFICULTE;
-            vTaskResume(hRetroUI); // S'assurer que la tâche de l'interface utilisateur est active pour afficher le menu de sélection
+            //vTaskResume(hRetroUI); // S'assurer que la tâche de l'interface utilisateur est active pour afficher le menu de sélection
             
             xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, portMAX_DELAY);
 
@@ -768,12 +781,13 @@ void TaskStateControl (void *pvParameters) {
             break;
 	    case IDLE:{
             retroUIState = TIMER;
-            vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
+            //vTaskResume(hCommRecv); // Reprendre la tâche de réception JSON une fois la difficulté choisie
             vTaskResume(hMotorTask); // Reprendre la tâche de contrôle des moteurs une fois la difficulté choisie
             manualControlEnabled = true; // Allow manual control in TaskMotorControl
             TickType_t start = xTaskGetTickCount();
             TickType_t duration = pdMS_TO_TICKS(temps[difficulty] * 1000);
             int dernierDecompte = -10;
+            static int lastOff = 0; //Pour led strip décompte
 
             while ((xTaskGetTickCount() - start) < duration) {
 
@@ -799,8 +813,28 @@ void TaskStateControl (void *pvParameters) {
                         ecrireMot(nombreTexte, 11, 4, pixels.Color(25, 25, 0));
                     }
                     pixels.show();
+                    dernierDecompte = decompte;
                 }
-                dernierDecompte = decompte;
+                const int shouldOff = n_LED_compteur - (int)round(n_LED_compteur*decompte/temps[difficulty]); //nb de lumières qui devraient être éteintes
+                if(shouldOff != lastOff){
+                    const int shouldOff = n_LED_compteur - (int)round(n_LED_compteur*decompte/temps[difficulty]); //nb de lumières qui devraient être éteintes
+                    // Éteindre la différence depuis la dernière fois
+                    for (int i = lastOff; i < shouldOff; i++) {
+                        int index = n_LED_compteur - 1 - i; // Éteindre de droite à gauche
+                        pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + index, 0);
+                    }
+                    lastOff = shouldOff;
+
+                    // LEDs restantes
+                    const int LED_restant = n_LED_compteur - shouldOff;
+                    // Gradient de couleur pour les LEDs restantes
+                    float ratio = (float)LED_restant / (float)n_LED_compteur;
+                    uint32_t couleur = gradient_couleur(ratio);
+                    for (int i = 0; i < LED_restant; i++) {
+                        pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, couleur);
+                    }
+                    pixels_LED.show();
+                }
 
                 if (xEventGroupWaitBits(inputEventGroup, EVT_BTN_OK, pdTRUE, pdFALSE, pdMS_TO_TICKS(20))) {
                     break;
@@ -1057,7 +1091,7 @@ void TaskCommJsonSend(void *pvParameters) {
 }
 
 void sendFullSnapshot() {
-    static StaticJsonDocument<1024> doc1;
+    static StaticJsonDocument<768> doc1;
 
     doc1["type"] = "full";
 
@@ -1381,25 +1415,24 @@ static inline bool rxBufferPop(char &c) {
 void TaskCommJsonReceive(void *pvParameters) {
     (void) pvParameters;
 
-    static char lineBuf[128];
+    static char lineBuf[128]; //128 tto FOURCHETTE
     static uint16_t lineLen = 0;
 
     for (;;) {
 
         // 1. READ SERIAL → RING BUFFER ONLY
-        /*
         while (Serial.available()) {
             char c = Serial.read();
             rxBufferPush(c);
-        }*/
-        
+        }
+        /*
         if (xSemaphoreTake(serialMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
             while (Serial.available()) {
                 char c = Serial.read();
                 rxBufferPush(c);
             }
             xSemaphoreGive(serialMutex);
-        }
+        }*/
 
         // 2. PARSE LINES FROM BUFFER
         char c;
@@ -1420,7 +1453,7 @@ void TaskCommJsonReceive(void *pvParameters) {
             }
         }
 
-        vTaskDelay(pdMS_TO_TICKS(200));
+        vTaskDelay(pdMS_TO_TICKS(250));
     }
 }
 
@@ -1499,7 +1532,7 @@ void allumeLED(int x, int y, uint32_t couleur){
   }
 };
  
-void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
+void ecrireLettre(const uint8_t matriceLettre[5][3], int xDepart, int yDepart, uint32_t couleur){
  
   for (int rangee = 0; rangee < 5; rangee++)
   {
@@ -1507,7 +1540,7 @@ void ecrireLettre(byte matriceLettre[5][3], int xDepart, int yDepart, uint32_t c
     for (int colonne = 0; colonne < 3; colonne++)
     {
  
-      if (matriceLettre[rangee][colonne] == 1)
+      if (pgm_read_byte(&matriceLettre[rangee][colonne]) == 1)
       {
         allumeLED(xDepart + colonne, yDepart + rangee, couleur);
       }
@@ -1589,7 +1622,7 @@ void defilerTexte(const char *mot, int yDepart, uint32_t couleur){
 
 void TaskRetroUI(void *pvParameters){
     (void) pvParameters;
-    int8_t oldColor=-1;
+    LedColor oldColor = -1;
     for(;;){
         switch(retroUIState){
             case ECRAN_ACCUEIL:
@@ -1611,15 +1644,38 @@ void TaskRetroUI(void *pvParameters){
             default:
                 pixels.clear();
                 pixels.show();
-                vTaskSuspend(NULL);
                 break;
-        }
-
+        };
         if(oldColor != ledColor){
-            eclairage_int_boite(ROUGE);
+            switch(ledColor){
+                case(LED_ROUGE):
+                    eclairage_int_boite(ROUGE_l);
+                    break;
+                case(LED_ORANGE):
+                    eclairage_int_boite(ORANGE_l);
+                    break;
+                case(LED_JAUNE):
+                    eclairage_int_boite(JAUNE_l);
+                    break;
+                case(LED_VERT):
+                    eclairage_int_boite(VERT_l);
+                    break;
+                case(LED_BLEU):
+                    eclairage_int_boite(BLEU_l);
+                    break;
+                case(LED_MAUVE):
+                    eclairage_int_boite(MAUVE_l);
+                    break;
+                case(LED_ROSE):
+                    eclairage_int_boite(ROSE_l);
+                    break;
+                case(LED_BLANC):
+                    eclairage_int_boite(BLANC_l);
+                    break;
+            }
             oldColor = ledColor;
         }
-
+        eclairage_LED_ext();
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
@@ -1667,7 +1723,7 @@ void EcranPerdant(){
         }
         ecrireMot("MEILLEURE CHANCE LA PROCHAINE FOIS", i, 4, pixels.Color(0, 0, 25));
         pixels.show();
-        //vTaskDelay(pdMS_TO_TICKS(50));
+        vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
@@ -1715,7 +1771,7 @@ void EcranGagnant(){
 
         decalage = 23;
     }
-    if (afficher) ecrireMot("SKIBIDI!", 3, 4, pixels.Color(0, 20, 5));
+    if (afficher) ecrireMot("Bravo!", 3, 4, pixels.Color(0, 20, 5));
 
     afficher = !afficher;
     pixels.show();
@@ -1739,56 +1795,146 @@ void EcranDiff(){
     prevRight = right;
     
     pixels.clear();
-    defilerTexte("CHOIX DIFFICULTE", 0, BLANC_);
+    defilerTexte("CHOIX DIFFICULTE", 0, BLANC);
 
     if (difficulty == 0){
-        ecrireMot("FACILE", 0, 8, JAUNE_);
+        ecrireMot("FACILE", 0, 8, JAUNE);
         // Fleche
-        allumeLED(25, 8, BLANC_);
-        allumeLED(26, 9, BLANC_);
-        allumeLED(27, 10, BLANC_);
-        allumeLED(26, 11, BLANC_);
-        allumeLED(25, 12, BLANC_);
+        allumeLED(25, 8, BLANC);
+        allumeLED(26, 9, BLANC);
+        allumeLED(27, 10, BLANC);
+        allumeLED(26, 11, BLANC);
+        allumeLED(25, 12, BLANC);
     }
     
     else if (difficulty == 1){
-        ecrireMot("MOYEN", 0, 8, ORANGE_);
+        ecrireMot("MOYEN", 0, 8, ORANGE);
         // Fleche
-        allumeLED(21, 8, BLANC_);
-        allumeLED(22, 9, BLANC_);
-        allumeLED(23, 10, BLANC_);
-        allumeLED(22, 11, BLANC_);
-        allumeLED(21, 12, BLANC_);
+        allumeLED(21, 8, BLANC);
+        allumeLED(22, 9, BLANC);
+        allumeLED(23, 10, BLANC);
+        allumeLED(22, 11, BLANC);
+        allumeLED(21, 12, BLANC);
     }
     
     else if (difficulty == 2){
-        ecrireMot("EXPERT", 0, 8, ROUGE_);
+        ecrireMot("EXPERT", 0, 8, ROUGE);
         // Fleche
-        allumeLED(25, 8, BLANC_);
-        allumeLED(26, 9, BLANC_);
-        allumeLED(27, 10, BLANC_);
-        allumeLED(26, 11, BLANC_);
-        allumeLED(25, 12, BLANC_);
+        allumeLED(25, 8, BLANC);
+        allumeLED(26, 9, BLANC);
+        allumeLED(27, 10, BLANC);
+        allumeLED(26, 11, BLANC);
+        allumeLED(25, 12, BLANC);
     }
     pixels.show();
 }
 
-void eclairage_int_boite(CRGB color)
-{
-  fill_solid(&leds[OFFSET_LED_INT], n_LED_total - OFFSET_LED_INT, color);
-  FastLED.show();
+void reinit_LED(int debut, int fin){
+
+  for(int i = debut; i<fin; i++){
+    pixels_LED.setPixelColor(i, pixels_LED.Color(0,0,0));
+  }
+
 }
 
+//La couleur vient de l'utilisateur
+void eclairage_int_boite(const uint8_t *RGB){
+  
+  reinit_LED(OFFSET_LED_INT, n_LED_total);
+
+  for(int i = OFFSET_LED_INT; i < n_LED_total; i++){
+
+    pixels_LED.setPixelColor(i, pixels_LED.Color(RGB[0], RGB[1], RGB[2]));
+  
+  }
+  
+  pixels_LED.show();
+
+};
+
+void eclairage_LED_ext(){
+
+  static int decalage = 0;
+  int longueur = NUMPIXELS_BANDE * 2;
+
+  //Réinitialisation des LEDs extérieures
+  reinit_LED(OFFSET_LED_GAUCHE, OFFSET_LED_COMPTEUR -1);
+  reinit_LED(OFFSET_LED_DROIT, OFFSET_LED_INT -1);
+
+  for (int i = 0; i < longueur; i++)
+  {
+    int couleur = (i + decalage) % 3;
+
+    uint32_t color;
+
+    if(couleur == 0){
+
+      color = pixels_LED.Color(ROSE_l[0], ROSE_l[1], ROSE_l[2]);
+
+    }
+    else if(couleur == 1){
+
+      color = pixels_LED.Color(ORANGE_l[0], ORANGE_l[1], ORANGE_l[2]);
+
+    }
+    else{
+
+      color = pixels_LED.Color(BLEU_l[0], BLEU_l[1], BLEU_l[2]);
+
+    }
+
+    pixels_LED.setPixelColor(OFFSET_LED_GAUCHE + i, color);
+    
+    pixels_LED.setPixelColor(OFFSET_LED_DROIT + i, color);
+  }
+
+  pixels_LED.show();
+  delay(100);
+
+  decalage = (decalage + 1) % 3;
+};
+
+void eteindreCompteur(){
+    for (int i = 0; i < n_LED_compteur; i++) {
+
+      pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, 0);
+    }
+    pixels_LED.show();
+}
+
+void allumerCompteur(){
+    for (int i = 0; i < n_LED_compteur; i++) {
+      pixels_LED.setPixelColor(OFFSET_LED_COMPTEUR + i, pixels_LED.Color(VERT_l[0], VERT_l[1], VERT_l[2]));
+    }
+    pixels_LED.show();
+}
+
+uint32_t gradient_couleur(float ratio){
+
+  ratio = constrain(ratio, 0.0f, 1.0f);
+  float r, g;
+
+  //Transforme le vert en jaune
+  if(ratio > 0.5f){
+    float ratio_jaune = (1.0f - ratio) / 0.5f;
+    r = VERT_l[0] + ratio_jaune * (JAUNE_l[0] - VERT_l[0]);
+    g = VERT_l[1] + ratio_jaune * (JAUNE_l[1] - VERT_l[1]);
+
+  }
+  //Transforme le jaune en rouge
+  else{
+    float ratio_rouge = (0.5f - ratio) / 0.5f;
+    r = JAUNE_l[0] + ratio_rouge * (ROUGE_l[0] - JAUNE_l[0]);
+    g = JAUNE_l[1] + ratio_rouge * (ROUGE_l[1] - JAUNE_l[1]);
+
+  }
+
+  return pixels_LED.Color(int(r), int(g), 0);
+
+}
 
 //TODO
 
-//Recevoir les messages par Json
-	//Verifier etat Reinitialiser vs Init
-	//Gerer bouton urgence
-
 //Limit switches in CoreXY
 
-//Ajouter interface retro
-
-//Mettre un bool pour autoriser les boutons qui gerent les moteurs. only dans IDLE
-
+//Ecran affichage parametre pour UI retro
